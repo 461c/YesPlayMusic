@@ -95,7 +95,7 @@ export default {
 
 [data-theme='dark'] {
   .menu {
-    background: var(--color-body-bg);
+    background: var(--color-secondary-bg);
     backdrop-filter: blur(16px) contrast(120%) brightness(60%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 0 6px rgba(255, 255, 255, 0.08);
@@ -107,7 +107,7 @@ export default {
 
 @supports (-moz-appearance: none) {
   .menu {
-    background-color: var(--color-body-bg) !important;
+    background-color: var(--color-secondary-bg) !important;
   }
 }
 

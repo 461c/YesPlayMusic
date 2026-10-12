@@ -115,7 +115,7 @@ export default {
   }
 }
 [data-theme='dark'] .win32-titlebar {
-  --hover: var(--color-body-bg);
-  --active: var(--color-body-bg);
+  --hover: var(--color-secondary-bg);
+  --active: var(--color-secondary-bg-for-transparent);
 }
 </style>

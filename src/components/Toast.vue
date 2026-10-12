@@ -35,7 +35,7 @@ export default {
 
 [data-theme='dark'] {
   .toast {
-    background: var(--color-body-bg);
+    background: var(--color-secondary-bg);
     backdrop-filter: blur(16px) contrast(120%);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }

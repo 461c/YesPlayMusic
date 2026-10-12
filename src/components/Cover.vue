@@ -148,13 +148,6 @@ img {
   }
 }
 
-[data-theme='dark'] .play-button {
-  background: var(--color-body-bg);
-  &:hover {
-    background: var(--color-body-bg);
-  }
-}
-
 .shadow {
   position: absolute;
   top: 12px;

@@ -161,13 +161,6 @@ img {
   }
 }
 
-[data-theme='dark'] .play-button {
-  background: var(--color-body-bg);
-  &:hover {
-    background: var(--color-body-bg);
-  }
-}
-
 @keyframes move {
   0% {
     transform: translateY(0);
