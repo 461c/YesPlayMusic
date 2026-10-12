@@ -186,8 +186,11 @@ export default {
   }
 
   .modal {
-    background: rgba(36, 36, 36, 0.88);
+    background: var(--color-body-bg);
     border: 1px solid rgba(255, 255, 255, 0.08);
+    ::-webkit-scrollbar-thumb {
+      background: var(--color-scrollbar-thumb);
+    }
   }
 }
 </style>

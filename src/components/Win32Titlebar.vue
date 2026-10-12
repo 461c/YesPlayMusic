@@ -115,7 +115,7 @@ export default {
   }
 }
 [data-theme='dark'] .win32-titlebar {
-  --hover: #191919;
-  --active: #333333;
+  --hover: var(--color-body-bg);
+  --active: var(--color-body-bg);
 }
 </style>

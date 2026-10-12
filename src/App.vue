@@ -122,14 +122,14 @@ main {
   right: 0;
   left: 0;
   overflow: auto;
-  padding: 64px 10vw 96px 10vw;
+  padding: 64px 10vw calc(96px + var(--player-bottom-gap)) 10vw;
   box-sizing: border-box;
   scrollbar-width: none; // firefox
 }
 
 @media (max-width: 1336px) {
   main {
-    padding: 64px 5vw 96px 5vw;
+    padding: 64px 5vw calc(96px + var(--player-bottom-gap)) 5vw;
   }
 }
 
@@ -144,5 +144,10 @@ main::-webkit-scrollbar {
 .slide-up-enter,
 .slide-up-leave-to {
   transform: translateY(100%);
+}
+
+.player.slide-up-enter,
+.player.slide-up-leave-to {
+  transform: translateY(calc(100% + var(--player-bottom-gap)));
 }
 </style>
