@@ -198,7 +198,7 @@ class Background {
         ((appearance === undefined || appearance === 'auto') &&
           nativeTheme.shouldUseDarkColors) ||
         appearance === 'dark'
-          ? '#222'
+          ? '#000'
           : '#fff',
     };
 

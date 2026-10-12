@@ -18,7 +18,7 @@ export default {
 <style lang="scss" scoped>
 .toast {
   position: fixed;
-  bottom: 64px;
+  bottom: calc(64px + var(--player-bottom-gap));
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 14px;
@@ -35,7 +35,7 @@ export default {
 
 [data-theme='dark'] {
   .toast {
-    background: rgba(46, 46, 46, 0.68);
+    background: var(--color-secondary-bg);
     backdrop-filter: blur(16px) contrast(120%);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }

@@ -1,5 +1,10 @@
 <template>
-  <div class="player" @click="handleClick" @mousedown="handleMouseDown">
+  <div
+    class="player"
+    :class="{ 'lyrics-open': showLyrics }"
+    @click="handleClick"
+    @mousedown="handleMouseDown"
+  >
     <div
       class="progress-bar"
       :class="{
@@ -169,10 +174,11 @@
 
           <button-icon
             class="lyrics-button"
-            title="歌词"
+            :title="showLyrics ? '收起歌词' : '展开歌词'"
+            :aria-expanded="showLyrics ? 'true' : 'false'"
             style="margin-left: 12px"
             @click.native="toggleLyrics"
-            ><svg-icon icon-class="arrow-up"
+            ><svg-icon :icon-class="showLyrics ? 'arrow-down' : 'arrow-up'"
           /></button-icon>
         </div>
       </div>
@@ -201,7 +207,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['player', 'settings', 'data']),
+    ...mapState(['player', 'settings', 'data', 'showLyrics']),
     currentTrack() {
       return this.player.currentTrack;
     },
@@ -330,44 +336,61 @@ export default {
 <style lang="scss" scoped>
 .player {
   position: fixed;
-  bottom: 0;
+  bottom: var(--player-bottom-gap);
   right: 0;
   left: 0;
+  width: calc(100% - var(--player-side-gap) * 2);
+  max-width: 900px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: space-around;
   height: 64px;
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
   backdrop-filter: saturate(180%) blur(30px);
-  // background-color: rgba(255, 255, 255, 0.86);
-  background-color: var(--color-navbar-bg);
+  background-color: var(--color-player-bg);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  transition: transform 0.4s;
   z-index: 100;
 }
 
-@supports (-moz-appearance: none) {
-  .player {
-    background-color: var(--color-body-bg);
-  }
+[data-theme='dark'] .player {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.player.lyrics-open {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .progress-bar {
   margin-top: -6px;
   margin-bottom: -6px;
-  width: 100%;
+  width: calc(100% - 24px);
+  margin-left: 12px;
+  margin-right: 12px;
 }
 
 .controls {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   height: 100%;
-  padding: {
-    right: 10vw;
-    left: 10vw;
-  }
+  padding: 0 24px;
 }
 
-@media (max-width: 1336px) {
+@media (max-width: 960px) {
   .controls {
-    padding: 0 5vw;
+    padding: 0 16px;
+  }
+  .right-control-buttons .container .button-icon {
+    margin-right: 2px;
+    margin-left: 2px;
+  }
+  .volume-bar {
+    display: none;
   }
 }
 
@@ -380,6 +403,7 @@ export default {
 }
 
 .playing .container {
+  min-width: 0;
   display: flex;
   align-items: center;
   img {
@@ -390,6 +414,7 @@ export default {
     user-select: none;
   }
   .track-info {
+    min-width: 0;
     height: 46px;
     margin-left: 12px;
     display: flex;

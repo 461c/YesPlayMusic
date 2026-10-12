@@ -178,7 +178,7 @@ export default {
 
 [data-theme='dark'] {
   #thumbContainer div {
-    background: var(--color-secondary-bg);
+    background: var(--color-scrollbar-thumb);
   }
 }
 

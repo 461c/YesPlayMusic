@@ -124,7 +124,7 @@ export default {
   }
 }
 [data-theme='dark'] .linux-titlebar {
-  --hover: #191919;
-  --active: #333333;
+  --hover: var(--color-secondary-bg);
+  --active: var(--color-secondary-bg-for-transparent);
 }
 </style>
