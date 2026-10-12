@@ -34,6 +34,16 @@
 
 [![Library][library-screenshot]](https://music.qier222.com)
 
+## 本分支 Win64 自动构建
+
+每次向 `master` 提交修改，都会自动构建 Windows 64 位 NSIS Setup 安装包，并保存到 [`win64` 分支](https://github.com/461c/YesPlayMusic/tree/win64)。
+
+- [下载最新 Win64 Setup](https://github.com/461c/YesPlayMusic/raw/refs/heads/win64/YesPlayMusic-Setup-x64.exe)
+- [查看构建状态和备用下载产物](https://github.com/461c/YesPlayMusic/actions/workflows/win64.yml)
+- 安装包对应的源代码提交、构建时间和 SHA256 校验值记录在 `win64` 分支的 `build-info.json` 中。
+
+源码修改直接提交 `master`；`win64` 分支只存放构建产物。也可在 Actions 页面手动运行 **Win64 Setup**。
+
 ## 全新版本
 
 全新 2.0 Alpha 测试版已发布，欢迎前往 [Releases](https://github.com/qier222/YesPlayMusic/releases) 页面下载。

@@ -164,6 +164,7 @@ module.exports = {
           icon: 'build/icons/icon.icns',
         },
         nsis: {
+          artifactName: '${productName}-Setup-${version}-${arch}.${ext}',
           oneClick: true,
           perMachine: true,
           deleteAppDataOnUninstall: true,
