@@ -77,6 +77,52 @@
           </select>
         </div>
       </div>
+      <div class="item custom-css-item">
+        <div class="left">
+          <div class="title">{{ $t('settings.customCss.text') }}</div>
+          <div class="description">{{
+            $t('settings.customCss.description')
+          }}</div>
+        </div>
+        <form class="right custom-css-form" @submit.prevent="saveCustomCss">
+          <input
+            v-model="customCssInput"
+            class="text-input"
+            type="text"
+            spellcheck="false"
+            :aria-label="$t('settings.customCss.text')"
+            :placeholder="$t('settings.customCss.placeholder')"
+            :disabled="customCssLoading"
+          />
+          <div class="custom-css-actions">
+            <button
+              v-if="isElectron"
+              type="button"
+              :disabled="customCssLoading"
+              @click="chooseCustomCss"
+            >
+              {{ $t('settings.customCss.chooseFile') }}
+            </button>
+            <button type="submit" :disabled="customCssLoading">
+              {{ $t('settings.customCss.apply') }}
+            </button>
+            <button
+              type="button"
+              :disabled="customCssLoading || !settings.customCssUrl"
+              @click="reloadCustomCss"
+            >
+              {{ $t('settings.customCss.reload') }}
+            </button>
+            <button
+              type="button"
+              :disabled="customCssLoading"
+              @click="clearCustomCss"
+            >
+              {{ $t('settings.customCss.clear') }}
+            </button>
+          </div>
+        </form>
+      </div>
       <div v-if="isElectron" class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
@@ -817,6 +863,7 @@ import {
   bytesToSize,
 } from '@/utils/common';
 import { countDBSize, clearDB } from '@/utils/db';
+import { applyCustomCss } from '@/utils/customCss';
 import pkg from '../../package.json';
 
 const electron =
@@ -830,6 +877,8 @@ export default {
   name: 'Settings',
   data() {
     return {
+      customCssInput: this.$store.state.settings.customCssUrl || '',
+      customCssLoading: false,
       tracksCache: {
         size: '0KB',
         length: 0,
@@ -1366,6 +1415,60 @@ export default {
   },
   methods: {
     ...mapActions(['showToast']),
+    customCssError(error) {
+      const key = error.message.startsWith('settings.customCss.')
+        ? error.message
+        : 'settings.customCss.loadFailed';
+      this.showToast(this.$t(key));
+    },
+    async saveCustomCss() {
+      this.customCssLoading = true;
+      const address = this.customCssInput.trim();
+      try {
+        await applyCustomCss(address, this.customCssError);
+        this.$store.commit('updateSettings', {
+          key: 'customCssUrl',
+          value: address,
+        });
+        this.customCssInput = address;
+        this.showToast(
+          this.$t(
+            address
+              ? 'settings.customCss.applied'
+              : 'settings.customCss.cleared'
+          )
+        );
+      } catch (error) {
+        this.customCssError(error);
+      } finally {
+        this.customCssLoading = false;
+      }
+    },
+    async reloadCustomCss() {
+      this.customCssLoading = true;
+      try {
+        await applyCustomCss(this.settings.customCssUrl, this.customCssError);
+        this.showToast(this.$t('settings.customCss.applied'));
+      } catch (error) {
+        this.customCssError(error);
+      } finally {
+        this.customCssLoading = false;
+      }
+    },
+    clearCustomCss() {
+      this.customCssInput = '';
+      this.saveCustomCss();
+    },
+    async chooseCustomCss() {
+      const result = await electron.remote.dialog.showOpenDialog({
+        title: this.$t('settings.customCss.chooseFile'),
+        properties: ['openFile'],
+        filters: [{ name: 'CSS', extensions: ['css'] }],
+      });
+      if (result.canceled || !result.filePaths.length) return;
+      this.customCssInput = result.filePaths[0];
+      this.saveCustomCss();
+    },
     getAllOutputDevices() {
       navigator.mediaDevices.enumerateDevices().then(devices => {
         this.allOutputDevices = devices.filter(device => {
@@ -1665,6 +1768,43 @@ button {
   }
   &:active {
     transform: scale(0.94);
+  }
+}
+
+.custom-css-item {
+  align-items: flex-start;
+  gap: 24px;
+  .left {
+    max-width: 280px;
+  }
+  .description {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    opacity: 0.68;
+  }
+  .custom-css-form {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  input.text-input {
+    width: 100%;
+    margin-right: 0;
+    box-sizing: border-box;
+  }
+  .custom-css-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: default;
+    transform: none;
   }
 }
 

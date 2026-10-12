@@ -172,6 +172,24 @@ export default {
       ocean: 'Okyanus geçişi',
       forest: 'Orman geçişi',
     },
+    customCss: {
+      text: 'Özel CSS adresi',
+      description:
+        'Harici CSS URL adresi kullanın. Masaüstü uygulaması yerel dosya yollarını ve file:// adreslerini de destekler. Yerel dosyalar kaydedildiğinde otomatik yenilenir.',
+      placeholder: 'https://example.com/theme.css veya C:\\Themes\\theme.css',
+      chooseFile: 'Dosya seç',
+      apply: 'Kaydet ve uygula',
+      reload: 'Yeniden yükle',
+      clear: 'Stilleri temizle',
+      applied: 'Özel CSS uygulandı',
+      cleared: 'Yerleşik stiller geri yüklendi',
+      loadFailed:
+        'CSS yüklenemedi. URL adresini, dosya yolunu veya izinleri kontrol edin.',
+      localOnly:
+        'Web uygulamasında HTTP/HTTPS adresi kullanın. Yerel CSS dosyaları masaüstü uygulamasını gerektirir.',
+      invalidAddress:
+        'HTTP/HTTPS adresi, mutlak dosya yolu veya file:// adresi girin.',
+    },
     trayIcon: {
       text: 'Tepsi Simgesi Rengi',
       auto: 'Otomatik',

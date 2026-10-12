@@ -44,6 +44,12 @@
 
 源码修改直接提交 `master`；`win64` 分支只存放构建产物。也可在 Actions 页面手动运行 **Win64 Setup**。
 
+### 自定义 CSS
+
+在设置中的「自定义 CSS 地址」输入 `https://example.com/theme.css` 并点击「保存并应用」，即可覆盖内置样式。桌面版也支持 `C:\Themes\theme.css`、`/home/user/theme.css`、`~/theme.css` 或 `file:///C:/Themes/theme.css`，也可以通过「选择文件」打开本地 CSS。
+
+设置会自动保存，启动时重新应用。本地 CSS 文件保存后自动重新加载；外部 CSS 可点击「重新加载」刷新。「清除样式」可以恢复内置样式。
+
 ## 全新版本
 
 全新 2.0 Alpha 测试版已发布，欢迎前往 [Releases](https://github.com/qier222/YesPlayMusic/releases) 页面下载。

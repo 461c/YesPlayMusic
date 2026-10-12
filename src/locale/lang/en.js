@@ -177,6 +177,24 @@ export default {
       ocean: 'Ocean Gradient',
       forest: 'Forest Gradient',
     },
+    customCss: {
+      text: 'Custom CSS address',
+      description:
+        'Use an external CSS URL, or a local file path/file:// URL in the desktop app. Local files reload automatically when saved.',
+      placeholder: 'https://example.com/theme.css or C:\\Themes\\theme.css',
+      chooseFile: 'Choose file',
+      apply: 'Save and apply',
+      reload: 'Reload',
+      clear: 'Clear styles',
+      applied: 'Custom CSS applied',
+      cleared: 'Built-in styles restored',
+      loadFailed:
+        'Unable to load CSS. Check the URL, file path or permissions.',
+      localOnly:
+        'Use an HTTP/HTTPS URL in the web app. Local CSS files require the desktop app.',
+      invalidAddress:
+        'Enter an HTTP/HTTPS URL, an absolute file path or a file:// URL.',
+    },
     trayIcon: {
       text: 'Tray Icon Color',
       auto: 'Auto',

@@ -11,6 +11,7 @@ import { dailyTask } from '@/utils/common';
 import '@/assets/css/global.scss';
 import NProgress from 'nprogress';
 import '@/assets/css/nprogress.css';
+import { applyCustomCss } from '@/utils/customCss';
 
 window.resetApp = () => {
   localStorage.clear();
@@ -46,3 +47,9 @@ new Vue({
   router,
   render: h => h(App),
 }).$mount('#app');
+
+applyCustomCss(store.state.settings.customCssUrl, () => {
+  store.dispatch('showToast', i18n.t('settings.customCss.loadFailed'));
+}).catch(() => {
+  store.dispatch('showToast', i18n.t('settings.customCss.loadFailed'));
+});

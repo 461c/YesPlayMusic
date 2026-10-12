@@ -174,6 +174,21 @@ export default {
       ocean: '海洋漸變',
       forest: '森林漸變',
     },
+    customCss: {
+      text: '自訂 CSS 位址',
+      description:
+        '支援外部 CSS 網址；桌面版也支援本機檔案路徑及 file:// 位址。本機檔案儲存後自動生效。',
+      placeholder: 'https://example.com/theme.css 或 C:\\Themes\\theme.css',
+      chooseFile: '選擇檔案',
+      apply: '儲存並套用',
+      reload: '重新載入',
+      clear: '清除樣式',
+      applied: '自訂 CSS 已套用',
+      cleared: '已恢復內建樣式',
+      loadFailed: '無法載入 CSS，請檢查網址、檔案路徑或存取權限',
+      localOnly: '網頁版請使用 HTTP 或 HTTPS 網址；本機 CSS 檔案僅支援桌面版',
+      invalidAddress: '請輸入 HTTP/HTTPS 網址、本機檔案完整路徑或 file:// 位址',
+    },
     trayIcon: {
       text: '工作列圖示顏色',
       auto: '自動',

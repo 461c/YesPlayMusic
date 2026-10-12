@@ -178,6 +178,22 @@ export default {
       ocean: '海洋渐变',
       forest: '森林渐变',
     },
+    customCss: {
+      text: '自定义 CSS 地址',
+      description:
+        '支持外部 CSS 网址；桌面版也支持本地文件路径和 file:// 地址。本地文件保存后自动生效。',
+      placeholder: 'https://example.com/theme.css 或 C:\\Themes\\theme.css',
+      chooseFile: '选择文件',
+      apply: '保存并应用',
+      reload: '重新加载',
+      clear: '清除样式',
+      applied: '自定义 CSS 已应用',
+      cleared: '已恢复内置样式',
+      loadFailed: '无法加载 CSS，请检查网址、文件路径或访问权限',
+      localOnly: '网页版请使用 HTTP 或 HTTPS 网址；本地 CSS 文件仅支持桌面版',
+      invalidAddress:
+        '请输入 HTTP/HTTPS 网址、本地文件的完整路径或 file:// 地址',
+    },
     trayIcon: {
       text: '托盘图标颜色',
       auto: '自动',

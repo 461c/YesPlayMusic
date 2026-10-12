@@ -7,4 +7,5 @@
 - Every push to `master` runs `.github/workflows/win64.yml` to build a Windows x64 NSIS Setup installer.
 - The `win64` branch stores build artifacts only. Source changes belong on `master`.
 - Use the existing `yarn.lock` for dependency installation. Build the Windows installer with `yarn electron:build-win64`.
+- Settings support a persistent custom CSS URL, or a local file path/file:// URL in Electron. Apply user styles after built-in styles, reload local files on save, and allow clearing them to restore built-in styles.
 - Verify the workflow result before reporting that an installer has been published.
