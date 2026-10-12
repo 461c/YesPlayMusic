@@ -1132,9 +1132,12 @@ export default {
   }
 }
 
-.slide-up-enter-active,
+.slide-up-enter-active {
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .slide-up-leave-active {
-  transition: all 0.4s;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .slide-up-enter,

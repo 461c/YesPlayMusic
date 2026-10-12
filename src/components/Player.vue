@@ -345,7 +345,7 @@ export default {
   right: 0;
   left: 0;
   width: calc(100% - var(--player-side-gap) * 2);
-  max-width: 1200px;
+  max-width: 900px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -354,9 +354,9 @@ export default {
   -webkit-backdrop-filter: saturate(180%) blur(30px);
   backdrop-filter: saturate(180%) blur(30px);
   background-color: var(--color-player-bg);
-  border-radius: 0 0 12px 12px;
+  border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-  transition: opacity 0.3s, transform 0.4s;
+  transition: transform 0.4s;
   z-index: 300;
 }
 
@@ -377,12 +377,14 @@ export default {
 .progress-bar {
   margin-top: -6px;
   margin-bottom: -6px;
-  width: 100%;
+  width: calc(100% - 24px);
+  margin-left: 12px;
+  margin-right: 12px;
 }
 
 .controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   height: 100%;
   padding: 0 24px;
 }
