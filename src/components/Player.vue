@@ -330,17 +330,23 @@ export default {
 <style lang="scss" scoped>
 .player {
   position: fixed;
-  bottom: 0;
-  right: 0;
-  left: 0;
+  bottom: var(--player-bottom-gap);
+  right: var(--player-side-gap);
+  left: var(--player-side-gap);
   display: flex;
   flex-direction: column;
   justify-content: space-around;
   height: 64px;
   backdrop-filter: saturate(180%) blur(30px);
-  // background-color: rgba(255, 255, 255, 0.86);
   background-color: var(--color-navbar-bg);
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
   z-index: 100;
+}
+
+[data-theme='dark'] .player {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.32);
 }
 
 @supports (-moz-appearance: none) {
@@ -360,14 +366,14 @@ export default {
   grid-template-columns: repeat(3, 1fr);
   height: 100%;
   padding: {
-    right: 10vw;
-    left: 10vw;
+    right: calc(10vw - var(--player-side-gap));
+    left: calc(10vw - var(--player-side-gap));
   }
 }
 
 @media (max-width: 1336px) {
   .controls {
-    padding: 0 5vw;
+    padding: 0 calc(5vw - var(--player-side-gap));
   }
 }
 

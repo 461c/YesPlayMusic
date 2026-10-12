@@ -95,13 +95,13 @@ export default {
 
 [data-theme='dark'] {
   .menu {
-    background: rgba(36, 36, 36, 0.78);
+    background: var(--color-body-bg);
     backdrop-filter: blur(16px) contrast(120%) brightness(60%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 0 6px rgba(255, 255, 255, 0.08);
   }
   .menu .item:hover {
-    color: var(--color-text);
+    color: var(--color-primary);
   }
 }
 
