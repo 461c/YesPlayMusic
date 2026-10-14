@@ -939,7 +939,8 @@ export default {
       const parts = [
         formats[info.mime] || info.sourceFormat?.toUpperCase() || '格式未知',
       ];
-      if (info.bitrate > 0) parts.push(`${Math.round(info.bitrate / 1000)} kbps`);
+      if (info.bitrate > 0)
+        parts.push(`${Math.round(info.bitrate / 1000)} kbps`);
       if (info.sampleRate > 0) parts.push(`${info.sampleRate / 1000} kHz`);
       if (info.bitDepth > 0) parts.push(`${info.bitDepth}-bit`);
       if (info.channels > 0) parts.push(`${info.channels} 声道`);

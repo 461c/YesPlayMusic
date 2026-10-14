@@ -21,7 +21,10 @@ export function getMP3(id) {
     return request({
       url: '/song/url/v1',
       method: 'get',
-      params: { id, level: musicQualityLevel(store.state.settings.musicQuality) },
+      params: {
+        id,
+        level: musicQualityLevel(store.state.settings.musicQuality),
+      },
     });
   }
   const getBr = () => {

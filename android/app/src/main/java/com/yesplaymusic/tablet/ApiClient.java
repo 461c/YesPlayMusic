@@ -25,6 +25,7 @@ final class ApiClient {
         }
     }
     private static final ConcurrentHashMap<String, AudioSource> audioUrls = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, AudioSource> resolvedAudio = new ConcurrentHashMap<>();
     static String qualityLevel(String quality) {
         switch (quality) {
             case "128000": case "standard": return "standard";
@@ -43,12 +44,12 @@ final class ApiClient {
         if (!cookie.equals(preferences(context).getString("cookie", ""))) audioUrls.clear();
         preferences(context).edit().putString("cookie", cookie).apply();
     }
-    private static String audioKey(Context context, String id) {
-        return id + ":" + preferences(context).getString("qualityLevel", "exhigh") + ":"
+    private static String audioKey(Context context, String id, String level) {
+        return id + ":" + level + ":"
             + preferences(context).getString("cookie", "") + ":" + baseUrl(context);
     }
     static JSONObject audioInfo(Context context, String id) {
-        AudioSource source = audioUrls.get(audioKey(context, id));
+        AudioSource source = resolvedAudio.get(id);
         try { return source == null ? new JSONObject() : new JSONObject(source.info.toString()); }
         catch (Exception ignored) { return new JSONObject(); }
     }
@@ -96,13 +97,18 @@ final class ApiClient {
         } finally { connection.disconnect(); }
     }
     static Uri resolveAudio(Context context, String id) throws IOException {
-        String key = audioKey(context, id);
+        return resolveAudio(context, id, preferences(context).getString("qualityLevel", "exhigh"));
+    }
+    static Uri resolveAudio(Context context, String id, String level) throws IOException {
+        String key = audioKey(context, id, level);
         AudioSource cached = audioUrls.get(key);
-        if (cached != null && cached.expires > SystemClock.elapsedRealtime()) return Uri.parse(cached.url);
+        if (cached != null && cached.expires > SystemClock.elapsedRealtime()) {
+            resolvedAudio.put(id, cached);
+            return Uri.parse(cached.url);
+        }
         String result;
         JSONObject info = new JSONObject();
         long lifetime = 120000;
-        String level = preferences(context).getString("qualityLevel", "exhigh");
         String cookie = preferences(context).getString("cookie", "");
         if (cookie.contains("MUSIC_U=")) {
             try {
@@ -122,7 +128,10 @@ final class ApiClient {
             try { info.put("requestedLevel", level).put("guest", true); } catch (Exception ignored) { }
         }
         if (audioUrls.size() > 100) audioUrls.clear();
-        audioUrls.put(key, new AudioSource(result, info, lifetime));
+        AudioSource source = new AudioSource(result, info, lifetime);
+        audioUrls.put(key, source);
+        if (resolvedAudio.size() > 100) resolvedAudio.clear();
+        resolvedAudio.put(id, source);
         return Uri.parse(result);
     }
     static void ensureReady(Context context) throws Exception {
