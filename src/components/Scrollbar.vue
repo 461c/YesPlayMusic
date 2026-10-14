@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="!isAndroid">
     <transition name="fade">
       <div
         v-show="show"
@@ -24,10 +24,13 @@
 </template>
 
 <script>
+import { isAndroid } from '@/utils/androidAudio';
+
 export default {
   name: 'Scrollbar',
   data() {
     return {
+      isAndroid,
       top: 0,
       thumbHeight: 0,
       active: false,
@@ -61,6 +64,15 @@ export default {
 
   methods: {
     handleScroll() {
+      const route = this.$route;
+      if (route.meta.savePosition) {
+        this.positions[route.name] = {
+          scrollTop: this.main.scrollTop,
+          params: route.params,
+        };
+      }
+      if (this.isAndroid) return;
+
       const clintHeight = this.main.clientHeight - 128;
       const scrollHeight = this.main.scrollHeight - 128;
       const scrollTop = this.main.scrollTop;
@@ -76,11 +88,6 @@ export default {
 
       if (!this.show && clintHeight !== thumbHeight) this.show = true;
       this.setScrollbarHideTimeout();
-
-      const route = this.$route;
-      if (route.meta.savePosition) {
-        this.positions[route.name] = { scrollTop, params: route.params };
-      }
     },
     handleMouseenter() {
       this.active = true;

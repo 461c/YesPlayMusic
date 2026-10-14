@@ -124,6 +124,9 @@ main {
   overflow: auto;
   padding: 64px 10vw calc(96px + var(--player-bottom-gap)) 10vw;
   box-sizing: border-box;
+}
+
+body:not([data-platform='android']) main {
   scrollbar-width: none; // firefox
 }
 
@@ -133,7 +136,7 @@ main {
   }
 }
 
-main::-webkit-scrollbar {
+body:not([data-platform='android']) main::-webkit-scrollbar {
   width: 0px;
 }
 

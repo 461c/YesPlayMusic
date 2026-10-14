@@ -4,6 +4,9 @@ html[data-platform='android'] {
 body[data-platform='android'] {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+  .player.lyrics-open {
+    display: none !important;
+  }
   main {
     padding-left: 4vw;
     padding-right: 4vw;
