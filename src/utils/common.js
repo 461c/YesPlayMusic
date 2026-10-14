@@ -2,7 +2,10 @@ import { isAccountLoggedIn } from './auth';
 import { refreshCookie } from '@/api/auth';
 import dayjs from 'dayjs';
 import store from '@/store';
-import { systemAppearance, updateAndroidAppearance } from './androidEnvironment';
+import {
+  systemAppearance,
+  updateAndroidAppearance,
+} from './androidEnvironment';
 
 const themeColorPresets = {
   default: {
