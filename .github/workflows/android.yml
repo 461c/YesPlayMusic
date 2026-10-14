@@ -15,6 +15,11 @@ on:
       - 'babel.config.js'
       - '.github/workflows/android.yml'
   workflow_dispatch:
+    inputs:
+      device_tests:
+        description: 'Run Android emulator API, media and UI tests'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -72,11 +77,13 @@ jobs:
       - name: Verify packaged API files
         run: python3 scripts/check-android-api-assets.py android/app/build/outputs/apk/release/app-release.apk
       - name: Enable Android emulator acceleration
+        if: github.event_name == 'workflow_dispatch' && inputs.device_tests
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Verify embedded API on Android 15
+        if: github.event_name == 'workflow_dispatch' && inputs.device_tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -89,7 +96,7 @@ jobs:
             adb pull /sdcard/Android/data/com.yesplaymusic.tablet/files/android-ui android-ui-report
             adb shell dumpsys media_session > android-ui-report/media-session.txt
       - name: Save Android UI verification
-        if: always()
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.device_tests
         uses: actions/upload-artifact@v4
         with:
           name: Android-UI-verification
@@ -126,7 +133,12 @@ jobs:
           cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-Tablet.apk" .
           cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-Tablet.apk.sha256" .
           cp "$GITHUB_WORKSPACE/android/INSTALL.md" README.md
-          cp -a "$GITHUB_WORKSPACE/android-ui-report" ui-verification
+          if [ -d "$GITHUB_WORKSPACE/android-ui-report" ]; then
+            rm -rf ui-verification
+            cp -a "$GITHUB_WORKSPACE/android-ui-report" ui-verification
+          else
+            rm -rf ui-verification
+          fi
           printf '{"sourceSha":"%s","runUrl":"https://github.com/%s/actions/runs/%s"}\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > build-info.json
           git add .
           git commit -m "build(android): ${GITHUB_SHA:0:12}"
