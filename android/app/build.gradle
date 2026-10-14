@@ -18,7 +18,7 @@ android {
     // Node packages have legitimate underscore paths; package exactly the manifest's files.
     androidResources { ignoreAssetsPattern = '' }
     packaging { jniLibs { useLegacyPackaging true } }
-    testBuildType 'release'
+    testBuildType 'debug'
     signingConfigs {
         development {
             storeFile file('../dev-keystore.p12')
@@ -29,6 +29,7 @@ android {
         }
     }
     buildTypes {
+        debug { signingConfig signingConfigs.development }
         release {
             signingConfig signingConfigs.development
             minifyEnabled true
@@ -48,5 +49,4 @@ dependencies {
     implementation 'androidx.media3:media3-session:1.5.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
-    androidTestCompileOnly 'com.google.errorprone:error_prone_annotations:2.36.0'
 }
