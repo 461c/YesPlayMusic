@@ -2,7 +2,7 @@
 
 下载 [YesPlayMusic-Android-Tablet.apk](https://github.com/461c/YesPlayMusic/raw/refs/heads/android/YesPlayMusic-Android-Tablet.apk)，在平板上允许该下载来源安装应用。支持 Android 7.0（API 24）及以上，建议使用更新的 Android System WebView。
 
-应用内置 Node.js 和 `@neteaseapireborn/api`，启动时自动将接口文件安装到应用私有目录，在本机 `127.0.0.1` 上启动接口，等待就绪后打开界面。无需自建服务器、安装 Termux 或填写 API 地址。接口仅本机可访问；退出界面时不会终止后台播放所需的接口，系统结束应用进程后，下次启动会自动重新启动。
+应用内置 Node.js 和 `@neteaseapireborn/api`，启动时自动将接口文件安装到应用私有目录，在本机 `127.0.0.1` 上启动接口，等待就绪后打开界面。无需自建服务器、安装 Termux 或填写 API 地址。API 在应用内的独立服务进程运行，与 WebView 和播放器原生库隔离，通过绑定保持与播放服务相同的后台重要性。接口仅本机可访问；退出界面时不会终止后台播放所需的接口，系统结束应用进程后，下次启动会自动重新启动。
 
 从旧版升级后默认切换为内置接口。设置中的接口地址留空即使用内置接口；仍可填写自己的 HTTP/HTTPS 地址作为可选覆盖。登录与音乐内容仍需要联网访问网易云，本地接口不代表离线音乐服务。支持 arm64-v8a、armeabi-v7a、x86_64。应用等待本地接口完成启动，启动失败会显示提示。
 

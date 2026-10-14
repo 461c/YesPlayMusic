@@ -6,7 +6,7 @@
 #include "node.h"
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_yesplaymusic_tablet_LocalApi_startNode(JNIEnv* env, jclass, jstring directory, jint port) {
+Java_com_yesplaymusic_tablet_EmbeddedApi_startNode(JNIEnv* env, jclass, jstring directory, jint port) {
     const char* path = env->GetStringUTFChars(directory, nullptr);
     std::string root(path);
     env->ReleaseStringUTFChars(directory, path);

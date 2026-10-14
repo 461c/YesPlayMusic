@@ -2,4 +2,4 @@
     @android.webkit.JavascriptInterface <methods>;
 }
 
--keep class com.yesplaymusic.tablet.LocalApi { native <methods>; }
+-keep class com.yesplaymusic.tablet.EmbeddedApi { native <methods>; }

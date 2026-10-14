@@ -7,7 +7,13 @@ api_port=''
 for attempt in $(seq 1 90); do
   api_port=$(adb logcat -d -s YesPlayMusicAPI:I | sed -n 's/.*Local API ready at http:\/\/127\.0\.0\.1:\([0-9]*\).*/\1/p' | head -1)
   if [ -n "$api_port" ]; then break; fi
+  if adb logcat -d -b crash | grep -q 'FORTIFY:'; then
+    sleep 3
+    adb logcat -d -b crash
+    exit 1
+  fi
   if ! adb shell pidof com.yesplaymusic.tablet >/dev/null; then
+    sleep 3
     adb logcat -d -b crash
     exit 1
   fi
