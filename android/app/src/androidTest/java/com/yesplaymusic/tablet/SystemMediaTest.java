@@ -16,6 +16,10 @@ import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.UiDevice;
+import androidx.test.uiautomator.UiObject2;
+import androidx.test.uiautomator.Until;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
@@ -83,6 +87,8 @@ public class SystemMediaTest {
             await(() -> system.getMetadata() != null && "System Track A".equals(system.getMetadata().getString(android.media.MediaMetadata.METADATA_KEY_TITLE)));
             await(() -> system.getMetadata().getLong(android.media.MediaMetadata.METADATA_KEY_DURATION) > 0);
             assertTrue((system.getPlaybackState().getActions() & PlaybackState.ACTION_SKIP_TO_NEXT) != 0);
+            assertTrue((system.getPlaybackState().getActions() & PlaybackState.ACTION_SEEK_TO) != 0);
+            verifySystemPlayer(context, controller);
 
             CountDownLatch connected = new CountDownLatch(1);
             AtomicReference<MediaBrowser> reference = new AtomicReference<>();
@@ -130,12 +136,35 @@ public class SystemMediaTest {
         }
     }
 
+    private void verifySystemPlayer(Context context, MediaController controller) throws Exception {
+        UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        java.io.File report = new java.io.File(context.getExternalFilesDir(null), "android-ui");
+        report.mkdirs();
+        assertTrue(device.openQuickSettings());
+        try {
+            UiObject2 title = device.wait(Until.findObject(By.res("com.android.systemui", "header_title")
+                .text("System Track A")), 15000);
+            device.dumpWindowHierarchy(new java.io.File(report, "system-player.xml"));
+            device.takeScreenshot(new java.io.File(report, "system-player.png"));
+            assertNotNull("Track must appear in SystemUI's media carousel, not just a notification", title);
+            UiObject2 seek = device.wait(Until.findObject(By.res("com.android.systemui", "media_progress_bar")), 5000);
+            assertNotNull("System player must expose its seek bar", seek);
+            UiObject2 playPause = device.wait(Until.findObject(By.res("com.android.systemui", "actionPlayPause")), 5000);
+            assertNotNull("System player must expose its native play/pause control", playPause);
+            playPause.click();
+            await(() -> !controller.isPlaying());
+            playPause = device.wait(Until.findObject(By.res("com.android.systemui", "actionPlayPause")), 5000);
+            playPause.click();
+            await(controller::isPlaying);
+        } finally { device.pressBack(); }
+    }
+
     /** Offline PCM fixture served on loopback; no music account or public API is used. */
     private static final class Fixture implements AutoCloseable {
         private final ServerSocket server = new ServerSocket(0, 0, java.net.InetAddress.getByName("127.0.0.1"));
         private volatile boolean open = true;
         Fixture() throws Exception {
-            byte[] pcm = new byte[1920000];
+            byte[] pcm = new byte[5760000];
             ByteBuffer wav = ByteBuffer.allocate(44 + pcm.length).order(ByteOrder.LITTLE_ENDIAN);
             wav.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + pcm.length)
                 .put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII)).putInt(16).putShort((short) 1).putShort((short) 1)

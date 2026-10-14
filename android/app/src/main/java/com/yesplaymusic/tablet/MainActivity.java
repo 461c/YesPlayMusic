@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -14,6 +15,8 @@ import android.os.Looper;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.view.WindowInsets;
+import android.view.View;
+import android.view.WindowManager;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import android.webkit.WebResourceResponse;
@@ -48,6 +51,9 @@ public final class MainActivity extends Activity {
     private volatile String snapshot = "{}";
     private boolean pageReady = false;
     private boolean visible = false;
+    private volatile String environment = "{}";
+    private int insetTop, insetBottom, insetLeft, insetRight;
+    private boolean appearanceDark, lyricsOpen;
     private final Runnable progress = new Runnable() {
         @Override public void run() {
             if (!visible) return;
@@ -58,20 +64,27 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        configureSystemBars();
         web = new WebView(this);
         content = new android.widget.FrameLayout(this);
         content.setBackgroundColor(android.graphics.Color.BLACK);
         content.addView(web, new android.widget.FrameLayout.LayoutParams(-1, -1));
         setContentView(content);
-        final int topGap = Math.round(12 * getResources().getDisplayMetrics().density);
         content.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-                view.setPadding(bars.left, bars.top + topGap, bars.right, bars.bottom);
+                insetLeft = bars.left; insetTop = bars.top; insetRight = bars.right; insetBottom = bars.bottom;
             } else {
-                view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop() + topGap,
-                    insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+                insetLeft = insets.getSystemWindowInsetLeft(); insetTop = insets.getSystemWindowInsetTop();
+                insetRight = insets.getSystemWindowInsetRight(); insetBottom = insets.getSystemWindowInsetBottom();
+                if (Build.VERSION.SDK_INT >= 28 && insets.getDisplayCutout() != null) {
+                    insetLeft = Math.max(insetLeft, insets.getDisplayCutout().getSafeInsetLeft());
+                    insetTop = Math.max(insetTop, insets.getDisplayCutout().getSafeInsetTop());
+                    insetRight = Math.max(insetRight, insets.getDisplayCutout().getSafeInsetRight());
+                    insetBottom = Math.max(insetBottom, insets.getDisplayCutout().getSafeInsetBottom());
+                }
             }
+            emitEnvironment();
             return insets;
         });
         web.setBackgroundColor(android.graphics.Color.BLACK);
@@ -112,6 +125,7 @@ public final class MainActivity extends Activity {
             }
             @Override public void onPageFinished(WebView view, String url) {
                 pageReady = true;
+                emitEnvironment();
                 emitState();
             }
         });
@@ -152,6 +166,50 @@ public final class MainActivity extends Activity {
     }
 
     private void loadPage() { pageReady = false; web.loadUrl("https://appassets.androidplatform.net/"); }
+    private boolean systemDark() {
+        return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+    }
+    private void configureSystemBars() {
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= 29) {
+            getWindow().setStatusBarContrastEnforced(false);
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+        if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
+        else getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        if (Build.VERSION.SDK_INT >= 28) {
+            WindowManager.LayoutParams attributes = getWindow().getAttributes();
+            attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            getWindow().setAttributes(attributes);
+        }
+        appearanceDark = systemDark();
+        updateSystemBarIcons();
+    }
+    private void updateSystemBarIcons() {
+        int flags = getWindow().getDecorView().getSystemUiVisibility();
+        flags = appearanceDark || lyricsOpen ? flags & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            : flags | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if (Build.VERSION.SDK_INT >= 26) flags = appearanceDark || lyricsOpen
+            ? flags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : flags | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        getWindow().getDecorView().setSystemUiVisibility(flags);
+    }
+    private void emitEnvironment() {
+        try {
+            float density = getResources().getDisplayMetrics().density;
+            environment = new JSONObject().put("dark", systemDark()).put("top", insetTop / density)
+                .put("bottom", insetBottom / density).put("left", insetLeft / density)
+                .put("right", insetRight / density).toString();
+            if (pageReady && !destroyed) web.evaluateJavascript(
+                "window.dispatchEvent(new CustomEvent('yesplaymusic-native-environment',{detail:" + environment + "}));", null);
+        } catch (Exception ignored) { }
+    }
+    @Override public void onConfigurationChanged(Configuration configuration) {
+        super.onConfigurationChanged(configuration);
+        content.requestApplyInsets();
+        emitEnvironment();
+    }
     private void showError(String text) { Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
     static MediaItem item(String id, String source, JSONObject song, int logicalIndex) {
         Bundle extras = new Bundle();
@@ -239,6 +297,14 @@ public final class MainActivity extends Activity {
     }
 
     public final class Bridge {
+        @JavascriptInterface public String getEnvironment() { return environment; }
+        @JavascriptInterface public boolean isSystemDark() { return systemDark(); }
+        @JavascriptInterface public void setAppearance(boolean dark) {
+            handler.post(() -> { appearanceDark = dark; updateSystemBarIcons(); });
+        }
+        @JavascriptInterface public void setLyricsOpen(boolean open) {
+            handler.post(() -> { lyricsOpen = open; updateSystemBarIcons(); });
+        }
         @JavascriptInterface public String getState() { return snapshot; }
         @JavascriptInterface public String getApiUrl() {
             return ApiClient.preferences(MainActivity.this).getBoolean("useRemoteApi", false)
@@ -276,6 +342,7 @@ public final class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume(); visible = true;
         web.onResume(); web.resumeTimers();
+        emitEnvironment();
         handler.removeCallbacks(progress); handler.post(progress);
     }
     @Override protected void onPause() {

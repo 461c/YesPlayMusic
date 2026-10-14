@@ -14,6 +14,9 @@ import '@/assets/css/nprogress.css';
 import { applyCustomCss } from '@/utils/customCss';
 import { isAndroid } from '@/utils/androidAudio';
 import '@/assets/css/android.scss';
+import { initializeAndroidEnvironment } from '@/utils/androidEnvironment';
+
+initializeAndroidEnvironment();
 
 window.resetApp = () => {
   localStorage.clear();

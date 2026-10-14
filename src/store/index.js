@@ -5,6 +5,7 @@ import mutations from './mutations';
 import actions from './actions';
 import { changeAppearance, changeThemeColor } from '@/utils/common';
 import Player from '@/utils/Player';
+import { updateAndroidLyrics } from '@/utils/androidEnvironment';
 // vuex 自定义插件
 import saveToLocalStorage from './plugins/localStorage';
 import { getSendSettingsPlugin } from './plugins/sendSettings';
@@ -44,14 +45,29 @@ if ([undefined, null].includes(store.state.settings.lang)) {
 changeAppearance(store.state.settings.appearance);
 changeThemeColor(store.state.settings.themeColor);
 
-window
-  .matchMedia('(prefers-color-scheme: dark)')
-  .addEventListener('change', () => {
-    if (store.state.settings.appearance === 'auto') {
-      changeAppearance(store.state.settings.appearance);
-      changeThemeColor(store.state.settings.themeColor);
-    }
-  });
+const updateSystemAppearance = () => {
+  if ([undefined, 'auto'].includes(store.state.settings.appearance)) {
+    changeAppearance(store.state.settings.appearance);
+    changeThemeColor(store.state.settings.themeColor);
+  }
+};
+const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+if (systemTheme.addEventListener) {
+  systemTheme.addEventListener('change', updateSystemAppearance);
+} else {
+  systemTheme.addListener(updateSystemAppearance);
+}
+window.addEventListener(
+  'yesplaymusic-native-environment',
+  updateSystemAppearance
+);
+store.watch(
+  state =>
+    state.showLyrics &&
+    [true, 'blur', 'dynamic'].includes(state.settings.lyricsBackground),
+  updateAndroidLyrics,
+  { immediate: true }
+);
 
 let player = new Player();
 player = new Proxy(player, {

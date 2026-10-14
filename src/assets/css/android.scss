@@ -8,14 +8,41 @@ body[data-platform='android'] {
     display: none !important;
   }
   main {
-    padding-left: 4vw;
-    padding-right: 4vw;
+    padding-top: calc(64px + var(--android-inset-top, 0px) + 12px);
+    padding-bottom: calc(
+      96px + var(--player-bottom-gap) + var(--android-inset-bottom, 0px)
+    );
+    padding-left: calc(4vw + var(--android-inset-left, 0px));
+    padding-right: calc(4vw + var(--android-inset-right, 0px));
     -webkit-overflow-scrolling: touch;
   }
   nav {
-    padding-left: 4vw;
-    padding-right: 4vw;
-    backdrop-filter: none;
+    padding-top: calc(var(--android-inset-top, 0px) + 12px);
+    padding-left: calc(4vw + var(--android-inset-left, 0px));
+    padding-right: calc(4vw + var(--android-inset-right, 0px));
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .player {
+    bottom: calc(var(--player-bottom-gap) + var(--android-inset-bottom, 0px));
+    width: calc(
+      100% - var(--player-side-gap) * 2 - var(--android-inset-left, 0px) -
+        var(--android-inset-right, 0px)
+    );
+  }
+  .lyrics-page {
+    padding: var(--android-inset-top, 0px) var(--android-inset-right, 0px)
+      var(--android-inset-bottom, 0px) var(--android-inset-left, 0px);
+    box-sizing: border-box;
+    .close-button {
+      top: calc(24px + var(--android-inset-top, 0px));
+      right: calc(24px + var(--android-inset-right, 0px));
+    }
+    .lyrics-background,
+    .gradient-background {
+      top: 0;
+      left: 0;
+    }
   }
   .settings-page .container {
     width: 100%;

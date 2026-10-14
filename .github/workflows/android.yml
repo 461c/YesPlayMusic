@@ -85,7 +85,16 @@ jobs:
           disable-animations: true
           script: |
             bash scripts/smoke-android-api.sh
-            gradle -p android connectedDebugAndroidTest --no-daemon || { cat android/app/build/outputs/androidTest-results/connected/debug/TEST-*.xml; exit 1; }
+            gradle -p android connectedDebugAndroidTest --no-daemon || { cat android/app/build/outputs/androidTest-results/connected/debug/TEST-*.xml; adb pull /sdcard/Android/data/com.yesplaymusic.tablet/files/android-ui android-ui-report || true; exit 1; }
+            adb pull /sdcard/Android/data/com.yesplaymusic.tablet/files/android-ui android-ui-report
+            adb shell dumpsys media_session > android-ui-report/media-session.txt
+      - name: Save Android UI verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-UI-verification
+          path: android-ui-report/
+          if-no-files-found: warn
       - name: Prepare installer
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk YesPlayMusic-Android-Tablet.apk
@@ -117,6 +126,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-Tablet.apk" .
           cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-Tablet.apk.sha256" .
           cp "$GITHUB_WORKSPACE/android/INSTALL.md" README.md
+          cp -a "$GITHUB_WORKSPACE/android-ui-report" ui-verification
           printf '{"sourceSha":"%s","runUrl":"https://github.com/%s/actions/runs/%s"}\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > build-info.json
           git add .
           git commit -m "build(android): ${GITHUB_SHA:0:12}"
