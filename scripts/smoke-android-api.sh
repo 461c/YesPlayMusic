@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# The disposable google_apis emulator is userdebug; root enables complete tombstone diagnostics.
+adb root
+adb wait-for-device
+native_crash() {
+  sleep 15
+  adb logcat -d -b crash
+  adb shell 'for file in /data/tombstones/tombstone_[0-9][0-9]; do [ ! -f "$file" ] || cat "$file"; done'
+  exit 1
+}
 adb install -g --no-incremental android/app/build/outputs/apk/release/app-release.apk
 adb logcat -c
 adb shell am start -W -n com.yesplaymusic.tablet/.MainActivity
@@ -8,14 +17,10 @@ for attempt in $(seq 1 90); do
   api_port=$(adb logcat -d -s YesPlayMusicAPI:I | sed -n 's/.*Local API ready at http:\/\/127\.0\.0\.1:\([0-9]*\).*/\1/p' | head -1)
   if [ -n "$api_port" ]; then break; fi
   if adb logcat -d -b crash | grep -q 'FORTIFY:'; then
-    sleep 3
-    adb logcat -d -b crash
-    exit 1
+    native_crash
   fi
   if ! adb shell pidof com.yesplaymusic.tablet >/dev/null; then
-    sleep 3
-    adb logcat -d -b crash
-    exit 1
+    native_crash
   fi
   sleep 1
 done
