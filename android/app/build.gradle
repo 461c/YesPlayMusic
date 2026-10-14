@@ -14,6 +14,8 @@ android {
     }
     ndkVersion '26.3.11579264'
     externalNativeBuild { cmake { path file('CMakeLists.txt'); version '3.22.1' } }
+    // Node packages have legitimate underscore paths; package exactly the manifest's files.
+    androidResources { ignoreAssetsPattern = '' }
     packaging { jniLibs { useLegacyPackaging true } }
     signingConfigs {
         development {

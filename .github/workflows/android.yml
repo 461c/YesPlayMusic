@@ -5,7 +5,7 @@ on:
     branches: [master]
     paths:
       - 'android/**'
-      - 'scripts/*android-api.*'
+      - 'scripts/*android-api*'
       - 'src/**'
       - 'public/**'
       - '.env.android'
@@ -69,6 +69,8 @@ jobs:
           gradle-version: '8.9'
       - name: Build installable APK
         run: gradle -p android assembleRelease --no-daemon
+      - name: Verify packaged API files
+        run: python3 scripts/check-android-api-assets.py android/app/build/outputs/apk/release/app-release.apk
       - name: Enable Android emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

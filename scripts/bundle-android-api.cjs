@@ -34,7 +34,11 @@ function copyPackage(source) {
     recursive: true,
     filter: file =>
       file === source ||
-      path.relative(source, file).split(path.sep)[0] !== 'node_modules',
+      (path.relative(source, file).split(path.sep)[0] !== 'node_modules' &&
+        !path
+          .relative(source, file)
+          .split(path.sep)
+          .some(part => part.startsWith('.'))),
   });
   for (const name of Object.keys(manifest.dependencies || {}))
     copyPackage(locate(name, source));

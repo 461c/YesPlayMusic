@@ -58,6 +58,7 @@ final class LocalApi {
                 }
                 throw new IOException("本地音乐接口启动失败，请关闭应用后重试");
             } catch (Exception | LinkageError error) {
+                Log.e("YesPlayMusicAPI", "Local API startup failed", error);
                 throw new java.util.concurrent.CompletionException(error);
             }
         });
