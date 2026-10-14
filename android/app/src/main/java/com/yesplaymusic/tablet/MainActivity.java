@@ -38,6 +38,7 @@ import org.json.JSONObject;
 @androidx.media3.common.util.UnstableApi
 public final class MainActivity extends Activity {
     private WebView web;
+    private android.widget.FrameLayout content;
     private volatile boolean destroyed = false;
     private final ExecutorService apiWorker = Executors.newFixedThreadPool(4);
     private MediaController controller;
@@ -58,13 +59,17 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         web = new WebView(this);
-        setContentView(web);
-        web.setOnApplyWindowInsetsListener((view, insets) -> {
+        content = new android.widget.FrameLayout(this);
+        content.setBackgroundColor(android.graphics.Color.BLACK);
+        content.addView(web, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        setContentView(content);
+        final int topGap = Math.round(12 * getResources().getDisplayMetrics().density);
+        content.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                view.setPadding(bars.left, bars.top + topGap, bars.right, bars.bottom);
             } else {
-                view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop() + topGap,
                     insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
             }
             return insets;
@@ -140,8 +145,8 @@ public final class MainActivity extends Activity {
                     .setPositiveButton("退出", (dialog, which) -> finish()).setCancelable(false).show();
                 return;
             }
-            setContentView(web);
-            web.requestApplyInsets();
+            setContentView(content);
+            content.requestApplyInsets();
             loadPage();
         }));
     }

@@ -7,8 +7,9 @@ android {
         applicationId 'com.yesplaymusic.tablet'
         minSdk 24
         targetSdk 35
-        versionCode 41102
-        versionName '0.4.11-android.2'
+        versionCode 41103
+        versionName '0.4.11-android.3'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
         externalNativeBuild { cmake { cppFlags '-std=c++20'; arguments '-DANDROID_STL=c++_shared' } }
     }
@@ -17,6 +18,7 @@ android {
     // Node packages have legitimate underscore paths; package exactly the manifest's files.
     androidResources { ignoreAssetsPattern = '' }
     packaging { jniLibs { useLegacyPackaging true } }
+    testBuildType 'release'
     signingConfigs {
         development {
             storeFile file('../dev-keystore.p12')
@@ -44,4 +46,6 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'androidx.media3:media3-exoplayer:1.5.1'
     implementation 'androidx.media3:media3-session:1.5.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }

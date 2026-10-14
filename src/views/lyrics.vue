@@ -289,12 +289,6 @@
           <svg-icon icon-class="arrow-down" />
         </button>
       </div>
-      <div class="close-button" style="left: 24px" @click="fullscreen">
-        <button>
-          <svg-icon v-if="isFullscreen" icon-class="fullscreen-exit" />
-          <svg-icon v-else icon-class="fullscreen" />
-        </button>
-      </div>
     </div>
   </transition>
 </template>
@@ -338,7 +332,6 @@ export default {
       minimize: true,
       background: '',
       date: this.formatTime(new Date()),
-      isFullscreen: !!document.fullscreenElement,
       rightClickLyric: null,
     };
   },
@@ -483,13 +476,10 @@ export default {
       this.setLyricsInterval();
     }
     document.addEventListener('keydown', e => {
-      if (e.key === 'F11') {
+      if (e.key === 'F11' && process.env.VUE_APP_ANDROID !== 'true') {
         e.preventDefault();
         this.fullscreen();
       }
-    });
-    document.addEventListener('fullscreenchange', () => {
-      this.isFullscreen = !!document.fullscreenElement;
     });
   },
   beforeDestroy: function () {

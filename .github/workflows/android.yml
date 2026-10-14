@@ -83,7 +83,9 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          script: bash scripts/smoke-android-api.sh
+          script: |
+            bash scripts/smoke-android-api.sh
+            gradle -p android connectedReleaseAndroidTest --no-daemon
       - name: Prepare installer
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk YesPlayMusic-Android-Tablet.apk
