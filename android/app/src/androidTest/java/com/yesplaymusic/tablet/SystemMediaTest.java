@@ -121,7 +121,9 @@ public class SystemMediaTest {
             system.getTransportControls().play();
             await(() -> controller.isPlaying() && controller.getMediaItemCount() == 2
                 && "system-fixture-b".equals(controller.getCurrentMediaItem().mediaId));
-            assertTrue("Resume must preserve the saved seek position", controller.getCurrentPosition() >= 1900);
+            AtomicReference<Long> resumedPosition = new AtomicReference<>();
+            ui(() -> resumedPosition.set(controller.getCurrentPosition()));
+            assertTrue("Resume must preserve the saved seek position", resumedPosition.get() >= 1900);
         } finally {
             if (browser != null) { MediaBrowser cleanup = browser; ui(cleanup::disconnect); }
             ui(() -> { controller.stop(); controller.release(); });

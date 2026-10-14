@@ -85,7 +85,7 @@ jobs:
           disable-animations: true
           script: |
             bash scripts/smoke-android-api.sh
-            gradle -p android connectedDebugAndroidTest --no-daemon
+            gradle -p android connectedDebugAndroidTest --no-daemon || { cat android/app/build/outputs/androidTest-results/connected/debug/TEST-*.xml; exit 1; }
       - name: Prepare installer
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk YesPlayMusic-Android-Tablet.apk
