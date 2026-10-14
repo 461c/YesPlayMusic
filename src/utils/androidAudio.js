@@ -108,7 +108,8 @@ export default class AndroidAudio {
       ? (performance.now() - this.positionUpdatedAt) / 1000
       : 0;
     const positionNow = (Number(this.state.position) || 0) + elapsed;
-    const duration = Number(this.state.duration) || this.owner.currentTrackDuration;
+    const duration =
+      Number(this.state.duration) || this.owner.currentTrackDuration;
     return duration > 0 ? Math.min(positionNow, duration) : positionNow;
   }
   play() {
