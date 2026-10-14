@@ -59,6 +59,16 @@ new Vue({
 }).$mount('#app');
 
 if (isAndroid) {
+  const updateAudioInfo = state => {
+    const info = state.audioInfo || null;
+    if (JSON.stringify(info) !== JSON.stringify(store.state.androidAudioInfo)) {
+      store.commit('updateAndroidAudioInfo', info);
+    }
+  };
+  window.addEventListener('yesplaymusic-native-state', event => {
+    updateAudioInfo(event.detail);
+  });
+  updateAudioInfo(JSON.parse(window.YesPlayMusicAndroid.getState()));
   window.yesplaymusicAndroidBack = () => {
     if (!store.state.showLyrics) return false;
     store.commit('toggleLyrics');

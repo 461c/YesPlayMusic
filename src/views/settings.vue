@@ -200,6 +200,16 @@
           </select>
         </div>
       </div>
+      <div v-if="isAndroid" class="item android-current-quality">
+        <div class="left">
+          <div class="title">当前播放音质</div>
+          <div class="description">所选音质在下次加载音源时生效。</div>
+        </div>
+        <div class="right">
+          <div>{{ androidQualityInfo }}</div>
+          <div class="description">{{ androidQualityNote }}</div>
+        </div>
+      </div>
       <div v-if="isElectron" class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.deviceSelector') }} </div>
@@ -915,7 +925,44 @@ export default {
     };
   },
   computed: {
-    ...mapState(['player', 'settings', 'data', 'lastfm']),
+    ...mapState(['player', 'settings', 'data', 'lastfm', 'androidAudioInfo']),
+    androidQualityInfo() {
+      const info = this.androidAudioInfo;
+      if (!info) return '暂无播放信息';
+      const formats = {
+        'audio/mpeg': 'MP3',
+        'audio/flac': 'FLAC',
+        'audio/mp4a-latm': 'AAC',
+        'audio/opus': 'Opus',
+        'audio/raw': 'PCM',
+      };
+      const parts = [
+        formats[info.mime] || info.sourceFormat?.toUpperCase() || '格式未知',
+      ];
+      if (info.bitrate > 0) parts.push(`${Math.round(info.bitrate / 1000)} kbps`);
+      if (info.sampleRate > 0) parts.push(`${info.sampleRate / 1000} kHz`);
+      if (info.bitDepth > 0) parts.push(`${info.bitDepth}-bit`);
+      if (info.channels > 0) parts.push(`${info.channels} 声道`);
+      return parts.join(' · ');
+    },
+    androidQualityNote() {
+      const info = this.androidAudioInfo;
+      if (!info) return '';
+      if (info.guest) return '未登录，当前使用公开音源。';
+      const levels = {
+        standard: '标准',
+        higher: '较高',
+        exhigh: '极高',
+        lossless: '无损',
+        hires: 'Hi-Res',
+      };
+      const requested = levels[info.requestedLevel];
+      const actual = levels[info.sourceLevel];
+      const parts = [];
+      if (requested) parts.push(`请求档位：${requested}`);
+      if (actual) parts.push(`音源档位：${actual}`);
+      return parts.join(' · ');
+    },
     isAndroid() {
       return isAndroid;
     },

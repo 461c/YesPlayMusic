@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.os.Looper;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
+import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
@@ -15,6 +16,8 @@ import androidx.media3.common.Player;
 import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.ResolvingDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.DecoderReuseEvaluation;
+import androidx.media3.exoplayer.analytics.AnalyticsListener;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaLibraryService;
@@ -66,12 +69,18 @@ public final class PlaybackService extends MediaLibraryService {
         player.setHandleAudioBecomingNoisy(true);
         player.setWakeMode(C.WAKE_MODE_NETWORK);
         PendingIntent activity = PendingIntent.getActivity(this, 0,
-            new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            new Intent(this, MainActivity.class).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Bundle extras = new Bundle();
         extras.putBoolean("android.media.playback.ALWAYS_RESERVE_SPACE_FOR.ACTION_SKIP_TO_PREVIOUS", true);
         extras.putBoolean("android.media.playback.ALWAYS_RESERVE_SPACE_FOR.ACTION_SKIP_TO_NEXT", true);
         session = new MediaLibrarySession.Builder(this, player, new LibraryCallback())
             .setId("yesplaymusic").setSessionExtras(extras).setSessionActivity(activity).build();
+        player.addAnalyticsListener(new AnalyticsListener() {
+            @Override public void onAudioInputFormatChanged(EventTime event, Format format, DecoderReuseEvaluation reuse) {
+                publishAudioInfo(format);
+            }
+        });
         player.addListener(new Player.Listener() {
             @Override public void onMediaItemTransition(MediaItem item, int reason) {
                 if (item != null) updateMetadata(item.mediaId);
@@ -106,6 +115,28 @@ public final class PlaybackService extends MediaLibraryService {
         });
     }
 
+    private void publishAudioInfo(Format format) {
+        MediaItem current = player.getCurrentMediaItem();
+        if (current == null || format == null) return;
+        try {
+            JSONObject info = ApiClient.audioInfo(this, current.mediaId);
+            info.put("trackId", current.mediaId).put("mime", format.sampleMimeType)
+                .put("sampleRate", Math.max(0, format.sampleRate)).put("channels", Math.max(0, format.channelCount));
+            if (info.optLong("bitrate") <= 0) info.put("bitrate", Math.max(0, format.averageBitrate));
+            int depth = format.pcmEncoding == C.ENCODING_PCM_16BIT ? 16
+                : format.pcmEncoding == C.ENCODING_PCM_24BIT ? 24
+                : format.pcmEncoding == C.ENCODING_PCM_32BIT ? 32
+                : format.pcmEncoding == C.ENCODING_PCM_8BIT ? 8 : 0;
+            if (depth > 0) info.put("bitDepth", depth);
+            Bundle extras = current.mediaMetadata.extras == null ? new Bundle() : new Bundle(current.mediaMetadata.extras);
+            String json = info.toString();
+            if (json.equals(extras.getString("androidAudioInfo"))) return;
+            extras.putString("androidAudioInfo", json);
+            player.replaceMediaItem(player.getCurrentMediaItemIndex(), current.buildUpon()
+                .setMediaMetadata(current.mediaMetadata.buildUpon().setExtras(extras).build()).build());
+        } catch (Exception ignored) { /* Diagnostics must never interrupt playback. */ }
+    }
+
     private void updateMetadata(String id) {
         if (!id.matches("\\d+") || id.equals(metadataId)) return;
         metadataId = id;
@@ -122,7 +153,9 @@ public final class PlaybackService extends MediaLibraryService {
                 }
                 JSONObject album = song.optJSONObject("al");
                 MediaMetadata.Builder metadata = new MediaMetadata.Builder()
-                    .setTitle(song.optString("name")).setArtist(names.toString());
+                    .setTitle(song.optString("name")).setDisplayTitle(song.optString("name"))
+                    .setArtist(names.toString()).setSubtitle(names.toString())
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC).setIsPlayable(true).setIsBrowsable(false);
                 if (album != null) {
                     metadata.setAlbumTitle(album.optString("name"));
                     String art = album.optString("picUrl");

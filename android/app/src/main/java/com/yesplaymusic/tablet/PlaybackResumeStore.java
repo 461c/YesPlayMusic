@@ -27,7 +27,7 @@ final class PlaybackResumeStore {
                     String uri = item.mediaId.matches("\\d+") ? "ypm://track/" + item.mediaId
                         : item.localConfiguration == null ? "" : item.localConfiguration.uri.toString();
                     queue.put(new JSONObject().put("id", item.mediaId).put("uri", uri)
-                        .put("mime", item.localConfiguration == null ? "audio/mpeg" : item.localConfiguration.mimeType)
+                        .put("mime", item.localConfiguration == null ? null : item.localConfiguration.mimeType)
                         .put("title", metadata.title).put("artist", metadata.artist).put("album", metadata.albumTitle)
                         .put("art", metadata.artworkUri == null ? "" : metadata.artworkUri.toString())
                         .put("index", metadata.extras == null ? -1 : metadata.extras.getInt("playlistIndex", -1)));
@@ -49,14 +49,18 @@ final class PlaybackResumeStore {
                 Bundle extras = new Bundle();
                 extras.putInt("playlistIndex", entry.optInt("index", -1));
                 MediaMetadata.Builder metadata = new MediaMetadata.Builder().setTitle(entry.optString("title"))
-                    .setArtist(entry.optString("artist")).setAlbumTitle(entry.optString("album"))
+                    .setDisplayTitle(entry.optString("title")).setArtist(entry.optString("artist"))
+                    .setSubtitle(entry.optString("artist")).setAlbumTitle(entry.optString("album"))
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                     .setIsBrowsable(false).setIsPlayable(true).setExtras(extras);
                 String art = entry.optString("art");
                 if (!art.isEmpty()) metadata.setArtworkUri(Uri.parse(art));
                 String uri = entry.optString("uri");
                 if (uri.isEmpty()) continue;
-                items.add(new MediaItem.Builder().setMediaId(entry.getString("id")).setUri(uri)
-                    .setMimeType(entry.optString("mime", "audio/mpeg")).setMediaMetadata(metadata.build()).build());
+                String id = entry.getString("id");
+                items.add(new MediaItem.Builder().setMediaId(id).setUri(uri)
+                    .setMimeType(id.matches("\\d+") ? null : entry.optString("mime", null))
+                    .setMediaMetadata(metadata.build()).build());
             }
         } catch (Exception ignored) { items.clear(); }
         return items;

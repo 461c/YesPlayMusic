@@ -2,9 +2,11 @@
   <div
     class="player"
     :class="{ 'lyrics-open': showLyrics }"
-    :role="showLyrics ? 'button' : null"
-    :tabindex="showLyrics ? 0 : null"
-    :aria-label="showLyrics ? '收起歌词' : null"
+    :role="showLyrics && !isAndroid ? 'button' : null"
+    :tabindex="showLyrics && !isAndroid ? 0 : null"
+    :aria-label="showLyrics && !isAndroid ? '收起歌词' : null"
+    :aria-hidden="isAndroid && showLyrics ? 'true' : null"
+    :inert="isAndroid && showLyrics ? '' : null"
     @click="handleClick"
     @mousedown="handleMouseDown"
     @keydown.enter.self.prevent="toggleLyrics"
@@ -209,7 +211,9 @@ export default {
   },
   data() {
     return {
+      isAndroid,
       mouseDownTarget: null,
+      playerResizeObserver: null,
     };
   },
   computed: {
@@ -237,13 +241,46 @@ export default {
   mounted() {
     this.setupMediaControls();
     window.addEventListener('keydown', this.handleKeydown);
+    if (isAndroid) {
+      this.updateLyricsTravel();
+      window.addEventListener('resize', this.updateLyricsTravel);
+      window.addEventListener(
+        'yesplaymusic-native-environment',
+        this.updateLyricsTravel
+      );
+      if (window.ResizeObserver) {
+        this.playerResizeObserver = new window.ResizeObserver(
+          this.updateLyricsTravel
+        );
+        this.playerResizeObserver.observe(this.$el);
+      }
+    }
   },
   beforeDestroy() {
     window.removeEventListener('keydown', this.handleKeydown);
+    window.removeEventListener('resize', this.updateLyricsTravel);
+    window.removeEventListener(
+      'yesplaymusic-native-environment',
+      this.updateLyricsTravel
+    );
+    this.playerResizeObserver?.disconnect();
+  },
+  watch: {
+    showLyrics() {
+      if (isAndroid) this.updateLyricsTravel();
+    },
   },
   methods: {
     ...mapMutations(['toggleLyrics']),
     ...mapActions(['showToast', 'likeATrack']),
+    updateLyricsTravel() {
+      const player = this.$el;
+      if (!player) return;
+      // Read the resting layout, independent of the current transform or custom bottom.
+      const viewport = document.documentElement.clientHeight;
+      const distance = Math.max(0, viewport - player.offsetTop) + 24;
+      player.style.setProperty('--player-lyrics-travel', `${distance}px`);
+    },
     handleClick(event) {
       if (event.target == this.mouseDownTarget) {
         this.toggleLyrics();

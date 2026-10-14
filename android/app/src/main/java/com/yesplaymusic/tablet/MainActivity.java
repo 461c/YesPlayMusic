@@ -84,9 +84,10 @@ public final class MainActivity extends Activity {
                     insetBottom = Math.max(insetBottom, insets.getDisplayCutout().getSafeInsetBottom());
                 }
             }
-            emitEnvironment();
+            view.post(this::emitEnvironment);
             return insets;
         });
+        web.addOnLayoutChangeListener((view, l, t, r, b, oldL, oldT, oldR, oldB) -> emitEnvironment());
         web.setBackgroundColor(android.graphics.Color.BLACK);
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -198,7 +199,11 @@ public final class MainActivity extends Activity {
     private void emitEnvironment() {
         try {
             float density = getResources().getDisplayMetrics().density;
-            environment = new JSONObject().put("dark", systemDark()).put("top", insetTop / density)
+            int[] origin = new int[2];
+            web.getLocationOnScreen(origin);
+            // Some vendor windows already lay WebView below the status bar.
+            int overlappingTop = Math.max(0, insetTop - Math.max(0, origin[1]));
+            environment = new JSONObject().put("dark", systemDark()).put("top", overlappingTop / density)
                 .put("bottom", insetBottom / density).put("left", insetLeft / density)
                 .put("right", insetRight / density).toString();
             if (pageReady && !destroyed) web.evaluateJavascript(
@@ -214,8 +219,9 @@ public final class MainActivity extends Activity {
     static MediaItem item(String id, String source, JSONObject song, int logicalIndex) {
         Bundle extras = new Bundle();
         extras.putInt("playlistIndex", logicalIndex);
-        MediaMetadata.Builder metadata = new MediaMetadata.Builder()
-            .setTitle(song == null ? "曲目 " + id : song.optString("name", "曲目 " + id)).setExtras(extras);
+        String title = song == null ? "曲目 " + id : song.optString("name", "曲目 " + id);
+        MediaMetadata.Builder metadata = new MediaMetadata.Builder().setTitle(title).setDisplayTitle(title)
+            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC).setIsPlayable(true).setIsBrowsable(false).setExtras(extras);
         if (song != null) {
             JSONArray artists = song.optJSONArray("ar");
             StringBuilder names = new StringBuilder();
@@ -225,7 +231,7 @@ public final class MainActivity extends Activity {
                 if (i > 0) names.append(", ");
                 names.append(artist.optString("name"));
             }
-            metadata.setArtist(names.toString());
+            metadata.setArtist(names.toString()).setSubtitle(names.toString());
             JSONObject album = song.optJSONObject("al");
             if (album != null) {
                 metadata.setAlbumTitle(album.optString("name"));
@@ -234,8 +240,8 @@ public final class MainActivity extends Activity {
             }
         }
         return new MediaItem.Builder().setMediaId(id)
-            .setUri(source == null || source.isEmpty() ? "ypm://track/" + id : source)
-            .setMimeType("audio/mpeg").setMediaMetadata(metadata.build()).build();
+            .setUri(id.matches("\\d+") || source == null || source.isEmpty() ? "ypm://track/" + id : source)
+            .setMediaMetadata(metadata.build()).build();
     }
 
     private void handle(JSONObject command) {
@@ -254,8 +260,8 @@ public final class MainActivity extends Activity {
                         items.add(item(entry.getString("id"), i == index ? command.optString("source", "") : null,
                             i == index ? command.optJSONObject("track") : null, entry.optInt("logicalIndex", -1)));
                     }
-                    ApiClient.preferences(this).edit().putString("cookie", command.optString("cookie", ""))
-                        .putBoolean("personalFm", command.optBoolean("personalFm", false)).apply();
+                    ApiClient.setCookie(this, command.optString("cookie", ""));
+                    ApiClient.preferences(this).edit().putBoolean("personalFm", command.optBoolean("personalFm", false)).apply();
                     controller.setMediaItems(items, index, position);
                     controller.setRepeatMode(command.optInt("repeatMode", Player.REPEAT_MODE_OFF));
                     controller.setVolume((float) command.optDouble("volume", 1));
@@ -287,6 +293,10 @@ public final class MainActivity extends Activity {
             state.put("ended", controller.getPlaybackState() == Player.STATE_ENDED);
             state.put("playlistIndex", current == null || current.mediaMetadata.extras == null ? -1
                 : current.mediaMetadata.extras.getInt("playlistIndex", -1));
+            if (current != null && current.mediaMetadata.extras != null) {
+                String info = current.mediaMetadata.extras.getString("androidAudioInfo", "");
+                if (!info.isEmpty()) state.put("audioInfo", new JSONObject(info));
+            }
             if (controller.getPlayerError() != null) state.put("error", controller.getPlayerError().getMessage());
             snapshot = state.toString();
             if (visible && pageReady) {
@@ -311,8 +321,9 @@ public final class MainActivity extends Activity {
                 ? ApiClient.baseUrl(MainActivity.this) : "";
         }
         @JavascriptInterface public void setCookie(String cookie) {
-            ApiClient.preferences(MainActivity.this).edit().putString("cookie", cookie).apply();
+            ApiClient.setCookie(MainActivity.this, cookie);
         }
+        @JavascriptInterface public void setMusicQuality(String quality) { ApiClient.setQuality(MainActivity.this, quality); }
         @JavascriptInterface public void request(String id, String json) {
             apiWorker.execute(() -> {
                 JSONObject result;

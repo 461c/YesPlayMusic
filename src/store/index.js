@@ -5,7 +5,10 @@ import mutations from './mutations';
 import actions from './actions';
 import { changeAppearance, changeThemeColor } from '@/utils/common';
 import Player from '@/utils/Player';
-import { updateAndroidLyrics } from '@/utils/androidEnvironment';
+import {
+  updateAndroidLyrics,
+  updateAndroidQuality,
+} from '@/utils/androidEnvironment';
 // vuex 自定义插件
 import saveToLocalStorage from './plugins/localStorage';
 import { getSendSettingsPlugin } from './plugins/sendSettings';
@@ -68,6 +71,9 @@ store.watch(
   updateAndroidLyrics,
   { immediate: true }
 );
+store.watch(state => state.settings.musicQuality, updateAndroidQuality, {
+  immediate: true,
+});
 
 let player = new Player();
 player = new Proxy(player, {

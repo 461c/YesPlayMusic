@@ -78,11 +78,18 @@ public class TabletUiTest {
             device.executeShellCommand("cmd uimode night no");
             awaitJs(activity, "!YesPlayMusicAndroid.isSystemDark() && document.body.dataset.theme === 'dark'");
             assertTrue(js(activity, "(document.querySelector('#app').__vue__.$store.state.player._enabled=true,"
+                + "true)"));
+            awaitJs(activity, "document.querySelector('.player')");
+            assertTrue(js(activity, "(document.querySelector('.player').style.bottom='140px',"
                 + "document.querySelector('#app').__vue__.$store.commit('toggleLyrics'),true)"));
             awaitJs(activity, "document.querySelector('.lyrics-page') && "
                 + "document.querySelector('.lyrics-page').getBoundingClientRect().top === 0 && "
-                + "getComputedStyle(document.querySelector('.player')).display === 'none'");
+                + "document.querySelector('.player').getBoundingClientRect().top >= document.documentElement.clientHeight && "
+                + "getComputedStyle(document.querySelector('.player')).opacity === '1'");
             device.takeScreenshot(new File(report, "tablet-lyrics.png"));
+            assertTrue(js(activity, "(document.querySelector('#app').__vue__.$store.commit('toggleLyrics'),true)"));
+            awaitJs(activity, "document.querySelector('.player').getBoundingClientRect().top < "
+                + "document.documentElement.clientHeight && document.querySelector('.player').style.bottom === '140px'");
         } finally {
             js(activity, "(document.querySelector('#app').__vue__.$store.state.settings.appearance='auto',"
                 + "document.querySelector('#app').__vue__.$store.state.showLyrics=false,true)");

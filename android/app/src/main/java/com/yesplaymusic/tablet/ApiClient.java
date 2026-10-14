@@ -11,11 +11,47 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
+import android.os.SystemClock;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class ApiClient {
-    private static final ConcurrentHashMap<String, String> audioUrls = new ConcurrentHashMap<>();
+    private static final class AudioSource {
+        final String url;
+        final JSONObject info;
+        final long expires;
+        AudioSource(String url, JSONObject info, long lifetime) {
+            this.url = url; this.info = info; this.expires = SystemClock.elapsedRealtime() + lifetime;
+        }
+    }
+    private static final ConcurrentHashMap<String, AudioSource> audioUrls = new ConcurrentHashMap<>();
+    static String qualityLevel(String quality) {
+        switch (quality) {
+            case "128000": case "standard": return "standard";
+            case "192000": case "higher": return "higher";
+            case "flac": case "lossless": return "lossless";
+            case "999000": case "hires": return "hires";
+            default: return "exhigh";
+        }
+    }
+    static void setQuality(Context context, String quality) {
+        String level = qualityLevel(quality);
+        if (!level.equals(preferences(context).getString("qualityLevel", "exhigh"))) audioUrls.clear();
+        preferences(context).edit().putString("qualityLevel", level).apply();
+    }
+    static void setCookie(Context context, String cookie) {
+        if (!cookie.equals(preferences(context).getString("cookie", ""))) audioUrls.clear();
+        preferences(context).edit().putString("cookie", cookie).apply();
+    }
+    private static String audioKey(Context context, String id) {
+        return id + ":" + preferences(context).getString("qualityLevel", "exhigh") + ":"
+            + preferences(context).getString("cookie", "") + ":" + baseUrl(context);
+    }
+    static JSONObject audioInfo(Context context, String id) {
+        AudioSource source = audioUrls.get(audioKey(context, id));
+        try { return source == null ? new JSONObject() : new JSONObject(source.info.toString()); }
+        catch (Exception ignored) { return new JSONObject(); }
+    }
     static SharedPreferences preferences(Context context) {
         return context.getSharedPreferences("android-player", Context.MODE_PRIVATE);
     }
@@ -60,26 +96,33 @@ final class ApiClient {
         } finally { connection.disconnect(); }
     }
     static Uri resolveAudio(Context context, String id) throws IOException {
-        String key = id + ":" + (System.currentTimeMillis() / 120000);
-        String cached = audioUrls.get(key);
-        if (cached != null) return Uri.parse(cached);
+        String key = audioKey(context, id);
+        AudioSource cached = audioUrls.get(key);
+        if (cached != null && cached.expires > SystemClock.elapsedRealtime()) return Uri.parse(cached.url);
         String result;
+        JSONObject info = new JSONObject();
+        long lifetime = 120000;
+        String level = preferences(context).getString("qualityLevel", "exhigh");
         String cookie = preferences(context).getString("cookie", "");
         if (cookie.contains("MUSIC_U=")) {
             try {
-                JSONObject response = json(context, "/song/url?id=" + Uri.encode(id) + "&br=320000");
+                JSONObject response = json(context, "/song/url/v1?id=" + Uri.encode(id) + "&level=" + Uri.encode(level));
                 JSONArray data = response.optJSONArray("data");
                 JSONObject track = data == null ? null : data.optJSONObject(0);
                 result = track == null ? "" : track.optString("url", "");
                 if (result.isEmpty() || (track.has("freeTrialInfo") && !track.isNull("freeTrialInfo"))) {
                     throw new IOException("该曲目没有可用的完整音源");
                 }
+                info.put("requestedLevel", level).put("sourceLevel", track.optString("level", ""))
+                    .put("bitrate", track.optLong("br", 0)).put("sourceFormat", track.optString("type", ""));
+                lifetime = Math.max(1000, Math.min(120000, track.optLong("expi", 120) * 1000 - 10000));
             } catch (Exception error) { throw new IOException(error); }
         } else {
             result = "https://music.163.com/song/media/outer/url?id=" + Uri.encode(id);
+            try { info.put("requestedLevel", level).put("guest", true); } catch (Exception ignored) { }
         }
         if (audioUrls.size() > 100) audioUrls.clear();
-        audioUrls.put(key, result);
+        audioUrls.put(key, new AudioSource(result, info, lifetime));
         return Uri.parse(result);
     }
     static void ensureReady(Context context) throws Exception {

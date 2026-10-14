@@ -12,6 +12,7 @@ updateApp();
 
 export default {
   showLyrics: false,
+  androidAudioInfo: null,
   enableScrolling: true,
   title: 'YesPlayMusic',
   liked: {

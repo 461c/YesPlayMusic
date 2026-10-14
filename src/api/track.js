@@ -1,6 +1,8 @@
 import store from '@/store';
 import request from '@/utils/request';
 import { mapTrackPlayableStatus } from '@/utils/common';
+import { isAndroid } from '@/utils/androidAudio';
+import { musicQualityLevel } from '@/utils/musicQuality';
 import {
   cacheTrackDetail,
   getTrackDetailFromCache,
@@ -15,6 +17,13 @@ import {
  * @param {string} id - 音乐的 id，例如 id=405998841,33894312
  */
 export function getMP3(id) {
+  if (isAndroid) {
+    return request({
+      url: '/song/url/v1',
+      method: 'get',
+      params: { id, level: musicQualityLevel(store.state.settings.musicQuality) },
+    });
+  }
   const getBr = () => {
     // 当返回的 quality >= 400000时，就会优先返回 hi-res
     const quality = store.state.settings?.musicQuality ?? '320000';

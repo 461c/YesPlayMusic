@@ -1,5 +1,6 @@
 import shortcuts from '@/utils/shortcuts';
 import cloneDeep from 'lodash/cloneDeep';
+import Vue from 'vue';
 
 export default {
   updateLikedXXX(state, { name, data }) {
@@ -12,7 +13,10 @@ export default {
     state.settings.lang = lang;
   },
   changeMusicQuality(state, value) {
-    state.settings.musicQuality = value;
+    Vue.set(state.settings, 'musicQuality', value);
+  },
+  updateAndroidAudioInfo(state, value) {
+    state.androidAudioInfo = value;
   },
   changeLyricFontSize(state, value) {
     state.settings.lyricFontSize = value;

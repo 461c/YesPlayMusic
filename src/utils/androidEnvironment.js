@@ -1,3 +1,5 @@
+import { musicQualityLevel } from './musicQuality';
+
 const native =
   process.env.VUE_APP_ANDROID === 'true' && window.YesPlayMusicAndroid;
 
@@ -34,4 +36,10 @@ export function updateAndroidAppearance(appearance) {
 
 export function updateAndroidLyrics(open) {
   if (native && native.setLyricsOpen) native.setLyricsOpen(open);
+}
+
+export function updateAndroidQuality(quality) {
+  if (native && native.setMusicQuality) {
+    native.setMusicQuality(musicQualityLevel(quality));
+  }
 }
