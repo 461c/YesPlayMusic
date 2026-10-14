@@ -14,6 +14,7 @@ export default class AndroidAudio {
     this.sourceTrackId = source ? String(owner.currentTrackID) : '';
     this.awaitingTrack = this.sourceTrackId;
     this.state = { position: 0, playing: false };
+    this.positionUpdatedAt = performance.now();
     this.listeners = {};
     this.restorationRequested = false;
     this.onState = event => this.consume(event.detail);
@@ -33,6 +34,7 @@ export default class AndroidAudio {
     this.awaitingTrack = '';
     const wasPlaying = this.state.playing;
     this.state = state;
+    this.positionUpdatedAt = performance.now();
     if (!state.trackId) {
       if (state.ready && this.owner.enabled && !this.restorationRequested) {
         this.restorationRequested = true;
@@ -99,9 +101,15 @@ export default class AndroidAudio {
   seek(position) {
     if (position !== undefined && position !== null) {
       this.state.position = position;
+      this.positionUpdatedAt = performance.now();
       androidCommand({ action: 'seek', position });
     }
-    return Number(this.state.position) || 0;
+    const elapsed = this.state.playing
+      ? (performance.now() - this.positionUpdatedAt) / 1000
+      : 0;
+    const positionNow = (Number(this.state.position) || 0) + elapsed;
+    const duration = Number(this.state.duration) || this.owner.currentTrackDuration;
+    return duration > 0 ? Math.min(positionNow, duration) : positionNow;
   }
   play() {
     androidCommand({ action: 'play' });
