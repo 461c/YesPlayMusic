@@ -7,7 +7,7 @@ api_port=''
 for attempt in $(seq 1 90); do
   api_port=$(adb logcat -d -s YesPlayMusicAPI:I | sed -n 's/.*Local API ready at http:\/\/127\.0\.0\.1:\([0-9]*\).*/\1/p' | head -1)
   if [ -n "$api_port" ]; then break; fi
-  if adb logcat -d -b crash | grep -q 'com.yesplaymusic.tablet'; then
+  if ! adb shell pidof com.yesplaymusic.tablet >/dev/null; then
     adb logcat -d -b crash
     exit 1
   fi
@@ -16,6 +16,7 @@ done
 if [ -z "$api_port" ]; then
   adb shell uiautomator dump /sdcard/yesplaymusic-ui.xml || true
   adb shell cat /sdcard/yesplaymusic-ui.xml || true
+  adb logcat -d -b crash
   adb logcat -d -s YesPlayMusicAPI AndroidRuntime System.err libc chromium
   echo 'Embedded API did not become ready on Android'
   exit 1

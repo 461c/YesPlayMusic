@@ -17,6 +17,6 @@
 
 ## 从源码构建
 
-安装 Node.js 16、Yarn 1、JDK 17、Android SDK 35、Gradle 8.9、NDK 26.3.11579264 和 CMake 3.22.1。执行 `yarn install --frozen-lockfile --ignore-engines --ignore-scripts`、`yarn android:web`、`yarn android:api`。依照 `.github/workflows/android.yml` 下载并校验固定版本 Node.js Mobile，将 zip 解压到 `android/app/libnode`，将 `dist/` 内容复制到 `android/app/src/main/assets/web/`，解码开发证书后运行 `gradle -p android assembleRelease`。API 的生产依赖从现有 `yarn.lock` 安装结果收集，不会把桌面 Electron 或 Rust 原生插件打包到安卓 API 中。
+安装 Node.js 16、Yarn 1、JDK 17、Android SDK 35、Gradle 8.9、NDK 24.0.8215888 和 CMake 3.22.1。执行 `yarn install --frozen-lockfile --ignore-engines --ignore-scripts`、`yarn android:web`、`yarn android:api`。依照 `.github/workflows/android.yml` 下载并校验固定版本 Node.js Mobile，将 zip 解压到 `android/app/libnode`，将 `dist/` 内容复制到 `android/app/src/main/assets/web/`，解码开发证书后运行 `gradle -p android assembleRelease`。API 的生产依赖从现有 `yarn.lock` 安装结果收集，不会把桌面 Electron 或 Rust 原生插件打包到安卓 API 中。
 
 安装后可验证：首次打开无需地址设置；扫码登录、搜索、播放及切歌；退到后台切歌并恢复界面；编辑歌单与上传头像；关闭应用进程后重新启动；覆盖安装同签名更新。原生运行时仍需在目标设备验证，包括使用 16 KB 内存页的设备。
