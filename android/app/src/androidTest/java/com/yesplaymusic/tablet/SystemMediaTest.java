@@ -60,6 +60,9 @@ public class SystemMediaTest {
 
     @Test public void systemBrowserTokenControlsAndResumption() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        context.startActivity(new android.content.Intent().setComponent(new ComponentName(context.getPackageName(),
+            "com.yesplaymusic.tablet.MainActivity")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
         AtomicReference<ListenableFuture<MediaController>> connecting = new AtomicReference<>();
         ui(() -> connecting.set(new MediaController.Builder(context, new SessionToken(context,
             new ComponentName(context.getPackageName(), "com.yesplaymusic.tablet.PlaybackService"))).buildAsync()));
@@ -130,7 +133,7 @@ public class SystemMediaTest {
         private final ServerSocket server = new ServerSocket(0, 0, java.net.InetAddress.getByName("127.0.0.1"));
         private volatile boolean open = true;
         Fixture() throws Exception {
-            byte[] pcm = new byte[320000];
+            byte[] pcm = new byte[1920000];
             ByteBuffer wav = ByteBuffer.allocate(44 + pcm.length).order(ByteOrder.LITTLE_ENDIAN);
             wav.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + pcm.length)
                 .put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII)).putInt(16).putShort((short) 1).putShort((short) 1)
