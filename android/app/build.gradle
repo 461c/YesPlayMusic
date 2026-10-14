@@ -10,9 +10,9 @@ android {
         versionCode 41102
         versionName '0.4.11-android.2'
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
-        externalNativeBuild { cmake { cppFlags '-std=c++17'; arguments '-DANDROID_STL=c++_shared' } }
+        externalNativeBuild { cmake { cppFlags '-std=c++20'; arguments '-DANDROID_STL=c++_shared' } }
     }
-    ndkVersion '24.0.8215888'
+    ndkVersion '27.3.13750724'
     externalNativeBuild { cmake { path file('CMakeLists.txt'); version '3.22.1' } }
     // Node packages have legitimate underscore paths; package exactly the manifest's files.
     androidResources { ignoreAssetsPattern = '' }

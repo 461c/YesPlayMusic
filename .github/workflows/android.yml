@@ -46,8 +46,8 @@ jobs:
         run: yarn android:test
       - name: Download embedded Node.js runtime
         run: |
-          curl --fail --location --retry 3 -o "$RUNNER_TEMP/nodejs-mobile.zip" https://github.com/nodejs-mobile/nodejs-mobile/releases/download/v18.20.4/nodejs-mobile-v18.20.4-android.zip
-          echo "bd7321eaa1a7602fbe0bb87302df2d79d87835cf4363fbdd17c350dbb485c2af  $RUNNER_TEMP/nodejs-mobile.zip" | sha256sum --check
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/nodejs-mobile.zip" https://github.com/fogtape/nodejs-mobile/releases/download/v24.21.0-0/nodejs-mobile-android-24.21.0-0.zip
+          echo "e3cd29a1be03405f11dd5c857af8cd3ad13f84f1409ea648f5328f0bada5bd76  $RUNNER_TEMP/nodejs-mobile.zip" | sha256sum --check
           mkdir -p android/app/libnode
           unzip -q "$RUNNER_TEMP/nodejs-mobile.zip" -d android/app/libnode
       - name: Bundle interface assets
@@ -63,7 +63,7 @@ jobs:
         with:
           packages: 'platform-tools'
       - name: Install Android SDK
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;24.0.8215888' 'cmake;3.22.1'
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.3.13750724' 'cmake;3.22.1'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'

@@ -5,3 +5,5 @@ set_target_properties(node PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libn
 add_library(ypm-node SHARED src/main/cpp/node-runtime.cpp)
 target_include_directories(ypm-node PRIVATE libnode/include/node)
 target_link_libraries(ypm-node node log)
+
+target_link_options(ypm-node PRIVATE "-Wl,-z,max-page-size=16384")

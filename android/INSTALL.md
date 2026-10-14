@@ -17,6 +17,8 @@
 
 ## 从源码构建
 
-安装 Node.js 16、Yarn 1、JDK 17、Android SDK 35、Gradle 8.9、NDK 24.0.8215888 和 CMake 3.22.1。执行 `yarn install --frozen-lockfile --ignore-engines --ignore-scripts`、`yarn android:web`、`yarn android:api`。依照 `.github/workflows/android.yml` 下载并校验固定版本 Node.js Mobile，将 zip 解压到 `android/app/libnode`，将 `dist/` 内容复制到 `android/app/src/main/assets/web/`，解码开发证书后运行 `gradle -p android assembleRelease`。API 的生产依赖从现有 `yarn.lock` 安装结果收集，不会把桌面 Electron 或 Rust 原生插件打包到安卓 API 中。
+安装 Node.js 16、Yarn 1、JDK 17、Android SDK 35、Gradle 8.9、NDK 27.3.13750724 和 CMake 3.22.1。执行 `yarn install --frozen-lockfile --ignore-engines --ignore-scripts`、`yarn android:web`、`yarn android:api`。依照 `.github/workflows/android.yml` 下载并校验固定版本 Node.js Mobile，将 zip 解压到 `android/app/libnode`，将 `dist/` 内容复制到 `android/app/src/main/assets/web/`，解码开发证书后运行 `gradle -p android assembleRelease`。API 的生产依赖从现有 `yarn.lock` 安装结果收集，不会把桌面 Electron 或 Rust 原生插件打包到安卓 API 中。
 
-安装后可验证：首次打开无需地址设置；扫码登录、搜索、播放及切歌；退到后台切歌并恢复界面；编辑歌单与上传头像；关闭应用进程后重新启动；覆盖安装同签名更新。原生运行时仍需在目标设备验证，包括使用 16 KB 内存页的设备。
+安装后可验证：首次打开无需地址设置；扫码登录、搜索、播放及切歌；退到后台切歌并恢复界面；编辑歌单与上传头像；关闭应用进程后重新启动；覆盖安装同签名更新。运行库和 JNI 桥接使用 16 KB 对齐；实际登录、播放及设备兼容性仍需在目标设备验证。
+
+内置运行库固定为 [fogtape/nodejs-mobile v24.21.0-0](https://github.com/fogtape/nodejs-mobile/releases/tag/v24.21.0-0) 的完整 Android 构建（基于 Node.js 24.21.0，移动端构建为预发布修订），下载时校验固定 SHA-256。使用其匹配的 NDK r27d；接口依赖仍使用本仓库的 `yarn.lock`。
