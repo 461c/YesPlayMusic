@@ -26,7 +26,9 @@ final class LocalApi {
         Context app = context.getApplicationContext();
         startup = CompletableFuture.supplyAsync(() -> {
             try {
+                Log.i("YesPlayMusicAPI", "Installing local API assets");
                 File directory = install(app);
+                Log.i("YesPlayMusicAPI", "Loading embedded Node runtime");
                 int port;
                 try (ServerSocket socket = new ServerSocket(0, 0, InetAddress.getByName("127.0.0.1"))) {
                     port = socket.getLocalPort();
@@ -82,6 +84,7 @@ final class LocalApi {
                     throw new IOException("Invalid API asset path");
                 }
                 target.getParentFile().mkdirs();
+                if (i % 500 == 0) Log.i("YesPlayMusicAPI", "Installing API file " + i + "/" + files.length());
                 try (FileOutputStream output = new FileOutputStream(target)) {
                     output.write(ApiClient.read(context.getAssets().open("api/" + path)));
                 }

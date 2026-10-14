@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-adb install --no-incremental android/app/build/outputs/apk/release/app-release.apk
+adb install -g --no-incremental android/app/build/outputs/apk/release/app-release.apk
 adb logcat -c
 adb shell am start -W -n com.yesplaymusic.tablet/.MainActivity
 api_port=''
@@ -14,7 +14,9 @@ for attempt in $(seq 1 90); do
   sleep 1
 done
 if [ -z "$api_port" ]; then
-  adb logcat -d -s YesPlayMusicAPI AndroidRuntime chromium
+  adb shell uiautomator dump /sdcard/yesplaymusic-ui.xml || true
+  adb shell cat /sdcard/yesplaymusic-ui.xml || true
+  adb logcat -d -s YesPlayMusicAPI AndroidRuntime System.err libc chromium
   echo 'Embedded API did not become ready on Android'
   exit 1
 fi
