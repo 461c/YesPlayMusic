@@ -9,3 +9,5 @@
 - Use the existing `yarn.lock` for dependency installation. Build the Windows installer with `yarn electron:build-win64`.
 - Settings support a persistent custom CSS URL, or a local file path/file:// URL in Electron. Apply user styles after built-in styles, reload local files on save, and allow clearing them to restore built-in styles.
 - Verify the workflow result before reporting that an installer has been published.
+- Android uses the local WebView UI with a native Media3/ExoPlayer MediaSessionService, not WebView audio. Preserve native background queues, audio focus, headset pause and session reconnection. Android API access is configured at first launch; do not hardcode an unverified third-party server.
+- Android APKs are built by `.github/workflows/android.yml` and published to the `android` artifact branch. Keep the development signing certificate stable for installable updates; do not describe this certificate as an app-store signing key.

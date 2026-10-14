@@ -1,0 +1,72 @@
+html[data-platform='android'] {
+  min-width: 0;
+}
+body[data-platform='android'] {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  main {
+    padding-left: 4vw;
+    padding-right: 4vw;
+    -webkit-overflow-scrolling: touch;
+  }
+  nav {
+    padding-left: 4vw;
+    padding-right: 4vw;
+    backdrop-filter: none;
+  }
+  .settings-page .container {
+    width: 100%;
+    max-width: 720px;
+  }
+  .button-icon {
+    min-width: 40px;
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+  .lyrics-background {
+    filter: blur(24px) brightness(0.6);
+  }
+  .dynamic-background > div {
+    animation: none !important;
+  }
+  .cover .shadow,
+  .lyrics-page .cover-container .shadow {
+    display: none;
+  }
+  .android-api-address input {
+    width: 100%;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+  }
+  @media (max-width: 700px) {
+    .right-control-buttons .container > .button-icon:nth-child(2),
+    .right-control-buttons .container > .button-icon:nth-child(3),
+    .right-control-buttons
+      .container
+      > .button-icon:nth-child(4):not(.lyrics-button) {
+      display: none;
+    }
+    .player .playing img {
+      width: 36px;
+      height: 36px;
+    }
+    .custom-css-item {
+      flex-direction: column;
+      gap: 12px;
+      .left {
+        max-width: none;
+      }
+      .custom-css-form {
+        width: 100%;
+      }
+    }
+    .lyrics-page {
+      .left-side {
+        width: 40%;
+      }
+      .right-side {
+        width: 60%;
+      }
+    }
+  }
+}

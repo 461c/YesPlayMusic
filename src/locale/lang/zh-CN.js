@@ -178,6 +178,12 @@ export default {
       ocean: '海洋渐变',
       forest: '森林渐变',
     },
+    androidApi: {
+      text: '安卓音乐接口地址',
+      placeholder: 'https://你的接口服务地址',
+      save: '保存并刷新',
+      invalid: '请输入平板可访问的 HTTP 或 HTTPS 音乐接口地址',
+    },
     customCss: {
       text: '自定义 CSS 地址',
       description:

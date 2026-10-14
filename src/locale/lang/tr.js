@@ -172,6 +172,12 @@ export default {
       ocean: 'Okyanus geçişi',
       forest: 'Orman geçişi',
     },
+    androidApi: {
+      text: 'Android müzik API adresi',
+      placeholder: 'https://your-api.example.com',
+      save: 'Kaydet ve yenile',
+      invalid: 'Tabletten erişilebilen bir HTTP/HTTPS müzik API adresi girin.',
+    },
     customCss: {
       text: 'Özel CSS adresi',
       description:

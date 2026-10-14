@@ -1,6 +1,7 @@
 import router from '@/router';
 import { doLogout, getCookie } from '@/utils/auth';
 import axios from 'axios';
+import { isAndroid } from '@/utils/androidAudio';
 
 let baseURL = '';
 // Web 和 Electron 跑在不同端口避免同时启动时冲突
@@ -24,7 +25,7 @@ service.interceptors.request.use(function (config) {
   if (!config.params) config.params = {};
   if (baseURL.length) {
     if (
-      baseURL[0] !== '/' &&
+      (baseURL[0] !== '/' || isAndroid) &&
       !process.env.IS_ELECTRON &&
       getCookie('MUSIC_U') !== null
     ) {

@@ -24,7 +24,7 @@ let localStorage = {
     enableReversedMode: false,
     nyancatStyle: false,
     showLyricsTranslation: true,
-    lyricsBackground: true,
+    lyricsBackground: process.env.VUE_APP_ANDROID === 'true' ? false : true,
     enableOsdlyricsSupport: false,
     closeAppOption: 'ask',
     enableDiscordRichPresence: false,

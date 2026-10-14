@@ -50,6 +50,12 @@
 
 设置会自动保存，启动时重新应用。本地 CSS 文件保存后自动重新加载；外部 CSS 可点击「重新加载」刷新。「清除样式」可以恢复内置样式。
 
+### 安卓平板版
+
+[下载安卓 APK](https://github.com/461c/YesPlayMusic/raw/refs/heads/android/YesPlayMusic-Android-Tablet.apk) · [安卓构建状态](https://github.com/461c/YesPlayMusic/actions/workflows/android.yml) · [安装及接口配置说明](android/INSTALL.md)
+
+支持 Android 7.0 及以上，使用原生 Media3/ExoPlayer 前台媒体服务实现后台音乐播放、锁屏和耳机控制。安卓界面默认减少动态效果，退到后台暂停界面计时器；音频播放和队列切歌独立运行。首次启动需要填写平板可以访问的兼容网易云音乐 API 服务地址，安卓 APK 不包含桌面版的 Electron/Node.js 服务。
+
 ## 全新版本
 
 全新 2.0 Alpha 测试版已发布，欢迎前往 [Releases](https://github.com/qier222/YesPlayMusic/releases) 页面下载。
@@ -70,7 +76,7 @@
 - ~~✔️ 每日自动签到（手机端和电脑端同时签到）~~
 - 🌚 Light/Dark Mode 自动切换
 - 👆 支持 Touch Bar 歌词显示
-![Library][touchbar-screenshot]
+  ![Library][touchbar-screenshot]
 - 🖥️ 支持 PWA，可在 Chrome/Edge 里点击地址栏右边的 ➕ 安装到电脑
 - 🟥 支持 Last.fm Scrobble
 - ☁️ 支持音乐云盘
@@ -309,4 +315,4 @@ API 源代码来自 [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryif
 [library-screenshot]: images/library.png
 [library-dark-screenshot]: images/library-dark.png
 [search-screenshot]: images/search.png
-[touchbar-screenshot]: images/touchbar.png 
+[touchbar-screenshot]: images/touchbar.png

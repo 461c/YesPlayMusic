@@ -199,6 +199,7 @@ import ButtonIcon from '@/components/ButtonIcon.vue';
 import VueSlider from 'vue-slider-component';
 import { goToListSource, hasListSource } from '@/utils/playList';
 import { formatTrackTime } from '@/utils/common';
+import { isAndroid } from '@/utils/androidAudio';
 
 export default {
   name: 'Player',
@@ -303,6 +304,7 @@ export default {
     },
 
     setupMediaControls() {
+      if (isAndroid) return;
       if ('mediaSession' in navigator) {
         navigator.mediaSession.setActionHandler('play', () => {
           this.playOrPause();

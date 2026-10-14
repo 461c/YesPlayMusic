@@ -123,6 +123,21 @@
           </div>
         </form>
       </div>
+      <div v-if="isAndroid" class="item android-api-address">
+        <div class="left">
+          <div class="title">{{ $t('settings.androidApi.text') }}</div>
+        </div>
+        <form class="right" @submit.prevent="saveAndroidApi">
+          <input
+            v-model="androidApiInput"
+            class="text-input"
+            type="url"
+            :aria-label="$t('settings.androidApi.text')"
+            :placeholder="$t('settings.androidApi.placeholder')"
+          />
+          <button type="submit">{{ $t('settings.androidApi.save') }}</button>
+        </form>
+      </div>
       <div v-if="isElectron" class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
@@ -864,6 +879,7 @@ import {
 } from '@/utils/common';
 import { countDBSize, clearDB } from '@/utils/db';
 import { applyCustomCss } from '@/utils/customCss';
+import { isAndroid } from '@/utils/androidAudio';
 import pkg from '../../package.json';
 
 const electron =
@@ -877,6 +893,7 @@ export default {
   name: 'Settings',
   data() {
     return {
+      androidApiInput: isAndroid ? window.YesPlayMusicAndroid.getApiUrl() : '',
       customCssInput: this.$store.state.settings.customCssUrl || '',
       customCssLoading: false,
       tracksCache: {
@@ -899,6 +916,9 @@ export default {
   },
   computed: {
     ...mapState(['player', 'settings', 'data', 'lastfm']),
+    isAndroid() {
+      return isAndroid;
+    },
     isElectron() {
       return process.env.IS_ELECTRON;
     },
@@ -1415,6 +1435,17 @@ export default {
   },
   methods: {
     ...mapActions(['showToast']),
+    saveAndroidApi() {
+      try {
+        const url = new URL(this.androidApiInput.trim());
+        if (!['http:', 'https:'].includes(url.protocol))
+          throw new Error('invalid URL');
+        window.YesPlayMusicAndroid.setApiUrl(url.href.replace(/\/$/, ''));
+        window.location.reload();
+      } catch (error) {
+        this.showToast(this.$t('settings.androidApi.invalid'));
+      }
+    },
     customCssError(error) {
       const key = error.message.startsWith('settings.customCss.')
         ? error.message

@@ -34,6 +34,13 @@ NeteaseCloudMusicApi-master.zip
 vercel.json
 # direnv
 .direnv
+/android/.gradle
+/android/build
+/android/app/build
+/android/local.properties
+/android/dev-keystore.jks
+/android/dev-keystore.p12
+/android/app/src/main/assets/web
 
 # pre-commit
 .pre-commit-config.yaml

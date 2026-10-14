@@ -174,6 +174,12 @@ export default {
       ocean: '海洋漸變',
       forest: '森林漸變',
     },
+    androidApi: {
+      text: 'Android 音樂介面位址',
+      placeholder: 'https://你的介面服務位址',
+      save: '儲存並重新整理',
+      invalid: '請輸入平板可存取的 HTTP 或 HTTPS 音樂介面位址',
+    },
     customCss: {
       text: '自訂 CSS 位址',
       description:

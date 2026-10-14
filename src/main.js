@@ -12,6 +12,8 @@ import '@/assets/css/global.scss';
 import NProgress from 'nprogress';
 import '@/assets/css/nprogress.css';
 import { applyCustomCss } from '@/utils/customCss';
+import { isAndroid } from '@/utils/androidAudio';
+import '@/assets/css/android.scss';
 
 window.resetApp = () => {
   localStorage.clear();
@@ -29,16 +31,21 @@ console.log(
   'background:unset;color:unset;'
 );
 
-Vue.use(
-  VueGtag,
-  {
-    config: { id: 'G-KMJJCFZDKF' },
-  },
-  router
-);
+if (!isAndroid)
+  Vue.use(
+    VueGtag,
+    {
+      config: { id: 'G-KMJJCFZDKF' },
+    },
+    router
+  );
 Vue.config.productionTip = false;
 
 NProgress.configure({ showSpinner: false, trickleSpeed: 100 });
+if (isAndroid) {
+  document.body.setAttribute('data-platform', 'android');
+  document.documentElement.setAttribute('data-platform', 'android');
+}
 dailyTask();
 
 new Vue({
@@ -47,6 +54,14 @@ new Vue({
   router,
   render: h => h(App),
 }).$mount('#app');
+
+if (isAndroid) {
+  window.yesplaymusicAndroidBack = () => {
+    if (!store.state.showLyrics) return false;
+    store.commit('toggleLyrics');
+    return true;
+  };
+}
 
 applyCustomCss(store.state.settings.customCssUrl, () => {
   store.dispatch('showToast', i18n.t('settings.customCss.loadFailed'));

@@ -2,7 +2,7 @@
 
 import { register } from 'register-service-worker';
 
-if (!process.env.IS_ELECTRON) {
+if (!process.env.IS_ELECTRON && process.env.VUE_APP_ANDROID !== 'true') {
   register(`${process.env.BASE_URL}service-worker.js`, {
     ready() {
       // console.log(

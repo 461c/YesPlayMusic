@@ -177,6 +177,13 @@ export default {
       ocean: 'Ocean Gradient',
       forest: 'Forest Gradient',
     },
+    androidApi: {
+      text: 'Android music API address',
+      placeholder: 'https://your-api.example.com',
+      save: 'Save and refresh',
+      invalid:
+        'Enter an HTTP/HTTPS music API address accessible from this tablet.',
+    },
     customCss: {
       text: 'Custom CSS address',
       description:

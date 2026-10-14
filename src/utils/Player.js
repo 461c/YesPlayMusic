@@ -10,6 +10,7 @@ import { cacheTrackSource, getTrackSource } from '@/utils/db';
 import { isCreateMpris, isCreateTray } from '@/utils/platform';
 import { Howl, Howler } from 'howler';
 import shuffle from 'lodash/shuffle';
+import AndroidAudio, { isAndroid, androidCommand } from '@/utils/androidAudio';
 import { decode as base642Buffer } from '@/utils/base64';
 
 const PLAY_PAUSE_FADE_DURATION = 200;
@@ -39,6 +40,7 @@ const excludeSaveKeys = [
   '_playing',
   '_personalFMLoading',
   '_personalFMNextLoading',
+  '_nativeTrackLoadingId',
 ];
 
 function setTitle(track) {
@@ -70,6 +72,7 @@ export default class {
     this._volumeBeforeMuted = 1; // 用于保存静音前的音量
     this._personalFMLoading = false; // 是否正在私人FM中加载新的track
     this._personalFMNextLoading = false; // 是否正在缓存私人FM的下一首歌曲
+    this._nativeTrackLoadingId = '';
 
     // 播放信息
     this._list = []; // 播放列表
@@ -216,7 +219,9 @@ export default class {
     this._loadSelfFromLocalStorage();
     this._howler?.volume(this.volume);
 
-    if (this._enabled) {
+    if (isAndroid) {
+      this._howler = new AndroidAudio(this);
+    } else if (this._enabled) {
       // 恢复当前播放歌曲
       this._replaceCurrentTrack(this.currentTrackID, false).then(() => {
         this._howler?.seek(localStorage.getItem('playerCurrentTrackTime') ?? 0);
@@ -244,6 +249,30 @@ export default class {
     if (isCreateTray) {
       ipcRenderer?.send('updateTrayPlayState', this._playing);
     }
+  }
+  _syncNativeState(state) {
+    this._setPlaying(!!state.playing);
+    this._enabled = true;
+    if (state.playlistIndex >= 0) this.current = state.playlistIndex;
+    const id = Number(state.trackId);
+    if (!id || (id === this.currentTrackID && this.currentTrack.name)) return;
+    if (this._nativeTrackLoadingId === String(id)) return;
+    this._nativeTrackLoadingId = String(id);
+    if (state.playlistIndex === -1 && this._playNextList[0] === id)
+      this._playNextList.shift();
+    getTrackDetail(id)
+      .then(data => {
+        const native = JSON.parse(window.YesPlayMusicAndroid.getState());
+        if (String(native.trackId) !== String(id)) return;
+        this._currentTrack = data.songs[0];
+        setTitle(this._playing ? this._currentTrack : null);
+        this.saveSelfToLocalStorage();
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (this._nativeTrackLoadingId === String(id))
+          this._nativeTrackLoadingId = '';
+      });
   }
   _setIntervals() {
     // 同步播放进度
@@ -340,6 +369,12 @@ export default class {
     }
   }
   _playAudioSource(source, autoplay = true) {
+    if (isAndroid) {
+      this._howler?.unload();
+      this._howler = new AndroidAudio(this, source);
+      if (autoplay) this.play();
+      return;
+    }
     Howler.unload();
     this._howler = new Howl({
       src: [source],
@@ -492,6 +527,7 @@ export default class {
     return this._getAudioSourceBlobURL(buffer);
   }
   _getAudioSource(track) {
+    if (isAndroid) return this._getAudioSourceFromNetease(track);
     return this._getAudioSourceFromCache(String(track.id))
       .then(source => {
         return source ?? this._getAudioSourceFromNetease(track);
@@ -561,6 +597,7 @@ export default class {
     });
   }
   _cacheNextTrack() {
+    if (isAndroid) return;
     let nextTrackID = this._isPersonalFM
       ? this._personalFMNextTrack?.id ?? 0
       : this._getNextTrack()[0];
@@ -579,6 +616,7 @@ export default class {
     }
   }
   _initMediaSession() {
+    if (isAndroid) return;
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', () => {
         this.play();
@@ -610,6 +648,7 @@ export default class {
     }
   }
   _updateMediaSessionMetaData(track) {
+    if (isAndroid) return;
     if ('mediaSession' in navigator === false) {
       return;
     }
@@ -818,6 +857,12 @@ export default class {
   }
 
   pause() {
+    if (isAndroid) {
+      this._howler?.pause();
+      this._setPlaying(false);
+      setTitle(null);
+      return;
+    }
     this._howler?.fade(this.volume, 0, PLAY_PAUSE_FADE_DURATION);
 
     this._howler?.once('fade', () => {
@@ -881,6 +926,7 @@ export default class {
     }
   }
   setOutputDevice() {
+    if (isAndroid) return;
     if (this._howler?._sounds.length <= 0 || !this._howler?._sounds[0]._node) {
       return;
     }
@@ -949,6 +995,7 @@ export default class {
   }
   addTrackToPlayNext(trackID, playNow = false) {
     this._playNextList.push(trackID);
+    if (isAndroid) this._howler?.refreshQueue();
     if (playNow) {
       this.playNextTrack();
     }
@@ -990,15 +1037,22 @@ export default class {
     if (isCreateMpris) {
       ipcRenderer?.send('switchRepeatMode', this.repeatMode);
     }
+    if (isAndroid)
+      androidCommand({
+        action: 'repeat',
+        value: { off: 0, one: 1, on: 2 }[this.repeatMode],
+      });
   }
   switchShuffle() {
     this.shuffle = !this.shuffle;
+    if (isAndroid) this._howler?.refreshQueue();
     if (isCreateMpris) {
       ipcRenderer?.send('switchShuffle', this.shuffle);
     }
   }
   switchReversed() {
     this.reversed = !this.reversed;
+    if (isAndroid) this._howler?.refreshQueue();
   }
 
   clearPlayNextList() {

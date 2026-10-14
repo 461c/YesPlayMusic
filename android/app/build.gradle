@@ -1,0 +1,40 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.yesplaymusic.tablet'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.yesplaymusic.tablet'
+        minSdk 24
+        targetSdk 35
+        versionCode 41101
+        versionName '0.4.11-android.1'
+    }
+    signingConfigs {
+        development {
+            storeFile file('../dev-keystore.p12')
+            storeType 'pkcs12'
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.development
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.media3:media3-exoplayer:1.5.1'
+    implementation 'androidx.media3:media3-session:1.5.1'
+}
