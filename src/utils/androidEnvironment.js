@@ -43,3 +43,9 @@ export function updateAndroidQuality(quality) {
     native.setMusicQuality(musicQualityLevel(quality));
   }
 }
+
+export function updateAndroidConcurrentPlayback(enabled) {
+  if (native && native.setConcurrentPlayback) {
+    native.setConcurrentPlayback(Boolean(enabled));
+  }
+}

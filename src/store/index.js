@@ -6,6 +6,7 @@ import actions from './actions';
 import { changeAppearance, changeThemeColor } from '@/utils/common';
 import Player from '@/utils/Player';
 import {
+  updateAndroidConcurrentPlayback,
   updateAndroidLyrics,
   updateAndroidQuality,
 } from '@/utils/androidEnvironment';
@@ -74,6 +75,11 @@ store.watch(
 store.watch(state => state.settings.musicQuality, updateAndroidQuality, {
   immediate: true,
 });
+store.watch(
+  state => state.settings.allowConcurrentPlayback,
+  updateAndroidConcurrentPlayback,
+  { immediate: true }
+);
 
 let player = new Player();
 player = new Proxy(player, {

@@ -15,6 +15,9 @@ export default {
   changeMusicQuality(state, value) {
     Vue.set(state.settings, 'musicQuality', value);
   },
+  changeConcurrentPlayback(state, value) {
+    Vue.set(state.settings, 'allowConcurrentPlayback', value);
+  },
   updateAndroidAudioInfo(state, value) {
     state.androidAudioInfo = value;
   },

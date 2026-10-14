@@ -138,6 +138,26 @@
           <button type="submit">{{ $t('settings.androidApi.save') }}</button>
         </form>
       </div>
+      <div v-if="isAndroid" class="item">
+        <div class="left">
+          <div class="title">允许与其他应用同时播放</div>
+          <div class="description">
+            开启后允许同时发声，关闭则恢复常规播放行为。
+          </div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="allow-concurrent-playback"
+              v-model="allowConcurrentPlayback"
+              type="checkbox"
+              name="allow-concurrent-playback"
+              aria-label="允许与其他应用同时播放"
+            />
+            <label for="allow-concurrent-playback"></label>
+          </div>
+        </div>
+      </div>
       <div v-if="isElectron" class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
@@ -1106,6 +1126,14 @@ export default {
         if (value === this.settings.musicQuality) return;
         this.$store.commit('changeMusicQuality', value);
         this.clearCache();
+      },
+    },
+    allowConcurrentPlayback: {
+      get() {
+        return this.settings.allowConcurrentPlayback ?? false;
+      },
+      set(value) {
+        this.$store.commit('changeConcurrentPlayback', value);
       },
     },
     lyricFontSize: {

@@ -13,4 +13,5 @@
 - Settings support a persistent custom CSS URL, or a local file path/file:// URL in Electron. Apply user styles after built-in styles, reload local files on save, and allow clearing them to restore built-in styles.
 - Verify the workflow result before reporting that an installer has been published.
 - Android uses the local WebView UI with a native Media3/ExoPlayer MediaSessionService, not WebView audio. Preserve native background queues, audio focus, headset pause and session reconnection. Android API access is configured at first launch; do not hardcode an unverified third-party server.
+- Android Settings has a persistent opt-in concurrent playback switch. When enabled, disable ExoPlayer automatic audio focus handling so this app can mix with other media apps; when disabled, restore ordinary focus handling. Apply changes to the live service and to background/resumed playback. Headset-disconnect pause remains enabled.
 - Android APKs are built by `.github/workflows/android.yml` and published to the `android` artifact branch. Keep the development signing certificate stable for installable updates; do not describe this certificate as an app-store signing key.

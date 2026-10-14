@@ -324,6 +324,9 @@ public final class MainActivity extends Activity {
             ApiClient.setCookie(MainActivity.this, cookie);
         }
         @JavascriptInterface public void setMusicQuality(String quality) { ApiClient.setQuality(MainActivity.this, quality); }
+        @JavascriptInterface public void setConcurrentPlayback(boolean enabled) {
+            ApiClient.preferences(MainActivity.this).edit().putBoolean("allowConcurrentPlayback", enabled).apply();
+        }
         @JavascriptInterface public void request(String id, String json) {
             apiWorker.execute(() -> {
                 JSONObject result;

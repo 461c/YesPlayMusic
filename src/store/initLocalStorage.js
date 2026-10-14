@@ -15,6 +15,7 @@ let localStorage = {
     themeColor: 'default',
     customCssUrl: '',
     musicQuality: 320000,
+    allowConcurrentPlayback: false,
     lyricFontSize: 28,
     outputDevice: 'default',
     showPlaylistsByAppleMusic: true,

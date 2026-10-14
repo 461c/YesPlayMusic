@@ -2,6 +2,7 @@ package com.yesplaymusic.tablet;
 
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -45,6 +46,11 @@ public final class PlaybackService extends MediaLibraryService {
     private final AtomicBoolean loadingFm = new AtomicBoolean(false);
     private String metadataId = "";
     private int consecutiveErrors = 0;
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener = (preferences, key) -> {
+        if ("allowConcurrentPlayback".equals(key)) main.post(() -> {
+            if (player != null) applyAudioFocusPolicy();
+        });
+    };
     private final Runnable savePosition = new Runnable() {
         @Override public void run() {
             if (player != null && player.isPlaying()) {
@@ -71,8 +77,8 @@ public final class PlaybackService extends MediaLibraryService {
         };
         player = new ExoPlayer.Builder(this)
             .setMediaSourceFactory(new DefaultMediaSourceFactory(source)).build();
-        player.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
-            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true);
+        applyAudioFocusPolicy();
+        ApiClient.preferences(this).registerOnSharedPreferenceChangeListener(preferenceListener);
         player.setHandleAudioBecomingNoisy(true);
         player.setWakeMode(C.WAKE_MODE_NETWORK);
         PendingIntent activity = PendingIntent.getActivity(this, 0,
@@ -120,6 +126,12 @@ public final class PlaybackService extends MediaLibraryService {
                 }
             }
         });
+    }
+
+    private void applyAudioFocusPolicy() {
+        boolean concurrent = ApiClient.preferences(this).getBoolean("allowConcurrentPlayback", false);
+        player.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), !concurrent);
     }
 
     private void publishAudioInfo(Format format) {
@@ -281,6 +293,7 @@ public final class PlaybackService extends MediaLibraryService {
     @Override public MediaLibrarySession onGetSession(MediaSession.ControllerInfo info) { return session; }
 
     @Override public void onDestroy() {
+        ApiClient.preferences(this).unregisterOnSharedPreferenceChangeListener(preferenceListener);
         if (player != null) PlaybackResumeStore.save(this, player, true);
         worker.shutdownNow();
         main.removeCallbacksAndMessages(null);
