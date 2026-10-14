@@ -180,7 +180,7 @@ export default {
     },
     androidApi: {
       text: '安卓音乐接口地址',
-      placeholder: 'https://你的接口服务地址',
+      placeholder: '留空使用内置本地接口',
       save: '保存并刷新',
       invalid: '请输入平板可访问的 HTTP 或 HTTPS 音乐接口地址',
     },

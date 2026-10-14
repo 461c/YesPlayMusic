@@ -1437,6 +1437,11 @@ export default {
     ...mapActions(['showToast']),
     saveAndroidApi() {
       try {
+        if (!this.androidApiInput.trim()) {
+          window.YesPlayMusicAndroid.setApiUrl('');
+          window.location.reload();
+          return;
+        }
         const url = new URL(this.androidApiInput.trim());
         if (!['http:', 'https:'].includes(url.protocol))
           throw new Error('invalid URL');

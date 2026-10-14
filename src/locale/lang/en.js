@@ -179,7 +179,7 @@ export default {
     },
     androidApi: {
       text: 'Android music API address',
-      placeholder: 'https://your-api.example.com',
+      placeholder: 'Leave empty to use the built-in local API',
       save: 'Save and refresh',
       invalid:
         'Enter an HTTP/HTTPS music API address accessible from this tablet.',

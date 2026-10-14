@@ -36,6 +36,7 @@ public final class PlaybackService extends MediaSessionService {
 
     @Override public void onCreate() {
         super.onCreate();
+        LocalApi.ensureStarted(this);
         ResolvingDataSource.Factory source = new ResolvingDataSource.Factory(
             new DefaultHttpDataSource.Factory().setUserAgent("YesPlayMusic-Android")
                 .setDefaultRequestProperties(Collections.singletonMap("Referer", "https://music.163.com/"))

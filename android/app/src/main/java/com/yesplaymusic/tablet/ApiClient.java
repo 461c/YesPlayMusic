@@ -3,15 +3,13 @@ package com.yesplaymusic.tablet;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.webkit.WebResourceResponse;
-import java.io.ByteArrayInputStream;
+import android.util.Base64;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -22,14 +20,21 @@ final class ApiClient {
         return context.getSharedPreferences("android-player", Context.MODE_PRIVATE);
     }
     static String baseUrl(Context context) {
-        return preferences(context).getString("apiUrl", "");
+        return preferences(context).getBoolean("useRemoteApi", false)
+            ? preferences(context).getString("apiUrl", "") : LocalApi.address();
     }
     static void setBaseUrl(Context context, String address) {
+        if (address.trim().isEmpty()) {
+            preferences(context).edit().putBoolean("useRemoteApi", false).apply();
+            audioUrls.clear();
+            LocalApi.ensureStarted(context);
+            return;
+        }
         Uri uri = Uri.parse(address.trim());
         if ((!"https".equals(uri.getScheme()) && !"http".equals(uri.getScheme())) || uri.getHost() == null) {
             throw new IllegalArgumentException("请输入有效的 HTTP 或 HTTPS 接口地址");
         }
-        preferences(context).edit().putString("apiUrl", address.trim().replaceAll("/+$", "")).apply();
+        preferences(context).edit().putBoolean("useRemoteApi", true).putString("apiUrl", address.trim().replaceAll("/+$", "")).apply();
         audioUrls.clear();
     }
     static byte[] read(InputStream stream) throws IOException {
@@ -44,6 +49,7 @@ final class ApiClient {
     static JSONObject json(Context context, String path) throws Exception {
         String cookie = preferences(context).getString("cookie", "");
         String separator = path.contains("?") ? "&" : "?";
+        ensureReady(context);
         URL url = new URL(baseUrl(context) + path + separator + "cookie=" + Uri.encode(cookie));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setConnectTimeout(12000);
@@ -76,28 +82,42 @@ final class ApiClient {
         audioUrls.put(key, result);
         return Uri.parse(result);
     }
-    static WebResourceResponse proxy(Context context, Uri uri, String method) {
-        HttpURLConnection connection = null;
+    static void ensureReady(Context context) throws Exception {
+        if (!preferences(context).getBoolean("useRemoteApi", false)) {
+            LocalApi.ensureStarted(context).get(45, java.util.concurrent.TimeUnit.SECONDS);
+        }
+    }
+
+    // WebView interception cannot read POST bodies. The JS adapter passes the full request.
+    static JSONObject request(Context context, JSONObject request) throws Exception {
+        ensureReady(context);
+        String path = request.getString("url");
+        if (!path.startsWith("/api/")) throw new IllegalArgumentException("Invalid API route");
+        HttpURLConnection connection = (HttpURLConnection) new URL(baseUrl(context) + path.substring(4)).openConnection();
+        connection.setConnectTimeout(12000);
+        connection.setReadTimeout(15000);
+        connection.setRequestMethod(request.optString("method", "GET").toUpperCase(java.util.Locale.ROOT));
+        JSONObject headers = request.optJSONObject("headers");
+        if (headers != null) {
+            for (String name : new String[] {"Content-Type", "Accept"}) {
+                String value = headers.optString(name, "");
+                if (!value.isEmpty()) connection.setRequestProperty(name, value);
+            }
+        }
         try {
-            String endpoint = uri.getEncodedPath().substring(4);
-            String query = uri.getEncodedQuery();
-            URL url = new URL(baseUrl(context) + endpoint + (query == null ? "" : "?" + query));
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod(method);
-            connection.setConnectTimeout(12000);
-            connection.setReadTimeout(15000);
-            if ("POST".equals(method)) {
+            if (request.has("body") || request.has("bodyBase64")) {
+                byte[] body = request.has("bodyBase64")
+                    ? Base64.decode(request.getString("bodyBase64"), Base64.DEFAULT)
+                    : request.getString("body").getBytes(StandardCharsets.UTF_8);
                 connection.setDoOutput(true);
-                connection.getOutputStream().close();
+                try (java.io.OutputStream stream = connection.getOutputStream()) { stream.write(body); }
             }
             int code = connection.getResponseCode();
-            byte[] body = read(code >= 400 ? connection.getErrorStream() : connection.getInputStream());
-            return new WebResourceResponse("application/json", "UTF-8", code, "Response",
-                Collections.singletonMap("Cache-Control", "no-store"), new ByteArrayInputStream(body));
-        } catch (Exception error) {
-            byte[] body = "{\"code\":502,\"msg\":\"音乐接口连接失败，请在设置中检查接口地址\"}".getBytes(StandardCharsets.UTF_8);
-            return new WebResourceResponse("application/json", "UTF-8", 502, "Bad Gateway",
-                Collections.emptyMap(), new ByteArrayInputStream(body));
-        } finally { if (connection != null) connection.disconnect(); }
+            JSONObject response = new JSONObject();
+            response.put("status", code);
+            response.put("data", new String(read(code >= 400 ? connection.getErrorStream() : connection.getInputStream()), StandardCharsets.UTF_8));
+            response.put("headers", new JSONObject().put("content-type", connection.getContentType()));
+            return response;
+        } finally { connection.disconnect(); }
     }
 }

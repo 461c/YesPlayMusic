@@ -47,6 +47,8 @@ export function doLogout() {
   logout();
   removeCookie('MUSIC_U');
   removeCookie('__csrf');
+  if (process.env.VUE_APP_ANDROID === 'true' && window.YesPlayMusicAndroid)
+    window.YesPlayMusicAndroid.setCookie('');
   // 更新状态仓库中的用户信息
   store.commit('updateData', { key: 'user', value: {} });
   // 更新状态仓库中的登录状态

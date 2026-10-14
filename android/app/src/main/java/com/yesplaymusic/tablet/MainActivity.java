@@ -13,11 +13,13 @@ import android.os.Handler;
 import android.os.Looper;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
+import android.view.WindowInsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.EditText;
 import android.widget.Toast;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
@@ -36,6 +38,8 @@ import org.json.JSONObject;
 @androidx.media3.common.util.UnstableApi
 public final class MainActivity extends Activity {
     private WebView web;
+    private volatile boolean destroyed = false;
+    private final ExecutorService apiWorker = Executors.newFixedThreadPool(4);
     private MediaController controller;
     private ListenableFuture<MediaController> controllerFuture;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -55,6 +59,16 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         web = new WebView(this);
         setContentView(web);
+        web.setOnApplyWindowInsetsListener((view, insets) -> {
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            } else {
+                view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                    insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+            }
+            return insets;
+        });
         web.setBackgroundColor(android.graphics.Color.BLACK);
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -80,9 +94,6 @@ public final class MainActivity extends Activity {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 if (!"appassets.androidplatform.net".equals(uri.getHost())) return null;
-                if (uri.getPath() != null && uri.getPath().startsWith("/api/")) {
-                    return ApiClient.proxy(MainActivity.this, uri, request.getMethod());
-                }
                 return assets.shouldInterceptRequest(uri);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -115,29 +126,28 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 1);
         }
-        if (ApiClient.baseUrl(this).isEmpty()) askApiAddress();
-        else loadPage();
+        // Keep the UI on the asset origin; wait until native API requests can succeed.
+        android.widget.TextView loading = new android.widget.TextView(this);
+        loading.setText("正在启动本地音乐接口…");
+        loading.setTextColor(android.graphics.Color.WHITE);
+        loading.setGravity(android.view.Gravity.CENTER);
+        setContentView(loading);
+        LocalApi.ensureStarted(this).whenComplete((address, error) -> handler.post(() -> {
+            if (destroyed) return;
+            if (error != null) {
+                new AlertDialog.Builder(this).setTitle("本地音乐接口启动失败")
+                    .setMessage("请完全关闭应用后重试。若仍无法启动，请提供设备型号和系统版本。")
+                    .setPositiveButton("退出", (dialog, which) -> finish()).setCancelable(false).show();
+                return;
+            }
+            setContentView(web);
+            web.requestApplyInsets();
+            loadPage();
+        }));
     }
 
     private void loadPage() { pageReady = false; web.loadUrl("https://appassets.androidplatform.net/"); }
     private void showError(String text) { Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
-    private void askApiAddress() {
-        EditText input = new EditText(this);
-        input.setSingleLine(true);
-        input.setHint("https://your-api.example.com 或 http://192.168.1.10:3000");
-        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("设置音乐接口地址")
-            .setMessage("请输入安卓平板可访问的网易云音乐 API 服务地址。电脑内置的 localhost 服务不能直接使用。")
-            .setView(input).setCancelable(false).setPositiveButton("保存", null)
-            .setNegativeButton("退出", (d, which) -> finish()).create();
-        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            try {
-                ApiClient.setBaseUrl(this, input.getText().toString());
-                dialog.dismiss(); loadPage();
-            } catch (Exception error) { input.setError(error.getMessage()); }
-        }));
-        dialog.show();
-    }
-
     static MediaItem item(String id, String source, JSONObject song, int logicalIndex) {
         Bundle extras = new Bundle();
         extras.putInt("playlistIndex", logicalIndex);
@@ -225,7 +235,30 @@ public final class MainActivity extends Activity {
 
     public final class Bridge {
         @JavascriptInterface public String getState() { return snapshot; }
-        @JavascriptInterface public String getApiUrl() { return ApiClient.baseUrl(MainActivity.this); }
+        @JavascriptInterface public String getApiUrl() {
+            return ApiClient.preferences(MainActivity.this).getBoolean("useRemoteApi", false)
+                ? ApiClient.baseUrl(MainActivity.this) : "";
+        }
+        @JavascriptInterface public void setCookie(String cookie) {
+            ApiClient.preferences(MainActivity.this).edit().putString("cookie", cookie).apply();
+        }
+        @JavascriptInterface public void request(String id, String json) {
+            apiWorker.execute(() -> {
+                JSONObject result;
+                try { result = ApiClient.request(MainActivity.this, new JSONObject(json)); }
+                catch (Exception error) {
+                    result = new JSONObject();
+                    try { result.put("error", "音乐接口请求失败：" + error.getMessage()); }
+                    catch (Exception ignored) { }
+                }
+                try { result.put("id", id); } catch (Exception ignored) { }
+                String response = result.toString();
+                handler.post(() -> {
+                    if (!destroyed) web.evaluateJavascript(
+                        "window.dispatchEvent(new CustomEvent('yesplaymusic-api-response',{detail:" + response + "}));", null);
+                });
+            });
+        }
         @JavascriptInterface public void setApiUrl(String url) { ApiClient.setBaseUrl(MainActivity.this, url); }
         @JavascriptInterface public void send(String json) {
             try {
@@ -253,6 +286,8 @@ public final class MainActivity extends Activity {
         });
     }
     @Override protected void onDestroy() {
+        destroyed = true;
+        apiWorker.shutdownNow();
         handler.removeCallbacksAndMessages(null);
         if (controllerFuture != null) MediaController.releaseFuture(controllerFuture);
         web.removeJavascriptInterface("YesPlayMusicAndroid"); web.destroy();

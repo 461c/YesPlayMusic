@@ -2,6 +2,7 @@ import router from '@/router';
 import { doLogout, getCookie } from '@/utils/auth';
 import axios from 'axios';
 import { isAndroid } from '@/utils/androidAudio';
+import androidApiAdapter from '@/utils/androidApi';
 
 let baseURL = '';
 // Web 和 Electron 跑在不同端口避免同时启动时冲突
@@ -17,6 +18,7 @@ if (process.env.IS_ELECTRON) {
 
 const service = axios.create({
   baseURL,
+  ...(isAndroid ? { adapter: androidApiAdapter } : {}),
   withCredentials: true,
   timeout: 15000,
 });
@@ -33,6 +35,16 @@ service.interceptors.request.use(function (config) {
     }
   } else {
     console.error("You must set up the baseURL in the service's config");
+  }
+
+  if (isAndroid) {
+    const cookie = ['MUSIC_U', '__csrf']
+      .map(key => [key, getCookie(key)])
+      .filter(([, value]) => value)
+      .map(([key, value]) => `${key}=${value};`)
+      .join('');
+    config.params.cookie = cookie;
+    window.YesPlayMusicAndroid.setCookie(cookie);
   }
 
   if (!process.env.IS_ELECTRON && !config.url.includes('/login')) {
@@ -94,6 +106,7 @@ service.interceptors.response.use(
         router.push({ name: 'login' });
       }
     }
+    if (isAndroid) return Promise.reject(error);
   }
 );
 

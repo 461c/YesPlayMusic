@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(yesplaymusic_node)
+add_library(node SHARED IMPORTED)
+set_target_properties(node PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libnode/bin/${ANDROID_ABI}/libnode.so)
+add_library(ypm-node SHARED src/main/cpp/node-runtime.cpp)
+target_include_directories(ypm-node PRIVATE libnode/include/node)
+target_link_libraries(ypm-node node log)

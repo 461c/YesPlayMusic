@@ -174,7 +174,7 @@ export default {
     },
     androidApi: {
       text: 'Android müzik API adresi',
-      placeholder: 'https://your-api.example.com',
+      placeholder: 'Yerleşik yerel API için boş bırakın',
       save: 'Kaydet ve yenile',
       invalid: 'Tabletten erişilebilen bir HTTP/HTTPS müzik API adresi girin.',
     },

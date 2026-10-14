@@ -176,7 +176,7 @@ export default {
     },
     androidApi: {
       text: 'Android 音樂介面位址',
-      placeholder: 'https://你的介面服務位址',
+      placeholder: '留空使用內建本機介面',
       save: '儲存並重新整理',
       invalid: '請輸入平板可存取的 HTTP 或 HTTPS 音樂介面位址',
     },
