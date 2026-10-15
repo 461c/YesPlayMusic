@@ -1,16 +1,18 @@
 <template>
   <div ref="contextMenu" class="context-menu">
-    <div
-      v-if="showMenu"
-      ref="menu"
-      class="menu"
-      tabindex="-1"
-      :style="{ top: top, left: left }"
-      @blur="closeMenu"
-      @click="closeMenu"
-    >
-      <slot></slot>
-    </div>
+    <transition name="menu-reveal">
+      <div
+        v-if="showMenu"
+        ref="menu"
+        class="menu"
+        tabindex="-1"
+        :style="{ top: top, left: left }"
+        @blur="closeMenu"
+        @click="closeMenu"
+      >
+        <slot></slot>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -28,6 +30,11 @@ export default {
   },
   computed: {
     ...mapState(['player']),
+  },
+  watch: {
+    $route() {
+      if (this.showMenu) this.closeMenu();
+    },
   },
   methods: {
     setMenu(top, left) {
@@ -53,6 +60,7 @@ export default {
       this.showMenu = true;
       this.$nextTick(
         function () {
+          if (!this.showMenu || !this.$refs.menu) return;
           this.$refs.menu.focus();
           this.setMenu(e.y, e.x);
         }.bind(this)
@@ -65,6 +73,25 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.menu.menu-reveal-enter-active,
+.menu.menu-reveal-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.menu-reveal-enter,
+.menu-reveal-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.menu.menu-reveal-leave-active {
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu.menu-reveal-enter-active,
+  .menu.menu-reveal-leave-active {
+    transition-duration: 0.01ms;
+  }
+}
+
 .context-menu {
   width: 100%;
   height: 100%;

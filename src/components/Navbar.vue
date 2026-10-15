@@ -66,15 +66,6 @@
         <svg-icon icon-class="logout" />
         {{ $t('library.userProfileMenu.logout') }}
       </div>
-      <hr />
-      <div class="item" @click="toGitHub">
-        <svg-icon icon-class="github" />
-        主软件仓库
-      </div>
-      <div class="item" @click="toBuildGitHub">
-        <svg-icon icon-class="github" />
-        本构建仓库
-      </div>
     </ContextMenu>
   </div>
 </template>
@@ -162,12 +153,6 @@ export default {
     toSettings() {
       this.$router.push({ name: 'settings' });
     },
-    toGitHub() {
-      window.open('https://github.com/qier222/YesPlayMusic');
-    },
-    toBuildGitHub() {
-      window.open('https://github.com/461c/YesPlayMusic');
-    },
     toLogin() {
       if (process.env.IS_ELECTRON === true) {
         this.$router.push({ name: 'loginAccount' });
@@ -181,6 +166,7 @@ export default {
 
 <style lang="scss" scoped>
 nav {
+  border-bottom: 1px solid rgba(128, 128, 128, 0.18);
   position: fixed;
   top: 0;
   right: 0;

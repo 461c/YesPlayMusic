@@ -8,13 +8,15 @@
   >
     <div class="cover-container">
       <div class="shade">
-        <button
-          v-show="focus"
-          class="play-button"
-          :style="playButtonStyles"
-          @click.stop="play()"
-          ><svg-icon icon-class="play" />
-        </button>
+        <transition name="cover-button">
+          <button
+            v-show="focus"
+            class="play-button"
+            :style="playButtonStyles"
+            @click.stop="play()"
+            ><svg-icon icon-class="play" />
+          </button>
+        </transition>
       </div>
       <img v-image-fade :src="imageUrl" :style="imageStyles" loading="lazy" />
       <transition v-if="coverHover || alwaysShowShadow" name="fade">
@@ -47,6 +49,14 @@ export default {
     return {
       focus: false,
     };
+  },
+  watch: {
+    $route() {
+      this.focus = false;
+    },
+  },
+  deactivated() {
+    this.focus = false;
   },
   computed: {
     imageStyles() {
@@ -120,6 +130,23 @@ img {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+.play-button.cover-button-enter-active,
+.play-button.cover-button-leave-active {
+  transition: opacity 0.2s ease;
+}
+.cover-button-enter,
+.cover-button-leave-to {
+  opacity: 0;
+}
+.play-button.cover-button-leave-active {
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-button.cover-button-enter-active,
+  .play-button.cover-button-leave-active {
+    transition-duration: 0.01ms;
+  }
 }
 .play-button {
   display: flex;

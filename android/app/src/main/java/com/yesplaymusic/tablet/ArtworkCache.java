@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Explicit library artwork only. Browsing or playing a random track never enrolls an image. */
+/** Playlist covers may prefetch; song artwork downloads only on an actual eligible image request. */
 final class ArtworkCache {
     private static ArtworkCache instance;
     static synchronized ArtworkCache get(Context context) {
@@ -27,6 +27,7 @@ final class ArtworkCache {
     }
     private final File directory;
     private final ExecutorService downloads = Executors.newFixedThreadPool(2);
+    private final Set<String> eligible = ConcurrentHashMap.newKeySet();
     private final Set<String> pending = ConcurrentHashMap.newKeySet();
     private final AtomicLong bytes = new AtomicLong(), count = new AtomicLong();
     private volatile long generation;
@@ -55,6 +56,16 @@ final class ArtworkCache {
         StringBuilder key = new StringBuilder();
         for (byte part : hash) key.append(String.format(Locale.ROOT, "%02x", part & 255));
         return new File(directory, key + ".img");
+    }
+    void resetEligibility() { eligible.clear(); }
+    void allow(String json) {
+        try {
+            JSONArray urls = new JSONArray(json);
+            for (int i = 0; i < urls.length(); i++) {
+                String address = canonical(urls.optString(i));
+                if (address != null) eligible.add(address);
+            }
+        } catch (Exception ignored) { }
     }
     void enqueue(String json) {
         try {
@@ -121,6 +132,11 @@ final class ArtworkCache {
         }
         DataInputStream input = null;
         try {
+            if (!file(address).isFile() && eligible.contains(address) && pending.add(address)) {
+                long epoch = generation;
+                try { download(address, epoch); }
+                finally { if (epoch == generation) pending.remove(address); }
+            }
             input = new DataInputStream(new BufferedInputStream(new FileInputStream(file(address))));
             String mime = input.readUTF();
             WebResourceResponse response = new WebResourceResponse(mime, null, input);

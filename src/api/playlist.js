@@ -1,3 +1,4 @@
+import { observePlaylistArtwork } from '@/utils/libraryArtwork';
 import request from '@/utils/request';
 import { mapTrackPlayableStatus } from '@/utils/common';
 
@@ -51,6 +52,7 @@ export function getPlaylistDetail(id, noCache = false) {
     params,
   }).then(data => {
     if (data.playlist) {
+      observePlaylistArtwork(data.playlist);
       data.playlist.tracks = mapTrackPlayableStatus(
         data.playlist.tracks,
         data.privileges || []

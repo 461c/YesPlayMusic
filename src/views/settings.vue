@@ -188,8 +188,8 @@
             {{ artworkCache.size }}</div
           >
           <div class="description">
-            自动缓存我的歌单及歌单内歌曲的封面，随机歌曲不会单独保存。 封面按
-            1024px 保存并复用；剩余空间不足 128MB 时暂停新增。
+            歌单封面缓存一次；歌单内歌曲封面仅随正常图片请求缓存，不主动遍历歌曲。随机歌曲不单独保存。
+            封面按 1024px 保存并复用；剩余空间不足 128MB 时暂停新增。
             <span v-if="artworkCache.pending"
               >正在缓存 {{ artworkCache.pending }} 张图片。</span
             >
@@ -890,15 +890,30 @@
             >QIER222</a
           ></p
         >
-        <p class="author">
-          由
+        <p class="author"
+          >本构建由
           <a
             href="https://kuanzzz.pages.dev"
             target="_blank"
             rel="noopener noreferrer"
             >kuanzzz.pages.dev</a
           >
-          修改
+          修改；原软件归原作者所有，修改内容遵循项目原有开源许可。
+        </p>
+        <p class="repository-links">
+          <a
+            href="https://github.com/qier222/YesPlayMusic"
+            target="_blank"
+            rel="noopener noreferrer"
+            >主软件仓库</a
+          >
+          <span> · </span>
+          <a
+            href="https://github.com/461c/YesPlayMusic"
+            target="_blank"
+            rel="noopener noreferrer"
+            >本构建仓库</a
+          >
         </p>
         <p class="version">v{{ version }}</p>
       </div>

@@ -337,6 +337,8 @@ public final class MainActivity extends Activity {
         @JavascriptInterface public void configureAudioCache(boolean enabled, long limitMb) {
             AudioCache.configure(MainActivity.this, enabled, limitMb);
         }
+        @JavascriptInterface public void resetArtworkEligibility() { ArtworkCache.get(MainActivity.this).resetEligibility(); }
+        @JavascriptInterface public void allowLibraryArtwork(String urls) { ArtworkCache.get(MainActivity.this).allow(urls); }
         @JavascriptInterface public void cacheLibraryArtwork(String urls) { ArtworkCache.get(MainActivity.this).enqueue(urls); }
         @JavascriptInterface public String getArtworkCacheStats() { return ArtworkCache.get(MainActivity.this).stats().toString(); }
         @JavascriptInterface public String clearArtworkCache() { return ArtworkCache.get(MainActivity.this).clear().toString(); }
