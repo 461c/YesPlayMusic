@@ -1,3 +1,4 @@
+import { syncLibraryArtwork } from '@/utils/libraryArtwork';
 // import store, { state, dispatch, commit } from "@/store";
 import { isAccountLoggedIn, isLooseLoggedIn } from '@/utils/auth';
 import { likeATrack } from '@/api/track';
@@ -112,20 +113,11 @@ export default {
           });
           if (process.env.VUE_APP_ANDROID === 'true') {
             const account = String(state.data.user?.userId || '');
-            import('@/utils/libraryArtwork')
-              .then(({ syncLibraryArtwork }) => {
-                if (String(state.data.user?.userId || '') !== account) return;
-                syncLibraryArtwork(
-                  result.playlist,
-                  account,
-                  () => String(state.data.user?.userId || '') === account
-                ).catch(error =>
-                  console.debug('Artwork sync unavailable', error)
-                );
-              })
-              .catch(error =>
-                console.debug('Artwork cache unavailable', error)
-              );
+            syncLibraryArtwork(
+              result.playlist,
+              account,
+              () => String(state.data.user?.userId || '') === account
+            ).catch(error => console.debug('Artwork cache unavailable', error));
           }
           // 更新用户”喜欢的歌曲“歌单ID
           commit('updateData', {

@@ -189,7 +189,13 @@
           >
           <div class="description">
             歌单封面缓存一次；歌单内歌曲封面仅随正常图片请求缓存，不主动遍历歌曲。随机歌曲不单独保存。
-            封面按 1024px 保存并复用；剩余空间不足 128MB 时暂停新增。
+            列表封面按 224px 缓存，大图按需保存并复用；剩余空间不足 128MB
+            时暂停新增。
+            <span
+              >本次运行：本地命中 {{ artworkCache.hits || 0 }} 次，图片下载
+              {{ artworkCache.downloads || 0 }} 次，失败
+              {{ artworkCache.failures || 0 }} 次。</span
+            >
             <span v-if="artworkCache.pending"
               >正在缓存 {{ artworkCache.pending }} 张图片。</span
             >

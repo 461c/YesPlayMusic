@@ -1,3 +1,4 @@
+import { resizedArtwork } from './imageUrl';
 import Vue from 'vue';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
@@ -60,14 +61,7 @@ Vue.filter('formatAlbumType', (type, album) => {
   }
 });
 
-Vue.filter('resizeImage', (imgUrl, size = 512) => {
-  if (!imgUrl) return '';
-  let httpsImgUrl = imgUrl;
-  if (imgUrl.slice(0, 5) !== 'https') {
-    httpsImgUrl = 'https' + imgUrl.slice(4);
-  }
-  return `${httpsImgUrl}?param=${size}y${size}`;
-});
+Vue.filter('resizeImage', resizedArtwork);
 
 Vue.filter('formatPlayCount', count => {
   if (!count) return '';

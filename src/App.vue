@@ -1,7 +1,7 @@
 <template>
   <div id="app" :class="{ 'user-select-none': userSelectNone }">
     <Scrollbar v-show="!showLyrics" ref="scrollbar" />
-    <Navbar v-show="showNavbar" ref="navbar" />
+    <Navbar v-show="showNavbar" ref="navbar" :scrolled="pageScrolled" />
     <main
       ref="main"
       :style="{ overflow: enableScrolling ? 'auto' : 'hidden' }"
@@ -52,6 +52,7 @@ export default {
     return {
       isElectron: process.env.IS_ELECTRON, // true || undefined
       userSelectNone: false,
+      pageScrolled: false,
     };
   },
   computed: {
@@ -105,8 +106,13 @@ export default {
     },
     restorePagePosition() {
       this.$refs.scrollbar.restorePosition();
+      this.$nextTick(() => this.updatePageScroll());
+    },
+    updatePageScroll() {
+      this.pageScrolled = this.$refs.main.scrollTop > 1;
     },
     handleScroll() {
+      this.updatePageScroll();
       this.$refs.scrollbar.handleScroll();
     },
   },

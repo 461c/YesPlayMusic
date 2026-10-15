@@ -1,6 +1,6 @@
 <template>
   <div>
-    <nav :class="{ 'has-custom-titlebar': hasCustomTitlebar }">
+    <nav :class="{ 'has-custom-titlebar': hasCustomTitlebar, scrolled }">
       <Win32Titlebar v-if="enableWin32Titlebar" />
       <LinuxTitlebar v-if="enableLinuxTitlebar" />
       <div class="navigation-buttons">
@@ -88,6 +88,9 @@ export default {
     ButtonIcon,
     ContextMenu,
   },
+  props: {
+    scrolled: { type: Boolean, default: false },
+  },
   data() {
     return {
       inputFocus: false,
@@ -163,7 +166,6 @@ export default {
 
 <style lang="scss" scoped>
 nav {
-  border-bottom: 1px solid rgba(128, 128, 128, 0.18);
   position: fixed;
   top: 0;
   right: 0;
@@ -181,6 +183,27 @@ nav {
   background-color: var(--color-navbar-bg);
   z-index: 100;
   -webkit-app-region: drag;
+}
+
+nav::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(128, 128, 128, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+nav.scrolled::after {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  nav::after {
+    transition-duration: 0.01ms;
+  }
 }
 
 @media (max-width: 1336px) {
