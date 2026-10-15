@@ -143,7 +143,7 @@
             <option :value="false">
               {{ $t('settings.cacheLimit.none') }}
             </option>
-            <option :value="512"> 500MB </option>
+            <option :value="512"> 512MB </option>
             <option :value="1024"> 1GB </option>
             <option :value="2048"> 2GB </option>
             <option :value="4096"> 4GB </option>
