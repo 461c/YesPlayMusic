@@ -181,6 +181,26 @@
           </button>
         </div>
       </div>
+      <div v-if="isAndroid" class="item">
+        <div class="left">
+          <div class="title"
+            >歌单图片缓存：{{ artworkCache.count }} 张 ·
+            {{ artworkCache.size }}</div
+          >
+          <div class="description">
+            自动缓存我的歌单及歌单内歌曲的封面，随机歌曲不会单独保存。 封面按
+            1024px 保存并复用；剩余空间不足 128MB 时暂停新增。
+            <span v-if="artworkCache.pending"
+              >正在缓存 {{ artworkCache.pending }} 张图片。</span
+            >
+          </div>
+        </div>
+        <div class="right">
+          <button :disabled="artworkClearing" @click="clearArtworkCache">
+            {{ artworkClearing ? '正在清除…' : '清除图片缓存' }}
+          </button>
+        </div>
+      </div>
       <h3>外观</h3>
       <div class="item">
         <div class="left">
@@ -919,6 +939,8 @@ export default {
         length: 0,
         partial: 0,
       },
+      artworkCache: { size: '0KB', count: 0, pending: 0 },
+      artworkClearing: false,
       cacheStatsTimer: null,
       cacheClearing: false,
       allOutputDevices: [
@@ -1592,9 +1614,27 @@ export default {
       doLogout();
       this.$router.push({ name: 'home' });
     },
+    async clearArtworkCache() {
+      this.artworkClearing = true;
+      await this.$nextTick();
+      try {
+        const { cancelArtworkSync } = await import('@/utils/libraryArtwork');
+        cancelArtworkSync();
+        window.YesPlayMusicAndroid.clearArtworkCache();
+        this.countDBSize();
+      } catch (error) {
+        this.showToast('清除图片缓存失败，请稍后重试');
+      } finally {
+        this.artworkClearing = false;
+      }
+    },
     countDBSize() {
       if (this.isAndroid) {
         try {
+          const artwork = JSON.parse(
+            window.YesPlayMusicAndroid.getArtworkCacheStats()
+          );
+          this.artworkCache = { ...artwork, size: bytesToSize(artwork.bytes) };
           const stats = JSON.parse(
             window.YesPlayMusicAndroid.getAudioCacheStats()
           );

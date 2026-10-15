@@ -21,3 +21,5 @@
 - Android audio diagnostics use a track-checked native snapshot, refreshed on input-format and ready/tracks/playback events. Never replace a media queue item solely to publish diagnostics.
 
 - Async route roots hidden by v-show must use v-page-reveal so entering after data arrives still fades/slides in. Images use v-image-fade for load/decode-driven opacity reveal, including cache hits and source changes; preserve lazy loading and respect reduced motion.
+
+- Android proactively persists 1024px artwork only for the user's created/collected playlists and their full track lists. Never enroll arbitrary playback/recommendations in persistent artwork storage. Use two background downloads, deduplicate by CDN image URL without size parameters, retain across launches, stop new downloads below 128MB free, and expose separate image usage/clear controls under 缓存. Playlist manifests avoid refetching unchanged library details.

@@ -118,7 +118,7 @@ public final class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if (!"appassets.androidplatform.net".equals(uri.getHost())) return null;
+                if (!"appassets.androidplatform.net".equals(uri.getHost())) return ArtworkCache.get(MainActivity.this).read(uri);
                 return assets.shouldInterceptRequest(uri);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -337,6 +337,9 @@ public final class MainActivity extends Activity {
         @JavascriptInterface public void configureAudioCache(boolean enabled, long limitMb) {
             AudioCache.configure(MainActivity.this, enabled, limitMb);
         }
+        @JavascriptInterface public void cacheLibraryArtwork(String urls) { ArtworkCache.get(MainActivity.this).enqueue(urls); }
+        @JavascriptInterface public String getArtworkCacheStats() { return ArtworkCache.get(MainActivity.this).stats().toString(); }
+        @JavascriptInterface public String clearArtworkCache() { return ArtworkCache.get(MainActivity.this).clear().toString(); }
         @JavascriptInterface public String getAudioCacheStats() { return AudioCache.stats(MainActivity.this).toString(); }
         @JavascriptInterface public String clearAudioCache() { return AudioCache.clear(MainActivity.this).toString(); }
         @JavascriptInterface public void request(String id, String json) {
