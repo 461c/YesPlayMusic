@@ -174,6 +174,13 @@
       "
     />
 
+    <div v-if="offline" class="offline-note">
+      {{
+        tracks.length
+          ? '正在显示本地保存的歌单内容，未保存的内容需联网加载。'
+          : '此歌单尚无本地内容，请联网打开一次。'
+      }}
+    </div>
     <div class="load-more">
       <ButtonTwoTone
         v-show="hasMore"
@@ -227,6 +234,8 @@ import {
   subscribePlaylist,
   deletePlaylist,
 } from '@/api/playlist';
+import { getCachedPlaylist } from '@/utils/offlineLibrary';
+import { observePlaylistArtwork } from '@/utils/libraryArtwork';
 import { getTrackDetail } from '@/api/track';
 import { isAccountLoggedIn } from '@/utils/auth';
 import nativeAlert from '@/utils/nativeAlert';
@@ -348,6 +357,7 @@ export default {
   data() {
     return {
       show: false,
+      offline: navigator.onLine === false,
       playlist: {
         id: 0,
         coverImgUrl: '',
@@ -447,45 +457,59 @@ export default {
         });
       });
     },
-    loadData(id, next = undefined) {
-      this.id = id;
-      getPlaylistDetail(this.id, true)
-        .then(data => {
-          this.playlist = data.playlist;
-          this.tracks = data.playlist.tracks;
-          NProgress.done();
-          if (next !== undefined) next();
-          this.show = true;
-          this.lastLoadedTrackIndex = data.playlist.tracks.length - 1;
-          return data;
-        })
-        .then(() => {
-          if (this.playlist.trackCount > this.tracks.length) {
-            this.loadingMore = true;
-            this.loadMore();
-          }
-        });
+    applyPlaylist(data) {
+      this.playlist = data.playlist;
+      this.tracks = [...(data.playlist.tracks || [])];
+      this.lastLoadedTrackIndex = this.tracks.length - 1;
+      this.hasMore = this.tracks.length < (data.playlist.trackIds?.length || 0);
+      observePlaylistArtwork(data.playlist);
+      this.show = true;
+      NProgress.done();
     },
-    loadMore(loadNum = 100) {
-      let trackIDs = this.playlist.trackIds.filter((t, index) => {
-        if (
-          index > this.lastLoadedTrackIndex &&
-          index <= this.lastLoadedTrackIndex + loadNum
-        ) {
-          return t;
+    async loadData(id, next = undefined) {
+      this.id = id;
+      const cached = await getCachedPlaylist(id);
+      if (String(this.id) !== String(id)) return;
+      if (cached) this.applyPlaylist(cached);
+      try {
+        if (!cached || navigator.onLine !== false) {
+          const data = await getPlaylistDetail(id, true);
+          if (String(this.id) !== String(id)) return;
+          this.applyPlaylist(data);
         }
-      });
-      trackIDs = trackIDs.map(t => t.id);
-      getTrackDetail(trackIDs.join(',')).then(data => {
+        if (next) next();
+        if (this.hasMore) this.loadMore();
+      } catch (error) {
+        this.offline = true;
+      } finally {
+        this.show = true;
+        NProgress.done();
+      }
+    },
+    async loadMore(loadNum = 100) {
+      if (this.loadingMore) return;
+      const ids = this.playlist.trackIds
+        .slice(
+          this.lastLoadedTrackIndex + 1,
+          this.lastLoadedTrackIndex + 1 + loadNum
+        )
+        .map(track => track.id);
+      if (!ids.length) {
+        this.hasMore = false;
+        return;
+      }
+      this.loadingMore = true;
+      try {
+        const data = await getTrackDetail(ids.join(','));
         this.tracks.push(...data.songs);
-        this.lastLoadedTrackIndex += trackIDs.length;
+        this.lastLoadedTrackIndex += ids.length;
+        this.hasMore =
+          this.lastLoadedTrackIndex + 1 < this.playlist.trackIds.length;
+      } catch (error) {
+        this.offline = true;
+      } finally {
         this.loadingMore = false;
-        if (this.lastLoadedTrackIndex + 1 === this.playlist.trackIds.length) {
-          this.hasMore = false;
-        } else {
-          this.hasMore = true;
-        }
-      });
+      }
     },
     openMenu(e) {
       this.$refs.playlistMenu.openMenu(e);
@@ -547,6 +571,12 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.offline-note {
+  margin: 16px 0;
+  color: var(--color-text);
+  opacity: 0.68;
+}
+
 .playlist {
   margin-top: 32px;
 }

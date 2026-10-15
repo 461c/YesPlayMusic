@@ -1,8 +1,13 @@
+import { emptyLibrary } from '@/utils/offlineLibrary';
 import shortcuts from '@/utils/shortcuts';
 import cloneDeep from 'lodash/cloneDeep';
 import Vue from 'vue';
 
 export default {
+  restoreLibrary(state, { scope, snapshot }) {
+    state.liked = { ...emptyLibrary(), ...snapshot };
+    state.libraryOwner = scope;
+  },
   updateLikedXXX(state, { name, data }) {
     state.liked[name] = data;
     if (name === 'songs') {
@@ -31,6 +36,14 @@ export default {
     Vue.set(state.settings, key, value);
   },
   updateData(state, { key, value }) {
+    if (
+      key === 'user' &&
+      String(state.data.user?.userId || '') !== String(value?.userId || '')
+    ) {
+      state.liked = emptyLibrary();
+      state.libraryOwner = null;
+      state.data.likedSongPlaylistID = undefined;
+    }
     state.data[key] = value;
   },
   togglePlaylistCategory(state, name) {

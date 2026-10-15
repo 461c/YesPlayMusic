@@ -180,19 +180,22 @@ export function updateHttps(url) {
 }
 
 export function dailyTask() {
+  if (navigator.onLine === false) return;
   let lastDate = store.state.data.lastRefreshCookieDate;
   if (
     isAccountLoggedIn() &&
     (lastDate === undefined || lastDate !== dayjs().date())
   ) {
     console.debug('[debug][common.js] execute dailyTask');
-    refreshCookie().then(() => {
-      console.debug('[debug][common.js] 刷新cookie');
-      store.commit('updateData', {
-        key: 'lastRefreshCookieDate',
-        value: dayjs().date(),
-      });
-    });
+    refreshCookie()
+      .then(() => {
+        console.debug('[debug][common.js] 刷新cookie');
+        store.commit('updateData', {
+          key: 'lastRefreshCookieDate',
+          value: dayjs().date(),
+        });
+      })
+      .catch(() => {});
   }
 }
 

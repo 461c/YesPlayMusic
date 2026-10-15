@@ -92,17 +92,22 @@ export default {
         this.player.playOrPause();
       }
     },
-    fetchData() {
+    async fetchData() {
       if (!isLooseLoggedIn()) return;
-      this.$store.dispatch('fetchLikedSongs');
-      this.$store.dispatch('fetchLikedSongsWithDetails');
-      this.$store.dispatch('fetchLikedPlaylist');
-      if (isAccountLoggedIn()) {
-        this.$store.dispatch('fetchLikedAlbums');
-        this.$store.dispatch('fetchLikedArtists');
-        this.$store.dispatch('fetchLikedMVs');
-        this.$store.dispatch('fetchCloudDisk');
-      }
+      await this.$store.dispatch('restoreLibrary');
+      const tasks = ['fetchLikedSongs'];
+      if (isAccountLoggedIn())
+        tasks.push(
+          'fetchLikedAlbums',
+          'fetchLikedArtists',
+          'fetchLikedMVs',
+          'fetchCloudDisk'
+        );
+      for (const action of tasks) this.$store.dispatch(action).catch(() => {});
+      this.$store
+        .dispatch('fetchLikedPlaylist')
+        .then(() => this.$store.dispatch('fetchLikedSongsWithDetails'))
+        .catch(() => {});
     },
     restorePagePosition() {
       this.$refs.scrollbar.restorePosition();

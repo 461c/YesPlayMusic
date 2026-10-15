@@ -1,3 +1,9 @@
+import { cachedResource } from '@/utils/cachedResource';
+import {
+  getCachedPlaylist,
+  savePlaylistSnapshot,
+  libraryScope,
+} from '@/utils/offlineLibrary';
 import { observePlaylistArtwork } from '@/utils/libraryArtwork';
 import request from '@/utils/request';
 import { mapTrackPlayableStatus } from '@/utils/common';
@@ -44,23 +50,36 @@ export function dailyRecommendPlaylist(params) {
  * @param {boolean=} noCache
  */
 export function getPlaylistDetail(id, noCache = false) {
-  let params = { id };
-  if (noCache) params.timestamp = new Date().getTime();
-  return request({
-    url: '/playlist/detail',
-    method: 'get',
-    params,
-  }).then(data => {
-    if (data.playlist) {
+  const scope = libraryScope();
+  const read = async () => {
+    const cached = await getCachedPlaylist(id, scope);
+    if (cached?.playlist) observePlaylistArtwork(cached.playlist);
+    return cached;
+  };
+  const load = () =>
+    request({
+      url: '/playlist/detail',
+      method: 'get',
+      params: { id, ...(noCache ? { timestamp: Date.now() } : {}) },
+    }).then(async data => {
+      if (!data?.playlist) throw new Error('无法获取歌单信息');
       observePlaylistArtwork(data.playlist);
       data.playlist.tracks = mapTrackPlayableStatus(
         data.playlist.tracks,
         data.privileges || []
       );
-    }
-    return data;
+      await savePlaylistSnapshot(id, data, scope);
+      return data;
+    });
+  if (!noCache) return cachedResource(read, load);
+  if (navigator.onLine === false) return cachedResource(read, load);
+  return load().catch(async error => {
+    const cached = await read();
+    if (cached) return cached;
+    throw error;
   });
 }
+
 /**
  * 获取精品歌单
  * 说明 : 调用此接口 , 可获取精品歌单

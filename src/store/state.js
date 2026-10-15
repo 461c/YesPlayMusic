@@ -1,3 +1,4 @@
+import { emptyLibrary } from '@/utils/offlineLibrary';
 import initLocalStorage from './initLocalStorage';
 import pkg from '../../package.json';
 import updateApp from '@/utils/updateApp';
@@ -15,19 +16,8 @@ export default {
   androidAudioInfo: null,
   enableScrolling: true,
   title: 'YesPlayMusic',
-  liked: {
-    songs: [],
-    songsWithDetails: [], // 只有前12首
-    playlists: [],
-    albums: [],
-    artists: [],
-    mvs: [],
-    cloudDisk: [],
-    playHistory: {
-      weekData: [],
-      allData: [],
-    },
-  },
+  liked: emptyLibrary(),
+  libraryOwner: null,
   contextMenu: {
     clickObjectID: 0,
     showMenu: false,

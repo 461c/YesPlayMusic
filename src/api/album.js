@@ -1,3 +1,4 @@
+import { cachedResource } from '@/utils/cachedResource';
 import request from '@/utils/request';
 import { mapTrackPlayableStatus } from '@/utils/common';
 import { cacheAlbum, getAlbumFromCache } from '@/utils/db';
@@ -21,11 +22,7 @@ export function getAlbum(id) {
       return data;
     });
   };
-  fetchLatest();
-
-  return getAlbumFromCache(id).then(result => {
-    return result ?? fetchLatest();
-  });
+  return cachedResource(() => getAlbumFromCache(id), fetchLatest);
 }
 
 /**

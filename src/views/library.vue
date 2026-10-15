@@ -8,6 +8,14 @@
         loading="lazy"
       />{{ data.user.nickname }}{{ $t('library.sLibrary') }}
     </h1>
+    <div v-if="offline" class="offline-note">
+      {{
+        hasLocalData
+          ? '当前离线，正在显示本地保存的音乐库。'
+          : '暂无本地音乐库数据，请联网打开一次。'
+      }}
+      <button :disabled="refreshing" @click="loadData">重试</button>
+    </div>
     <div class="section-one">
       <div class="liked-songs" @click="goToLikedSongsList">
         <div class="top">
@@ -245,6 +253,8 @@ export default {
   data() {
     return {
       show: false,
+      offline: navigator.onLine === false,
+      refreshing: false,
       likedSongs: [],
       lyric: undefined,
       currentTab: 'playlists',
@@ -253,6 +263,16 @@ export default {
   },
   computed: {
     ...mapState(['data', 'liked']),
+    hasLocalData() {
+      return [
+        'playlists',
+        'songsWithDetails',
+        'albums',
+        'artists',
+        'mvs',
+        'cloudDisk',
+      ].some(name => this.liked[name].length > 0);
+    },
     /**
      * @returns {string[]}
      */
@@ -316,28 +336,42 @@ export default {
   methods: {
     ...mapActions(['showToast']),
     ...mapMutations(['updateModal', 'updateData']),
-    loadData() {
-      if (this.liked.songsWithDetails.length > 0) {
-        NProgress.done();
+    async loadData() {
+      if (this.refreshing) return;
+      this.refreshing = true;
+      try {
+        await this.$store.dispatch('restoreLibrary');
         this.show = true;
-        this.$store.dispatch('fetchLikedSongsWithDetails');
-        this.getRandomLyric();
-      } else {
-        this.$store.dispatch('fetchLikedSongsWithDetails').then(() => {
-          NProgress.done();
-          this.show = true;
-          this.getRandomLyric();
-        });
+        NProgress.done();
+        if (navigator.onLine === false) {
+          this.offline = true;
+          return;
+        }
+        const actions = [
+          'fetchLikedSongs',
+          'fetchLikedAlbums',
+          'fetchLikedArtists',
+          'fetchLikedMVs',
+          'fetchCloudDisk',
+          'fetchPlayHistory',
+        ];
+        const results = await Promise.allSettled([
+          this.$store
+            .dispatch('fetchLikedPlaylist')
+            .then(() => this.$store.dispatch('fetchLikedSongsWithDetails')),
+          ...actions.map(action => this.$store.dispatch(action)),
+        ]);
+        this.offline = results.some(result => result.status === 'rejected');
+        if (!this.offline) this.getRandomLyric();
+      } finally {
+        this.refreshing = false;
+        this.show = true;
+        NProgress.done();
       }
-      this.$store.dispatch('fetchLikedSongs');
-      this.$store.dispatch('fetchLikedPlaylist');
-      this.$store.dispatch('fetchLikedAlbums');
-      this.$store.dispatch('fetchLikedArtists');
-      this.$store.dispatch('fetchLikedMVs');
-      this.$store.dispatch('fetchCloudDisk');
-      this.$store.dispatch('fetchPlayHistory');
     },
     playLikedSongs() {
+      if (!this.liked.playlists[0])
+        return this.showToast('暂无本地歌单信息，请联网加载一次');
       this.$store.state.player.playPlaylistByID(
         this.liked.playlists[0].id,
         'first',
@@ -345,6 +379,8 @@ export default {
       );
     },
     playIntelligenceList() {
+      if (!this.liked.playlists[0])
+        return this.showToast('暂无本地歌单信息，请联网加载一次');
       this.$store.state.player.playIntelligenceListById(
         this.liked.playlists[0].id,
         'first',
@@ -364,18 +400,18 @@ export default {
     },
     getRandomLyric() {
       if (this.liked.songs.length === 0) return;
-      getLyric(
-        this.liked.songs[randomNum(0, this.liked.songs.length - 1)]
-      ).then(data => {
-        if (data.lrc !== undefined) {
-          const isInstrumental = data.lrc.lyric
-            .split('\n')
-            .filter(l => l.includes('纯音乐，请欣赏'));
-          if (isInstrumental.length === 0) {
-            this.lyric = data.lrc.lyric;
+      getLyric(this.liked.songs[randomNum(0, this.liked.songs.length - 1)])
+        .then(data => {
+          if (data.lrc !== undefined) {
+            const isInstrumental = data.lrc.lyric
+              .split('\n')
+              .filter(l => l.includes('纯音乐，请欣赏'));
+            if (isInstrumental.length === 0) {
+              this.lyric = data.lrc.lyric;
+            }
           }
-        }
-      });
+        })
+        .catch(() => {});
     },
     openAddPlaylistModal() {
       if (!isAccountLoggedIn()) {
@@ -419,6 +455,17 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.offline-note {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  color: var(--color-text);
+  background: var(--color-secondary-bg);
+  button {
+    margin-left: 12px;
+  }
+}
+
 h1 {
   font-size: 42px;
   color: var(--color-text);

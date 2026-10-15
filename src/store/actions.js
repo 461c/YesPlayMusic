@@ -1,3 +1,4 @@
+import { libraryScope, readLibrary } from '@/utils/offlineLibrary';
 import { syncLibraryArtwork } from '@/utils/libraryArtwork';
 // import store, { state, dispatch, commit } from "@/store";
 import { isAccountLoggedIn, isLooseLoggedIn } from '@/utils/auth';
@@ -15,7 +16,25 @@ import {
   userAccount,
 } from '@/api/user';
 
-export default {
+const hydration = new Map();
+const actions = {
+  restoreLibrary({ state, commit }) {
+    const scope = libraryScope(state.data);
+    if (!scope || state.libraryOwner === scope) return Promise.resolve();
+    if (hydration.has(scope)) return hydration.get(scope);
+    const work = readLibrary(scope)
+      .then(snapshot => {
+        if (
+          libraryScope(state.data) === scope &&
+          state.libraryOwner !== scope
+        ) {
+          commit('restoreLibrary', { scope, snapshot });
+        }
+      })
+      .finally(() => hydration.delete(scope));
+    hydration.set(scope, work);
+    return work;
+  },
   showToast({ state, commit }, text) {
     if (state.toast.timer !== null) {
       clearTimeout(state.toast.timer);
@@ -77,12 +96,12 @@ export default {
     }
   },
   fetchLikedSongsWithDetails: ({ state, commit }) => {
+    if (!state.data.likedSongPlaylistID) return Promise.resolve();
     return getPlaylistDetail(state.data.likedSongPlaylistID, true).then(
       result => {
-        if (result.playlist?.trackIds?.length === 0) {
-          return new Promise(resolve => {
-            resolve();
-          });
+        if (!result.playlist?.trackIds?.length) {
+          commit('updateLikedXXX', { name: 'songsWithDetails', data: [] });
+          return;
         }
         return getTrackDetail(
           result.playlist.trackIds
@@ -101,11 +120,13 @@ export default {
   fetchLikedPlaylist: ({ state, commit }) => {
     if (!isLooseLoggedIn()) return;
     if (isAccountLoggedIn()) {
+      const owner = String(state.data.user?.userId || '');
       return userPlaylist({
         uid: state.data.user?.userId,
         limit: 2000, // 最多只加载2000个歌单（等有用户反馈问题再修）
         timestamp: new Date().getTime(),
       }).then(result => {
+        if (String(state.data.user?.userId || '') !== owner) return;
         if (result.playlist) {
           commit('updateLikedXXX', {
             name: 'playlists',
@@ -208,3 +229,36 @@ export default {
     });
   },
 };
+
+// Share normal refreshes from App/Library and ignore results belonging to a previous account.
+const requests = new Map();
+for (const name of Object.keys(actions).filter(name =>
+  name.startsWith('fetch')
+)) {
+  const action = actions[name];
+  actions[name] = (context, payload) => {
+    const scope = libraryScope(context.state.data);
+    const key = `${scope}:${name}`;
+    if (requests.has(key)) return requests.get(key);
+    const work = context
+      .dispatch('restoreLibrary')
+      .then(() => {
+        if (libraryScope(context.state.data) !== scope) return;
+        if (navigator.onLine === false) throw new Error('当前离线');
+        return action(
+          {
+            ...context,
+            commit: (...args) => {
+              if (libraryScope(context.state.data) === scope)
+                context.commit(...args);
+            },
+          },
+          payload
+        );
+      })
+      .finally(() => requests.delete(key));
+    requests.set(key, work);
+    return work;
+  };
+}
+export default actions;

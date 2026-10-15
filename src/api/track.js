@@ -1,3 +1,4 @@
+import { cachedResource } from '@/utils/cachedResource';
 import { observeTrackArtwork } from '@/utils/libraryArtwork';
 import store from '@/store';
 import request from '@/utils/request';
@@ -67,20 +68,21 @@ export function getTrackDetail(ids) {
       return data;
     });
   };
-  fetchLatest();
-
-  let idsInArray = [String(ids)];
-  if (typeof ids === 'string') {
-    idsInArray = ids.split(',');
-  }
-
-  return getTrackDetailFromCache(idsInArray).then(result => {
-    if (result) {
-      observeTrackArtwork(result.songs || []);
-      result.songs = mapTrackPlayableStatus(result.songs, result.privileges);
-    }
-    return result ?? fetchLatest();
-  });
+  const idsInArray = String(ids).split(',');
+  return cachedResource(
+    () =>
+      getTrackDetailFromCache(idsInArray).then(result => {
+        if (result) {
+          observeTrackArtwork(result.songs || []);
+          result.songs = mapTrackPlayableStatus(
+            result.songs,
+            result.privileges
+          );
+        }
+        return result;
+      }),
+    fetchLatest
+  );
 }
 
 /**
@@ -102,11 +104,7 @@ export function getLyric(id) {
     });
   };
 
-  fetchLatest();
-
-  return getLyricFromCache(id).then(result => {
-    return result ?? fetchLatest();
-  });
+  return cachedResource(() => getLyricFromCache(id), fetchLatest);
 }
 
 /**
