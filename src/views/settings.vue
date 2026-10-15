@@ -26,7 +26,156 @@
           </button>
         </div>
       </div>
-
+      <h3>播放与音质</h3>
+      <div class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.musicQuality.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="musicQuality">
+            <option value="128000">
+              {{ $t('settings.musicQuality.low') }} - 128Kbps
+            </option>
+            <option value="192000">
+              {{ $t('settings.musicQuality.medium') }} - 192Kbps
+            </option>
+            <option value="320000">
+              {{ $t('settings.musicQuality.high') }} - 320Kbps
+            </option>
+            <option value="flac">
+              {{ $t('settings.musicQuality.lossless') }} - FLAC
+            </option>
+            <option value="999000">Hi-Res</option>
+          </select>
+        </div>
+      </div>
+      <div v-if="isAndroid" class="item android-current-quality">
+        <div class="left">
+          <div class="title">当前播放音质</div>
+          <div class="description">所选音质在下次加载音源时生效。</div>
+        </div>
+        <div class="right">
+          <div>{{ androidQualityInfo }}</div>
+          <div class="description">{{ androidQualityNote }}</div>
+        </div>
+      </div>
+      <div v-if="isAndroid" class="item">
+        <div class="left">
+          <div class="title">允许与其他应用同时播放</div>
+          <div class="description">
+            开启后允许同时发声，关闭则恢复常规播放行为。
+          </div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="allow-concurrent-playback"
+              v-model="allowConcurrentPlayback"
+              type="checkbox"
+              name="allow-concurrent-playback"
+              aria-label="允许与其他应用同时播放"
+            />
+            <label for="allow-concurrent-playback"></label>
+          </div>
+        </div>
+      </div>
+      <div v-if="isElectron" class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.deviceSelector') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="outputDevice">
+            <option
+              v-for="device in allOutputDevices"
+              :key="device.deviceId"
+              :value="device.deviceId"
+              :selected="device.deviceId == outputDevice"
+            >
+              {{ $t(device.label) }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title">{{ $t('settings.enableReversedMode') }}</div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="enable-reversed-mode"
+              v-model="enableReversedMode"
+              type="checkbox"
+              name="enable-reversed-mode"
+            />
+            <label for="enable-reversed-mode"></label>
+          </div>
+        </div>
+      </div>
+      <h3 v-if="isElectron || isAndroid">缓存与存储</h3>
+      <div v-if="isElectron || isAndroid" class="item">
+        <div class="left">
+          <div class="title">
+            {{ $t('settings.automaticallyCacheSongs') }}
+          </div>
+          <div v-if="isAndroid" class="description">
+            边播边缓存；关闭后保留已有缓存，下次加载音源时生效。
+          </div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="automatically-cache-songs"
+              v-model="automaticallyCacheSongs"
+              type="checkbox"
+              name="automatically-cache-songs"
+            />
+            <label for="automatically-cache-songs"></label>
+          </div>
+        </div>
+      </div>
+      <div v-if="isElectron || isAndroid" class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.cacheLimit.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="cacheLimit">
+            <option :value="false">
+              {{ $t('settings.cacheLimit.none') }}
+            </option>
+            <option :value="512"> 500MB </option>
+            <option :value="1024"> 1GB </option>
+            <option :value="2048"> 2GB </option>
+            <option :value="4096"> 4GB </option>
+            <option :value="8192"> 8GB </option>
+          </select>
+        </div>
+      </div>
+      <div v-if="isElectron || isAndroid" class="item">
+        <div class="left">
+          <div v-if="isAndroid" class="title"
+            >已使用 {{ tracksCache.size }}</div
+          >
+          <div v-else class="title">
+            {{
+              $t('settings.cacheCount', {
+                song: tracksCache.length,
+                size: tracksCache.size,
+              })
+            }}</div
+          >
+          <div v-if="isAndroid" class="description">
+            完整音源 {{ tracksCache.length }} 项，部分缓存
+            {{ tracksCache.partial }} 项。
+          </div>
+        </div>
+        <div class="right">
+          <button :disabled="cacheClearing" @click="clearCache()">
+            {{ cacheClearing ? '正在清除…' : $t('settings.clearSongsCache') }}
+          </button>
+        </div>
+      </div>
+      <h3>外观与界面</h3>
       <div class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.language') }} </div>
@@ -123,186 +272,76 @@
           </div>
         </form>
       </div>
-      <div v-if="isAndroid" class="item android-api-address">
+      <div v-if="isElectron" class="item">
         <div class="left">
-          <div class="title">{{ $t('settings.androidApi.text') }}</div>
-        </div>
-        <form class="right" @submit.prevent="saveAndroidApi">
-          <input
-            v-model="androidApiInput"
-            class="text-input"
-            type="url"
-            :aria-label="$t('settings.androidApi.text')"
-            :placeholder="$t('settings.androidApi.placeholder')"
-          />
-          <button type="submit">{{ $t('settings.androidApi.save') }}</button>
-        </form>
-      </div>
-      <div v-if="isAndroid" class="item">
-        <div class="left">
-          <div class="title">允许与其他应用同时播放</div>
-          <div class="description">
-            开启后允许同时发声，关闭则恢复常规播放行为。
-          </div>
+          <div class="title"> {{ $t('settings.showLibraryDefault') }}</div>
         </div>
         <div class="right">
           <div class="toggle">
             <input
-              id="allow-concurrent-playback"
-              v-model="allowConcurrentPlayback"
+              id="show-library-default"
+              v-model="showLibraryDefault"
               type="checkbox"
-              name="allow-concurrent-playback"
-              aria-label="允许与其他应用同时播放"
+              name="show-library-default"
             />
-            <label for="allow-concurrent-playback"></label>
+            <label for="show-library-default"></label>
           </div>
-        </div>
-      </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="trayIconTheme">
-            <option value="auto">{{ $t('settings.trayIcon.auto') }}</option>
-            <option value="light">{{ $t('settings.trayIcon.light') }}</option>
-            <option value="dark">{{ $t('settings.trayIcon.dark') }}</option>
-          </select>
         </div>
       </div>
       <div class="item">
         <div class="left">
-          <div class="title">
-            {{ $t('settings.MusicGenrePreference.text') }}
-          </div>
-        </div>
-        <div class="right">
-          <select v-model="musicLanguage">
-            <option value="all">{{
-              $t('settings.MusicGenrePreference.none')
-            }}</option>
-            <option value="zh">{{
-              $t('settings.MusicGenrePreference.mandarin')
-            }}</option>
-            <option value="ea">{{
-              $t('settings.MusicGenrePreference.western')
-            }}</option>
-            <option value="jp">{{
-              $t('settings.MusicGenrePreference.japanese')
-            }}</option>
-            <option value="kr">{{
-              $t('settings.MusicGenrePreference.korean')
-            }}</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- <h3>音质</h3> -->
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.musicQuality.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="musicQuality">
-            <option value="128000">
-              {{ $t('settings.musicQuality.low') }} - 128Kbps
-            </option>
-            <option value="192000">
-              {{ $t('settings.musicQuality.medium') }} - 192Kbps
-            </option>
-            <option value="320000">
-              {{ $t('settings.musicQuality.high') }} - 320Kbps
-            </option>
-            <option value="flac">
-              {{ $t('settings.musicQuality.lossless') }} - FLAC
-            </option>
-            <option value="999000">Hi-Res</option>
-          </select>
-        </div>
-      </div>
-      <div v-if="isAndroid" class="item android-current-quality">
-        <div class="left">
-          <div class="title">当前播放音质</div>
-          <div class="description">所选音质在下次加载音源时生效。</div>
-        </div>
-        <div class="right">
-          <div>{{ androidQualityInfo }}</div>
-          <div class="description">{{ androidQualityNote }}</div>
-        </div>
-      </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.deviceSelector') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="outputDevice">
-            <option
-              v-for="device in allOutputDevices"
-              :key="device.deviceId"
-              :value="device.deviceId"
-              :selected="device.deviceId == outputDevice"
-            >
-              {{ $t(device.label) }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <h3 v-if="isElectron">{{ $t('settings.cache') }}</h3>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.automaticallyCacheSongs') }}
-          </div>
+          <div class="title">{{ $t('settings.subTitleDefault') }}</div>
         </div>
         <div class="right">
           <div class="toggle">
             <input
-              id="automatically-cache-songs"
-              v-model="automaticallyCacheSongs"
+              id="sub-title-default"
+              v-model="subTitleDefault"
               type="checkbox"
-              name="automatically-cache-songs"
+              name="sub-title-default"
             />
-            <label for="automatically-cache-songs"></label>
+            <label for="sub-title-default"></label>
           </div>
         </div>
       </div>
-      <div v-if="isElectron" class="item">
+      <div class="item">
         <div class="left">
-          <div class="title"> {{ $t('settings.cacheLimit.text') }} </div>
+          <div class="title" style="transform: scaleX(-1)">🐈️ 🏳️‍🌈</div>
         </div>
         <div class="right">
-          <select v-model="cacheLimit">
-            <option :value="false">
-              {{ $t('settings.cacheLimit.none') }}
-            </option>
-            <option :value="512"> 500MB </option>
-            <option :value="1024"> 1GB </option>
-            <option :value="2048"> 2GB </option>
-            <option :value="4096"> 4GB </option>
-            <option :value="8192"> 8GB </option>
-          </select>
+          <div class="toggle">
+            <input
+              id="nyancat-style"
+              v-model="nyancatStyle"
+              type="checkbox"
+              name="nyancat-style"
+            />
+            <label for="nyancat-style"></label>
+          </div>
         </div>
       </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title">
-            {{
-              $t('settings.cacheCount', {
-                song: tracksCache.length,
-                size: tracksCache.size,
-              })
-            }}</div
-          >
-        </div>
-        <div class="right">
-          <button @click="clearCache()">
-            {{ $t('settings.clearSongsCache') }}
-          </button>
-        </div>
-      </div>
-
       <h3>{{ $t('settings.lyric') }}</h3>
+      <div class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.lyricFontSize.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="lyricFontSize">
+            <option value="16">
+              {{ $t('settings.lyricFontSize.small') }} - 16px
+            </option>
+            <option value="22">
+              {{ $t('settings.lyricFontSize.medium') }} - 22px
+            </option>
+            <option value="28">
+              {{ $t('settings.lyricFontSize.large') }} - 28px
+            </option>
+            <option value="36">
+              {{ $t('settings.lyricFontSize.xlarge') }} - 36px
+            </option>
+          </select>
+        </div>
+      </div>
       <div class="item">
         <div class="left">
           <div class="title">{{ $t('settings.showLyricsTranslation') }}</div>
@@ -354,27 +393,6 @@
           </div>
         </div>
       </div>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.lyricFontSize.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="lyricFontSize">
-            <option value="16">
-              {{ $t('settings.lyricFontSize.small') }} - 16px
-            </option>
-            <option value="22">
-              {{ $t('settings.lyricFontSize.medium') }} - 22px
-            </option>
-            <option value="28">
-              {{ $t('settings.lyricFontSize.large') }} - 28px
-            </option>
-            <option value="36">
-              {{ $t('settings.lyricFontSize.xlarge') }} - 36px
-            </option>
-          </select>
-        </div>
-      </div>
       <div v-if="isElectron && isLinux" class="item">
         <div class="left">
           <div class="title">
@@ -402,9 +420,234 @@
           </div>
         </div>
       </div>
-
+      <h3>内容与服务</h3>
+      <div class="item">
+        <div class="left">
+          <div class="title">
+            {{ $t('settings.MusicGenrePreference.text') }}
+          </div>
+        </div>
+        <div class="right">
+          <select v-model="musicLanguage">
+            <option value="all">{{
+              $t('settings.MusicGenrePreference.none')
+            }}</option>
+            <option value="zh">{{
+              $t('settings.MusicGenrePreference.mandarin')
+            }}</option>
+            <option value="ea">{{
+              $t('settings.MusicGenrePreference.western')
+            }}</option>
+            <option value="jp">{{
+              $t('settings.MusicGenrePreference.japanese')
+            }}</option>
+            <option value="kr">{{
+              $t('settings.MusicGenrePreference.korean')
+            }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title">
+            {{ $t('settings.showPlaylistsByAppleMusic') }}</div
+          >
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="show-playlists-by-apple-music"
+              v-model="showPlaylistsByAppleMusic"
+              type="checkbox"
+              name="show-playlists-by-apple-music"
+            />
+            <label for="show-playlists-by-apple-music"></label>
+          </div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title">
+            {{
+              isLastfmConnected
+                ? `已连接到 Last.fm (${lastfm.name})`
+                : '连接 Last.fm '
+            }}</div
+          >
+        </div>
+        <div class="right">
+          <button v-if="isLastfmConnected" @click="lastfmDisconnect()"
+            >断开连接
+          </button>
+          <button v-else @click="lastfmConnect()"> 授权连接 </button>
+        </div>
+      </div>
+      <div v-if="isElectron" class="item">
+        <div class="left">
+          <div class="title">
+            {{ $t('settings.enableDiscordRichPresence') }}</div
+          >
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="enable-discord-rich-presence"
+              v-model="enableDiscordRichPresence"
+              type="checkbox"
+              name="enable-discord-rich-presence"
+            />
+            <label for="enable-discord-rich-presence"></label>
+          </div>
+        </div>
+      </div>
+      <h3 v-if="isElectron">桌面与快捷键</h3>
+      <div v-if="isElectron" class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="trayIconTheme">
+            <option value="auto">{{ $t('settings.trayIcon.auto') }}</option>
+            <option value="light">{{ $t('settings.trayIcon.light') }}</option>
+            <option value="dark">{{ $t('settings.trayIcon.dark') }}</option>
+          </select>
+        </div>
+      </div>
+      <div v-if="isElectron && !isMac" class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.closeAppOption.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="closeAppOption">
+            <option value="ask">
+              {{ $t('settings.closeAppOption.ask') }}
+            </option>
+            <option value="exit">
+              {{ $t('settings.closeAppOption.exit') }}
+            </option>
+            <option value="minimizeToTray">
+              {{ $t('settings.closeAppOption.minimizeToTray') }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div v-if="isElectron && isLinux" class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.enableCustomTitlebar') }} </div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="enable-custom-titlebar"
+              v-model="enableCustomTitlebar"
+              type="checkbox"
+              name="enable-custom-titlebar"
+            />
+            <label for="enable-custom-titlebar"></label>
+          </div>
+        </div>
+      </div>
+      <div v-if="isElectron">
+        <h4>快捷键</h4>
+        <div class="item">
+          <div class="left">
+            <div class="title"> {{ $t('settings.enableGlobalShortcut') }}</div>
+          </div>
+          <div class="right">
+            <div class="toggle">
+              <input
+                id="enable-enable-global-shortcut"
+                v-model="enableGlobalShortcut"
+                type="checkbox"
+                name="enable-enable-global-shortcut"
+              />
+              <label for="enable-enable-global-shortcut"></label>
+            </div>
+          </div>
+        </div>
+        <div
+          id="shortcut-table"
+          :class="{ 'global-disabled': !enableGlobalShortcut }"
+          tabindex="0"
+          @keydown="handleShortcutKeydown"
+        >
+          <div class="row row-head">
+            <div class="col">功能</div>
+            <div class="col">快捷键</div>
+            <div class="col">全局快捷键</div>
+          </div>
+          <div
+            v-for="shortcut in settings.shortcuts"
+            :key="shortcut.id"
+            class="row"
+          >
+            <div class="col">{{ shortcut.name }}</div>
+            <div class="col">
+              <div
+                class="keyboard-input"
+                :class="{
+                  active:
+                    shortcutInput.id === shortcut.id &&
+                    shortcutInput.type === 'shortcut',
+                }"
+                @click.stop="readyToRecordShortcut(shortcut.id, 'shortcut')"
+              >
+                {{
+                  shortcutInput.id === shortcut.id &&
+                  shortcutInput.type === 'shortcut' &&
+                  recordedShortcutComputed !== ''
+                    ? formatShortcut(recordedShortcutComputed)
+                    : formatShortcut(shortcut.shortcut)
+                }}
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="keyboard-input"
+                :class="{
+                  active:
+                    shortcutInput.id === shortcut.id &&
+                    shortcutInput.type === 'globalShortcut' &&
+                    enableGlobalShortcut,
+                }"
+                @click.stop="
+                  readyToRecordShortcut(shortcut.id, 'globalShortcut')
+                "
+                >{{
+                  shortcutInput.id === shortcut.id &&
+                  shortcutInput.type === 'globalShortcut' &&
+                  recordedShortcutComputed !== ''
+                    ? formatShortcut(recordedShortcutComputed)
+                    : formatShortcut(shortcut.globalShortcut)
+                }}</div
+              >
+            </div>
+          </div>
+          <button
+            class="restore-default-shortcut"
+            @click="restoreDefaultShortcuts"
+            >恢复默认快捷键</button
+          >
+        </div>
+      </div>
+      <h3 v-if="isAndroid || isElectron">网络与高级</h3>
+      <div v-if="isAndroid" class="item android-api-address">
+        <div class="left">
+          <div class="title">{{ $t('settings.androidApi.text') }}</div>
+        </div>
+        <form class="right" @submit.prevent="saveAndroidApi">
+          <input
+            v-model="androidApiInput"
+            class="text-input"
+            type="url"
+            :aria-label="$t('settings.androidApi.text')"
+            :placeholder="$t('settings.androidApi.placeholder')"
+          />
+          <button type="submit">{{ $t('settings.androidApi.save') }}</button>
+        </form>
+      </div>
       <section v-if="isElectron" class="unm-configuration">
-        <h3>UnblockNeteaseMusic</h3>
+        <h4>UnblockNeteaseMusic</h4>
         <div class="item">
           <div class="left">
             <div class="title"
@@ -570,170 +813,8 @@
           </div>
         </div>
       </section>
-
-      <h3>{{ $t('settings.customization') }}</h3>
-      <div class="item">
-        <div class="left">
-          <div class="title">
-            {{
-              isLastfmConnected
-                ? `已连接到 Last.fm (${lastfm.name})`
-                : '连接 Last.fm '
-            }}</div
-          >
-        </div>
-        <div class="right">
-          <button v-if="isLastfmConnected" @click="lastfmDisconnect()"
-            >断开连接
-          </button>
-          <button v-else @click="lastfmConnect()"> 授权连接 </button>
-        </div>
-      </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.enableDiscordRichPresence') }}</div
-          >
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-discord-rich-presence"
-              v-model="enableDiscordRichPresence"
-              type="checkbox"
-              name="enable-discord-rich-presence"
-            />
-            <label for="enable-discord-rich-presence"></label>
-          </div>
-        </div>
-      </div>
-
-      <h3>{{ $t('settings.others') }}</h3>
-      <div v-if="isElectron && !isMac" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.closeAppOption.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="closeAppOption">
-            <option value="ask">
-              {{ $t('settings.closeAppOption.ask') }}
-            </option>
-            <option value="exit">
-              {{ $t('settings.closeAppOption.exit') }}
-            </option>
-            <option value="minimizeToTray">
-              {{ $t('settings.closeAppOption.minimizeToTray') }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <div v-if="isElectron && isLinux" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.enableCustomTitlebar') }} </div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-custom-titlebar"
-              v-model="enableCustomTitlebar"
-              type="checkbox"
-              name="enable-custom-titlebar"
-            />
-            <label for="enable-custom-titlebar"></label>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.showLibraryDefault') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-library-default"
-              v-model="showLibraryDefault"
-              type="checkbox"
-              name="show-library-default"
-            />
-            <label for="show-library-default"></label>
-          </div>
-        </div>
-      </div>
-
-      <div class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.showPlaylistsByAppleMusic') }}</div
-          >
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-playlists-by-apple-music"
-              v-model="showPlaylistsByAppleMusic"
-              type="checkbox"
-              name="show-playlists-by-apple-music"
-            />
-            <label for="show-playlists-by-apple-music"></label>
-          </div>
-        </div>
-      </div>
-
-      <div class="item">
-        <div class="left">
-          <div class="title">{{ $t('settings.subTitleDefault') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="sub-title-default"
-              v-model="subTitleDefault"
-              type="checkbox"
-              name="sub-title-default"
-            />
-            <label for="sub-title-default"></label>
-          </div>
-        </div>
-      </div>
-
-      <div class="item">
-        <div class="left">
-          <div class="title">{{ $t('settings.enableReversedMode') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-reversed-mode"
-              v-model="enableReversedMode"
-              type="checkbox"
-              name="enable-reversed-mode"
-            />
-            <label for="enable-reversed-mode"></label>
-          </div>
-        </div>
-      </div>
-
-      <div class="item">
-        <div class="left">
-          <div class="title" style="transform: scaleX(-1)">🐈️ 🏳️‍🌈</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="nyancat-style"
-              v-model="nyancatStyle"
-              type="checkbox"
-              name="nyancat-style"
-            />
-            <label for="nyancat-style"></label>
-          </div>
-        </div>
-      </div>
-
       <div v-if="isElectron">
-        <h3>代理</h3>
+        <h4>代理</h4>
         <div class="item">
           <div class="left">
             <div class="title"> 代理协议 </div>
@@ -766,7 +847,7 @@
         </div>
       </div>
       <div v-if="isElectron">
-        <h3>Real IP</h3>
+        <h4>Real IP</h4>
         <div class="item">
           <div class="left">
             <div class="title"> Real IP </div>
@@ -792,107 +873,28 @@
           />
         </div>
       </div>
-
-      <div v-if="isElectron">
-        <h3>快捷键</h3>
-        <div class="item">
-          <div class="left">
-            <div class="title"> {{ $t('settings.enableGlobalShortcut') }}</div>
-          </div>
-          <div class="right">
-            <div class="toggle">
-              <input
-                id="enable-enable-global-shortcut"
-                v-model="enableGlobalShortcut"
-                type="checkbox"
-                name="enable-enable-global-shortcut"
-              />
-              <label for="enable-enable-global-shortcut"></label>
-            </div>
-          </div>
-        </div>
-        <div
-          id="shortcut-table"
-          :class="{ 'global-disabled': !enableGlobalShortcut }"
-          tabindex="0"
-          @keydown="handleShortcutKeydown"
-        >
-          <div class="row row-head">
-            <div class="col">功能</div>
-            <div class="col">快捷键</div>
-            <div class="col">全局快捷键</div>
-          </div>
-          <div
-            v-for="shortcut in settings.shortcuts"
-            :key="shortcut.id"
-            class="row"
-          >
-            <div class="col">{{ shortcut.name }}</div>
-            <div class="col">
-              <div
-                class="keyboard-input"
-                :class="{
-                  active:
-                    shortcutInput.id === shortcut.id &&
-                    shortcutInput.type === 'shortcut',
-                }"
-                @click.stop="readyToRecordShortcut(shortcut.id, 'shortcut')"
-              >
-                {{
-                  shortcutInput.id === shortcut.id &&
-                  shortcutInput.type === 'shortcut' &&
-                  recordedShortcutComputed !== ''
-                    ? formatShortcut(recordedShortcutComputed)
-                    : formatShortcut(shortcut.shortcut)
-                }}
-              </div>
-            </div>
-            <div class="col">
-              <div
-                class="keyboard-input"
-                :class="{
-                  active:
-                    shortcutInput.id === shortcut.id &&
-                    shortcutInput.type === 'globalShortcut' &&
-                    enableGlobalShortcut,
-                }"
-                @click.stop="
-                  readyToRecordShortcut(shortcut.id, 'globalShortcut')
-                "
-                >{{
-                  shortcutInput.id === shortcut.id &&
-                  shortcutInput.type === 'globalShortcut' &&
-                  recordedShortcutComputed !== ''
-                    ? formatShortcut(recordedShortcutComputed)
-                    : formatShortcut(shortcut.globalShortcut)
-                }}</div
-              >
-            </div>
-          </div>
-          <button
-            class="restore-default-shortcut"
-            @click="restoreDefaultShortcuts"
-            >恢复默认快捷键</button
-          >
-        </div>
-      </div>
-
+      <h3>关于</h3>
       <div class="footer">
         <p class="author"
           >MADE BY
-          <a href="http://github.com/qier222" target="_blank">QIER222</a></p
+          <a
+            href="https://github.com/qier222"
+            target="_blank"
+            rel="noopener noreferrer"
+            >QIER222</a
+          ></p
         >
+        <p class="author">
+          由
+          <a
+            href="https://kuanzzz.pages.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            >kuanzzz.pages.dev</a
+          >
+          修改
+        </p>
         <p class="version">v{{ version }}</p>
-
-        <a
-          v-if="!isElectron"
-          href="https://vercel.com/?utm_source=ohmusic&utm_campaign=oss"
-        >
-          <img
-            height="36"
-            src="https://www.datocms-assets.com/31049/1618983297-powered-by-vercel.svg"
-          />
-        </a>
       </div>
     </div>
   </div>
@@ -929,7 +931,10 @@ export default {
       tracksCache: {
         size: '0KB',
         length: 0,
+        partial: 0,
       },
+      cacheStatsTimer: null,
+      cacheClearing: false,
       allOutputDevices: [
         {
           deviceId: 'default',
@@ -1125,7 +1130,7 @@ export default {
       set(value) {
         if (value === this.settings.musicQuality) return;
         this.$store.commit('changeMusicQuality', value);
-        this.clearCache();
+        if (!this.isAndroid) this.clearCache();
       },
     },
     allowConcurrentPlayback: {
@@ -1210,7 +1215,7 @@ export default {
           key: 'automaticallyCacheSongs',
           value,
         });
-        if (value === false) {
+        if (value === false && !this.isAndroid) {
           this.clearCache();
         }
       },
@@ -1504,6 +1509,12 @@ export default {
   created() {
     this.countDBSize('tracks');
     if (process.env.IS_ELECTRON) this.getAllOutputDevices();
+    if (this.isAndroid) {
+      this.cacheStatsTimer = setInterval(() => this.countDBSize(), 3000);
+    }
+  },
+  beforeDestroy() {
+    clearInterval(this.cacheStatsTimer);
   },
   activated() {
     this.countDBSize('tracks');
@@ -1606,6 +1617,20 @@ export default {
       this.$router.push({ name: 'home' });
     },
     countDBSize() {
+      if (this.isAndroid) {
+        try {
+          const stats = JSON.parse(
+            window.YesPlayMusicAndroid.getAudioCacheStats()
+          );
+          if (stats.error) return;
+          this.tracksCache.size = bytesToSize(stats.bytes);
+          this.tracksCache.length = stats.length;
+          this.tracksCache.partial = stats.partial;
+        } catch (error) {
+          console.debug('Unable to read native audio cache', error);
+        }
+        return;
+      }
       countDBSize().then(data => {
         if (data === undefined) {
           this.tracksCache = {
@@ -1618,7 +1643,23 @@ export default {
         this.tracksCache.length = data.length;
       });
     },
-    clearCache() {
+    async clearCache() {
+      if (this.isAndroid) {
+        this.cacheClearing = true;
+        await this.$nextTick();
+        try {
+          const stats = JSON.parse(
+            window.YesPlayMusicAndroid.clearAudioCache()
+          );
+          if (stats.error) throw new Error(stats.error);
+          this.countDBSize();
+        } catch (error) {
+          this.showToast(error.message || '清除缓存失败，请稍后重试');
+        } finally {
+          this.cacheClearing = false;
+        }
+        return;
+      }
       clearDB().then(() => {
         this.countDBSize();
       });
@@ -1754,6 +1795,16 @@ h3 {
   font-size: 26px;
   color: var(--color-text);
   border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+}
+
+.container > h3:first-child {
+  margin-top: 0;
+}
+
+h4 {
+  margin-top: 28px;
+  font-size: 18px;
+  color: var(--color-text);
 }
 
 .user {

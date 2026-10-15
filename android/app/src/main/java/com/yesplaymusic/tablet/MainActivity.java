@@ -327,6 +327,11 @@ public final class MainActivity extends Activity {
         @JavascriptInterface public void setConcurrentPlayback(boolean enabled) {
             ApiClient.preferences(MainActivity.this).edit().putBoolean("allowConcurrentPlayback", enabled).apply();
         }
+        @JavascriptInterface public void configureAudioCache(boolean enabled, long limitMb) {
+            AudioCache.configure(MainActivity.this, enabled, limitMb);
+        }
+        @JavascriptInterface public String getAudioCacheStats() { return AudioCache.stats(MainActivity.this).toString(); }
+        @JavascriptInterface public String clearAudioCache() { return AudioCache.clear(MainActivity.this).toString(); }
         @JavascriptInterface public void request(String id, String json) {
             apiWorker.execute(() -> {
                 JSONObject result;

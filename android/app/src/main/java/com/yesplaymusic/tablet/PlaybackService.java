@@ -15,8 +15,6 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.datasource.DefaultHttpDataSource;
-import androidx.media3.datasource.DataSource;
-import androidx.media3.datasource.ResolvingDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.DecoderReuseEvaluation;
 import androidx.media3.exoplayer.analytics.AnalyticsListener;
@@ -66,17 +64,8 @@ public final class PlaybackService extends MediaLibraryService {
         DefaultHttpDataSource.Factory network = new DefaultHttpDataSource.Factory().setUserAgent("YesPlayMusic-Android")
             .setDefaultRequestProperties(Collections.singletonMap("Referer", "https://music.163.com/"))
             .setAllowCrossProtocolRedirects(true);
-        DataSource.Factory source = () -> {
-            final String[] streamLevel = { null };
-            return new ResolvingDataSource(network.createDataSource(), spec -> {
-                if (!"ypm".equals(spec.uri.getScheme())) return spec;
-                // Keep range reads/seeks on one format even if settings change mid-track.
-                if (streamLevel[0] == null) streamLevel[0] = ApiClient.preferences(this).getString("qualityLevel", "exhigh");
-                return spec.withUri(ApiClient.resolveAudio(this, spec.uri.getLastPathSegment(), streamLevel[0]));
-            });
-        };
         player = new ExoPlayer.Builder(this)
-            .setMediaSourceFactory(new DefaultMediaSourceFactory(source)).build();
+            .setMediaSourceFactory(new DefaultMediaSourceFactory(AudioCache.dataSources(this, network))).build();
         applyAudioFocusPolicy();
         ApiClient.preferences(this).registerOnSharedPreferenceChangeListener(preferenceListener);
         player.setHandleAudioBecomingNoisy(true);

@@ -53,6 +53,10 @@ final class ApiClient {
         try { return source == null ? new JSONObject() : new JSONObject(source.info.toString()); }
         catch (Exception ignored) { return new JSONObject(); }
     }
+    static void restoreAudioInfo(String id, JSONObject info) {
+        if (resolvedAudio.size() > 100) resolvedAudio.clear();
+        resolvedAudio.put(id, new AudioSource("", info, 0));
+    }
     static SharedPreferences preferences(Context context) {
         return context.getSharedPreferences("android-player", Context.MODE_PRIVATE);
     }

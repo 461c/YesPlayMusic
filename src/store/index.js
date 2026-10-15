@@ -6,6 +6,7 @@ import actions from './actions';
 import { changeAppearance, changeThemeColor } from '@/utils/common';
 import Player from '@/utils/Player';
 import {
+  updateAndroidCache,
   updateAndroidConcurrentPlayback,
   updateAndroidLyrics,
   updateAndroidQuality,
@@ -78,6 +79,15 @@ store.watch(state => state.settings.musicQuality, updateAndroidQuality, {
 store.watch(
   state => state.settings.allowConcurrentPlayback,
   updateAndroidConcurrentPlayback,
+  { immediate: true }
+);
+store.watch(
+  state =>
+    JSON.stringify([
+      state.settings.automaticallyCacheSongs,
+      state.settings.cacheLimit,
+    ]),
+  updateAndroidCache,
   { immediate: true }
 );
 

@@ -7,8 +7,8 @@ android {
         applicationId 'com.yesplaymusic.tablet'
         minSdk 24
         targetSdk 35
-        versionCode 41107
-        versionName '0.4.11-android.7'
+        versionCode 41108
+        versionName '0.4.11-android.8'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
         externalNativeBuild { cmake { cppFlags '-std=c++20'; arguments '-DANDROID_STL=c++_shared' } }
@@ -47,6 +47,7 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'androidx.media3:media3-exoplayer:1.5.1'
     implementation 'androidx.media3:media3-session:1.5.1'
+    implementation 'androidx.media3:media3-database:1.5.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'

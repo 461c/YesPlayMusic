@@ -28,7 +28,7 @@ export default {
     state.settings.outputDevice = deviceId;
   },
   updateSettings(state, { key, value }) {
-    state.settings[key] = value;
+    Vue.set(state.settings, key, value);
   },
   updateData(state, { key, value }) {
     state.data[key] = value;

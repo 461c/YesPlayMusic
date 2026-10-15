@@ -49,3 +49,13 @@ export function updateAndroidConcurrentPlayback(enabled) {
     native.setConcurrentPlayback(Boolean(enabled));
   }
 }
+
+export function updateAndroidCache(config) {
+  if (native && native.configureAudioCache) {
+    const [enabled, limit] = JSON.parse(config);
+    native.configureAudioCache(
+      Boolean(enabled),
+      limit === false ? 0 : limit ?? 8192
+    );
+  }
+}
