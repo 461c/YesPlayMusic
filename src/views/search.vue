@@ -1,5 +1,5 @@
 <template>
-  <div v-show="show" class="search-page">
+  <div v-page-reveal="show" v-show="show" class="search-page">
     <div v-show="artists.length > 0 || albums.length > 0" class="row">
       <div v-show="artists.length > 0" class="artists">
         <div v-show="artists.length > 0" class="section-title"

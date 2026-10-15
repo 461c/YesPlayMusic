@@ -19,3 +19,5 @@
 
 - Settings uses exactly four main sections: 播放、缓存、外观、其它. Do not restore the lyrics wall clock. Animate only route content with opacity/translateY, retaining cached pages and scroll restoration; navbar/player stay outside this transition and lyrics/player slide behavior stays independent. Avatar menu links are 主软件仓库 (qier222/YesPlayMusic) and 本构建仓库 (461c/YesPlayMusic).
 - Android audio diagnostics use a track-checked native snapshot, refreshed on input-format and ready/tracks/playback events. Never replace a media queue item solely to publish diagnostics.
+
+- Async route roots hidden by v-show must use v-page-reveal so entering after data arrives still fades/slides in. Images use v-image-fade for load/decode-driven opacity reveal, including cache hits and source changes; preserve lazy loading and respect reduced motion.

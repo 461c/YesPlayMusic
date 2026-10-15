@@ -1,7 +1,8 @@
 <template>
-  <div v-show="show" ref="library">
+  <div v-page-reveal="show" v-show="show" ref="library">
     <h1>
       <img
+        v-image-fade
         class="avatar"
         :src="data.user.avatarUrl | resizeImage"
         loading="lazy"

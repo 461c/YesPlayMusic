@@ -1,4 +1,5 @@
 import Vue from 'vue';
+import { pageReveal, imageFade } from '@/directives/reveal';
 import VueGtag from 'vue-gtag';
 import App from './App.vue';
 import router from './router';
@@ -15,6 +16,9 @@ import { applyCustomCss } from '@/utils/customCss';
 import { isAndroid } from '@/utils/androidAudio';
 import '@/assets/css/android.scss';
 import { initializeAndroidEnvironment } from '@/utils/androidEnvironment';
+
+Vue.directive('page-reveal', pageReveal);
+Vue.directive('image-fade', imageFade);
 
 initializeAndroidEnvironment();
 

@@ -1,5 +1,5 @@
 <template>
-  <div v-show="show" class="album-page">
+  <div v-page-reveal="show" v-show="show" class="album-page">
     <div class="playlist-info">
       <Cover
         :id="album.id"

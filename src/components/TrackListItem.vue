@@ -8,6 +8,7 @@
     @mouseleave="hover = false"
   >
     <img
+      v-image-fade
       v-if="!isAlbum"
       :src="imgUrl"
       loading="lazy"

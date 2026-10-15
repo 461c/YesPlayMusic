@@ -1,5 +1,5 @@
 <template>
-  <div v-show="show" class="playlist">
+  <div v-page-reveal="show" v-show="show" class="playlist">
     <div
       v-if="specialPlaylistInfo === undefined && !isLikeSongsPage"
       class="playlist-info"
@@ -97,7 +97,7 @@
         :class="specialPlaylistInfo.gradient"
         @click.right="openMenu"
       >
-        <!-- <img :src="playlist.coverImgUrl | resizeImage" /> -->
+        <!-- <img v-image-fade :src="playlist.coverImgUrl | resizeImage" /> -->
         {{ specialPlaylistInfo.name }}
       </div>
       <div class="subtitle"
@@ -140,6 +140,7 @@
     <div v-if="isLikeSongsPage" class="user-info">
       <h1>
         <img
+          v-image-fade
           class="avatar"
           :src="data.user.avatarUrl | resizeImage"
           loading="lazy"

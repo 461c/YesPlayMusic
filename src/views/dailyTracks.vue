@@ -1,5 +1,5 @@
 <template>
-  <div v-show="show">
+  <div v-page-reveal="show" v-show="show">
     <div class="special-playlist">
       <div class="title gradient"> 每日歌曲推荐 </div>
       <div class="subtitle">根据你的音乐口味生成 · 每天6:00更新</div>

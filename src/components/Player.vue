@@ -38,6 +38,7 @@
       <div class="playing">
         <div class="container" @click.stop>
           <img
+            v-image-fade
             :src="currentTrack.al && currentTrack.al.picUrl | resizeImage(224)"
             loading="lazy"
             @click="goToAlbum"

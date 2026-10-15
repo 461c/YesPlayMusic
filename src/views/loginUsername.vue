@@ -32,6 +32,7 @@
             @click="activeUser = user"
           >
             <img
+              v-image-fade
               class="head"
               :src="user.avatarUrl | resizeImage"
               loading="lazy"

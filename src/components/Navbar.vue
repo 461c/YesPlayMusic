@@ -44,6 +44,7 @@
           </div>
         </div>
         <img
+          v-image-fade
           class="avatar"
           :src="avatarUrl"
           loading="lazy"

@@ -1,7 +1,13 @@
 <template>
   <div class="fm" :style="{ background }" data-theme="dark">
-    <img :src="nextTrackCover" style="display: none" loading="lazy" />
     <img
+      v-image-fade
+      :src="nextTrackCover"
+      style="display: none"
+      loading="lazy"
+    />
+    <img
+      v-image-fade
       class="cover"
       :src="track.album && track.album.picUrl | resizeImage(512)"
       loading="lazy"

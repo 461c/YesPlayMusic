@@ -1,5 +1,5 @@
 <template>
-  <div v-show="show" class="search">
+  <div v-page-reveal="show" v-show="show" class="search">
     <h1>
       <span>{{ $t('search.searchFor') }} {{ typeNameTable[type] }}</span> "{{
         keywords

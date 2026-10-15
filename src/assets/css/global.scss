@@ -137,3 +137,8 @@ body:not([data-platform='android']) ::-webkit-scrollbar-thumb {
 .user-select-none {
   user-select: none;
 }
+
+// Preserve each image's existing opacity/hover styling after loading.
+img[data-image-pending] {
+  opacity: 0 !important;
+}

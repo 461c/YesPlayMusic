@@ -34,7 +34,7 @@
         <div>
           <div class="cover">
             <div class="cover-container">
-              <img :src="imageUrl" loading="lazy" />
+              <img v-image-fade :src="imageUrl" loading="lazy" />
               <div
                 class="shadow"
                 :style="{ backgroundImage: `url(${imageUrl})` }"

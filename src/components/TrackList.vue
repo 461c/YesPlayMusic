@@ -3,6 +3,7 @@
     <ContextMenu ref="menu">
       <div v-show="type !== 'cloudDisk'" class="item-info">
         <img
+          v-image-fade
           :src="rightClickedTrackComputed.al.picUrl | resizeImage(224)"
           loading="lazy"
         />

@@ -1,5 +1,5 @@
 <template>
-  <div v-show="show" class="home">
+  <div v-page-reveal="show" v-show="show" class="home">
     <div
       v-if="settings.showPlaylistsByAppleMusic !== false"
       class="index-row first-row"

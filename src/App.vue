@@ -9,7 +9,7 @@
     >
       <transition name="page" mode="out-in" @before-enter="restorePagePosition">
         <keep-alive include="Home,Artist,ArtistMV,Next,Search,Explore,Library">
-          <router-view :key="$route.path" />
+          <router-view :key="$route.fullPath" />
         </keep-alive>
       </transition>
     </main>
