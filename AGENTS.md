@@ -25,3 +25,5 @@
 - Android may prefetch the user's playlist covers once. Never issue extra playlist/song API calls or enumerate full lists for artwork. Enroll song covers only from ordinary responses for library playlists/tracks, and persist them only on actual image requests. Random/recommended songs are not independently enrolled. Keep 1024px deduplicated artwork across launches, stop new downloads below 128MB free, and expose separate usage/clear controls under 缓存.
 
 - Avatar/song context menus fade and translate vertically on entry/exit. Add a thin navbar bottom divider. Cover play buttons fade using opacity only and reset hover/touch focus on navigation or deactivation.
+
+- ContextMenu styles must reach slotted items/header images through transitions. Use shared styles strictly namespaced under .context-menu (including ancestor dark mode), rather than scoped descendant rules that miss slots. Avatar menu is text-only. Clamp menus above the visible player and within viewport edges; scroll long menus internally.

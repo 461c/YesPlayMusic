@@ -55,15 +55,12 @@
 
     <ContextMenu ref="userProfileMenu">
       <div class="item" @click="toSettings">
-        <svg-icon icon-class="settings" />
         {{ $t('library.userProfileMenu.settings') }}
       </div>
       <div v-if="!isLooseLoggedIn" class="item" @click="toLogin">
-        <svg-icon icon-class="login" />
         {{ $t('login.login') }}
       </div>
       <div v-if="isLooseLoggedIn" class="item" @click="logout">
-        <svg-icon icon-class="logout" />
         {{ $t('library.userProfileMenu.logout') }}
       </div>
     </ContextMenu>
