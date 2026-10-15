@@ -7,10 +7,11 @@
       :style="{ overflow: enableScrolling ? 'auto' : 'hidden' }"
       @scroll="handleScroll"
     >
-      <keep-alive>
-        <router-view v-if="$route.meta.keepAlive"></router-view>
-      </keep-alive>
-      <router-view v-if="!$route.meta.keepAlive"></router-view>
+      <transition name="page" mode="out-in" @before-enter="restorePagePosition">
+        <keep-alive include="Home,Artist,ArtistMV,Next,Search,Explore,Library">
+          <router-view :key="$route.path" />
+        </keep-alive>
+      </transition>
     </main>
     <transition name="slide-up">
       <Player v-if="enablePlayer" v-show="showPlayer" ref="player" />
@@ -102,6 +103,9 @@ export default {
         this.$store.dispatch('fetchCloudDisk');
       }
     },
+    restorePagePosition() {
+      this.$refs.scrollbar.restorePosition();
+    },
     handleScroll() {
       this.$refs.scrollbar.handleScroll();
     },
@@ -138,6 +142,25 @@ body:not([data-platform='android']) main {
 
 body:not([data-platform='android']) main::-webkit-scrollbar {
   width: 0px;
+}
+
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-active,
+  .page-leave-active {
+    transition-duration: 0.01ms;
+  }
 }
 
 .slide-up-enter-active,

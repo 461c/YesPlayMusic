@@ -68,7 +68,11 @@
       <hr />
       <div class="item" @click="toGitHub">
         <svg-icon icon-class="github" />
-        {{ $t('nav.github') }}
+        主软件仓库
+      </div>
+      <div class="item" @click="toBuildGitHub">
+        <svg-icon icon-class="github" />
+        本构建仓库
       </div>
     </ContextMenu>
   </div>
@@ -159,6 +163,9 @@ export default {
     },
     toGitHub() {
       window.open('https://github.com/qier222/YesPlayMusic');
+    },
+    toBuildGitHub() {
+      window.open('https://github.com/461c/YesPlayMusic');
     },
     toLogin() {
       if (process.env.IS_ELECTRON === true) {

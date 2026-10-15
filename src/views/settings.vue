@@ -26,7 +26,7 @@
           </button>
         </div>
       </div>
-      <h3>播放与音质</h3>
+      <h3>播放</h3>
       <div class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.musicQuality.text') }} </div>
@@ -112,7 +112,7 @@
           </div>
         </div>
       </div>
-      <h3 v-if="isElectron || isAndroid">缓存与存储</h3>
+      <h3>缓存</h3>
       <div v-if="isElectron || isAndroid" class="item">
         <div class="left">
           <div class="title">
@@ -175,7 +175,7 @@
           </button>
         </div>
       </div>
-      <h3>外观与界面</h3>
+      <h3>外观</h3>
       <div class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.language') }} </div>
@@ -320,7 +320,6 @@
           </div>
         </div>
       </div>
-      <h3>{{ $t('settings.lyric') }}</h3>
       <div class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.lyricFontSize.text') }} </div>
@@ -377,22 +376,6 @@
           </select>
         </div>
       </div>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.showLyricsTime') }} </div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-lyrics-time"
-              v-model="showLyricsTime"
-              type="checkbox"
-              name="show-lyrics-time"
-            />
-            <label for="show-lyrics-time"></label>
-          </div>
-        </div>
-      </div>
       <div v-if="isElectron && isLinux" class="item">
         <div class="left">
           <div class="title">
@@ -420,7 +403,7 @@
           </div>
         </div>
       </div>
-      <h3>内容与服务</h3>
+      <h3>其它</h3>
       <div class="item">
         <div class="left">
           <div class="title">
@@ -500,7 +483,6 @@
           </div>
         </div>
       </div>
-      <h3 v-if="isElectron">桌面与快捷键</h3>
       <div v-if="isElectron" class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
@@ -630,7 +612,6 @@
           >
         </div>
       </div>
-      <h3 v-if="isAndroid || isElectron">网络与高级</h3>
       <div v-if="isAndroid" class="item android-api-address">
         <div class="left">
           <div class="title">{{ $t('settings.androidApi.text') }}</div>
@@ -873,7 +854,6 @@
           />
         </div>
       </div>
-      <h3>关于</h3>
       <div class="footer">
         <p class="author"
           >MADE BY
@@ -953,7 +933,8 @@ export default {
     ...mapState(['player', 'settings', 'data', 'lastfm', 'androidAudioInfo']),
     androidQualityInfo() {
       const info = this.androidAudioInfo;
-      if (!info) return '暂无播放信息';
+      if (!info)
+        return this.player.playing ? '正在读取当前音源信息…' : '暂无播放信息';
       const formats = {
         'audio/mpeg': 'MP3',
         'audio/flac': 'FLAC',
@@ -1238,17 +1219,6 @@ export default {
       set(value) {
         this.$store.commit('updateSettings', {
           key: 'lyricsBackground',
-          value,
-        });
-      },
-    },
-    showLyricsTime: {
-      get() {
-        return this.settings.showLyricsTime;
-      },
-      set(value) {
-        this.$store.commit('updateSettings', {
-          key: 'showLyricsTime',
           value,
         });
       },

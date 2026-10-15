@@ -54,6 +54,11 @@ public final class MainActivity extends Activity {
     private volatile String environment = "{}";
     private int insetTop, insetBottom, insetLeft, insetRight;
     private boolean appearanceDark, lyricsOpen;
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener audioInfoListener = (preferences, key) -> {
+        if ("currentAudioInfo".equals(key)) handler.post(() -> {
+            if (!destroyed) emitState();
+        });
+    };
     private final Runnable progress = new Runnable() {
         @Override public void run() {
             if (!visible) return;
@@ -64,6 +69,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        ApiClient.preferences(this).registerOnSharedPreferenceChangeListener(audioInfoListener);
         configureSystemBars();
         web = new WebView(this);
         content = new android.widget.FrameLayout(this);
@@ -293,9 +299,10 @@ public final class MainActivity extends Activity {
             state.put("ended", controller.getPlaybackState() == Player.STATE_ENDED);
             state.put("playlistIndex", current == null || current.mediaMetadata.extras == null ? -1
                 : current.mediaMetadata.extras.getInt("playlistIndex", -1));
-            if (current != null && current.mediaMetadata.extras != null) {
-                String info = current.mediaMetadata.extras.getString("androidAudioInfo", "");
-                if (!info.isEmpty()) state.put("audioInfo", new JSONObject(info));
+            String diagnostic = ApiClient.preferences(this).getString("currentAudioInfo", "");
+            if (current != null && !diagnostic.isEmpty()) {
+                JSONObject info = new JSONObject(diagnostic);
+                if (current.mediaId.equals(info.optString("trackId"))) state.put("audioInfo", info);
             }
             if (controller.getPlayerError() != null) state.put("error", controller.getPlayerError().getMessage());
             snapshot = state.toString();
@@ -378,6 +385,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onDestroy() {
         destroyed = true;
+        ApiClient.preferences(this).unregisterOnSharedPreferenceChangeListener(audioInfoListener);
         apiWorker.shutdownNow();
         handler.removeCallbacksAndMessages(null);
         if (controllerFuture != null) MediaController.releaseFuture(controllerFuture);

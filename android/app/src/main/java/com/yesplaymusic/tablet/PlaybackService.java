@@ -60,6 +60,7 @@ public final class PlaybackService extends MediaLibraryService {
 
     @Override public void onCreate() {
         super.onCreate();
+        ApiClient.preferences(this).edit().remove("currentAudioInfo").apply();
         LocalApi.ensureStarted(this);
         DefaultHttpDataSource.Factory network = new DefaultHttpDataSource.Factory().setUserAgent("YesPlayMusic-Android")
             .setDefaultRequestProperties(Collections.singletonMap("Referer", "https://music.163.com/"))
@@ -80,11 +81,17 @@ public final class PlaybackService extends MediaLibraryService {
             .setId("yesplaymusic").setSessionExtras(extras).setSessionActivity(activity).build();
         player.addAnalyticsListener(new AnalyticsListener() {
             @Override public void onAudioInputFormatChanged(EventTime event, Format format, DecoderReuseEvaluation reuse) {
-                publishAudioInfo(format);
+                // Analytics can describe a prebuffered item rather than the playing item.
+                if (event.timeline.isEmpty() || event.windowIndex < 0
+                    || event.windowIndex >= event.timeline.getWindowCount()) return;
+                MediaItem input = event.timeline.getWindow(event.windowIndex, new androidx.media3.common.Timeline.Window()).mediaItem;
+                MediaItem current = player.getCurrentMediaItem();
+                if (current != null && current.mediaId.equals(input.mediaId)) publishAudioInfo(format);
             }
         });
         player.addListener(new Player.Listener() {
             @Override public void onMediaItemTransition(MediaItem item, int reason) {
+                ApiClient.preferences(PlaybackService.this).edit().remove("currentAudioInfo").apply();
                 if (item != null) updateMetadata(item.mediaId);
                 refillFm();
             }
@@ -97,6 +104,13 @@ public final class PlaybackService extends MediaLibraryService {
                 if (playing) main.post(savePosition);
             }
             @Override public void onEvents(Player source, Player.Events events) {
+                if (player.getPlaybackState() == Player.STATE_READY
+                    && (events.contains(Player.EVENT_TRACKS_CHANGED)
+                        || events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)
+                        || events.contains(Player.EVENT_IS_PLAYING_CHANGED)
+                        || events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION))) {
+                    publishAudioInfo(player.getAudioFormat());
+                }
                 boolean queueChanged = events.contains(Player.EVENT_TIMELINE_CHANGED)
                     || events.contains(Player.EVENT_MEDIA_METADATA_CHANGED);
                 PlaybackResumeStore.save(PlaybackService.this, player, queueChanged);
@@ -136,12 +150,11 @@ public final class PlaybackService extends MediaLibraryService {
                 : format.pcmEncoding == C.ENCODING_PCM_32BIT ? 32
                 : format.pcmEncoding == C.ENCODING_PCM_8BIT ? 8 : 0;
             if (depth > 0) info.put("bitDepth", depth);
-            Bundle extras = current.mediaMetadata.extras == null ? new Bundle() : new Bundle(current.mediaMetadata.extras);
             String json = info.toString();
-            if (json.equals(extras.getString("androidAudioInfo"))) return;
-            extras.putString("androidAudioInfo", json);
-            player.replaceMediaItem(player.getCurrentMediaItemIndex(), current.buildUpon()
-                .setMediaMetadata(current.mediaMetadata.buildUpon().setExtras(extras).build()).build());
+            // Diagnostics must not replace queue items or depend on controller metadata propagation.
+            if (!json.equals(ApiClient.preferences(this).getString("currentAudioInfo", ""))) {
+                ApiClient.preferences(this).edit().putString("currentAudioInfo", json).apply();
+            }
         } catch (Exception ignored) { /* Diagnostics must never interrupt playback. */ }
     }
 

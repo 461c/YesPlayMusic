@@ -60,7 +60,11 @@ new Vue({
 
 if (isAndroid) {
   const updateAudioInfo = state => {
-    const info = state.audioInfo || null;
+    const info =
+      state.audioInfo &&
+      String(state.audioInfo.trackId) === String(state.trackId)
+        ? state.audioInfo
+        : null;
     if (JSON.stringify(info) !== JSON.stringify(store.state.androidAudioInfo)) {
       store.commit('updateAndroidAudioInfo', info);
     }
