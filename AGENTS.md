@@ -31,3 +31,5 @@
 - Artwork cache must share in-flight fetches (including prefetched covers), keep legacy cached entries usable, normalize existing resize query parameters, and expose hit/download/failure counters. Initialize known library membership before concurrent startup responses; do not add song/playlist API requests for caching.
 
 - Persist library fields and ordinary playlist-detail responses in IndexedDB, scoped by account/API. Restore library data before refreshing; never gate the library page on network success. Offline/failed refreshes retain saved content. Switching accounts clears in-memory library state. Cached track/lyric/album reads must not start duplicate or unhandled refresh requests. Only metadata already requested during normal use is saved; never crawl playlists for offline support.
+
+- Android must disable whole-WebView edge stretching with OVER_SCROLL_NEVER and prevent main's scroll chaining with overscroll-behavior: none. Fixed navbar/player must never scale or move with top/bottom boundary gestures; preserve normal scrolling and independent page/lyrics/player animations.

@@ -72,6 +72,8 @@ public final class MainActivity extends Activity {
         ApiClient.preferences(this).registerOnSharedPreferenceChangeListener(audioInfoListener);
         configureSystemBars();
         web = new WebView(this);
+        // Native edge stretching scales the entire WebView, including fixed navbar/player.
+        web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         content = new android.widget.FrameLayout(this);
         content.setBackgroundColor(android.graphics.Color.BLACK);
         content.addView(web, new android.widget.FrameLayout.LayoutParams(-1, -1));

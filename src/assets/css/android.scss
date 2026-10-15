@@ -18,6 +18,8 @@ body[data-platform='android'] {
     transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
   main {
+    // Keep boundary gestures inside page content instead of stretching the app shell.
+    overscroll-behavior: none;
     padding-top: calc(64px + var(--android-inset-top, 0px));
     padding-bottom: calc(
       96px + var(--player-bottom-gap) + var(--android-inset-bottom, 0px)
