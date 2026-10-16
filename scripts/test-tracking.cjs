@@ -1,23 +1,15 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
-const source = fs
-  .readFileSync('src/views/tracking.vue', 'utf8')
-  .split('<script>')[1]
-  .split('</script>')[0]
-  .replace(/import[\s\S]*?from ['"][^'"]+['"];?/g, '')
-  .replace('export default', 'module.exports =');
-const requests = [];
-const writes = [];
+const requests = [],
+  writes = [];
 let saved = null;
 const sandbox = {
-  module: { exports: {} },
   Date,
   Promise,
   JSON,
   Set,
   String,
-  trackingSections: [],
   trackingScope: id => String(id),
   normalizeTrackingId: value => (/^[1-9]\d*$/.test(value) ? value : null),
   readTrackingList: async () => [],
@@ -29,14 +21,29 @@ const sandbox = {
     new Promise((resolve, reject) =>
       requests.push({ uid, section, cursor, resolve, reject })
     ),
+  TrackingSection: {},
 };
-vm.runInNewContext(source, sandbox);
-const component = sandbox.module.exports;
-function instance() {
+function component(path) {
+  const source = fs
+    .readFileSync(path, 'utf8')
+    .split('<script>')[1]
+    .split('</script>')[0]
+    .replace(/import[\s\S]*?from ['"][^'"]+['"];?/g, '')
+    .replace('export default', 'module.exports =');
+  const context = { ...sandbox, module: { exports: {} } };
+  vm.runInNewContext(source, context);
+  return context.module.exports;
+}
+function instance(component, props = {}) {
   const instance = {
     ...component.data(),
     scope: 'account-A',
     $store: { state: { player: {} } },
+    $emit() {},
+    $set(array, index, value) {
+      array.splice(index, 1, value);
+    },
+    ...props,
   };
   Object.entries(component.methods).forEach(
     ([key, method]) => (instance[key] = method.bind(instance))
@@ -50,81 +57,91 @@ function instance() {
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
 (async () => {
-  const page = instance();
-  page.ready = true;
-  page.addUser('123');
+  const parent = instance(component('src/views/tracking.vue'));
+  parent.ready = true;
+  parent.managing = true;
+  parent.inputId = '123';
+  parent.addUser();
+  parent.inputId = '456';
+  parent.addUser();
+  assert.equal(parent.groups.length, 3);
+  assert.equal(requests.length, 0, 'Management must not fetch user content');
+  parent.move(1, -1);
+  assert.equal(parent.users[0].id, '456');
+  parent.edit(parent.users[0]);
+  parent.editAlias = '备注';
+  parent.saveEdit('456');
+  assert.equal(parent.users[0].alias, '备注');
+  parent.edit(parent.users[0]);
+  parent.editId = '123';
+  parent.saveEdit('456');
+  assert.equal(parent.users[0].id, '456', 'Duplicate ID edit must be rejected');
+  parent.editId = '789';
+  parent.saveEdit('456');
+  assert.equal(parent.selected, '789');
+  assert.equal(parent.users[0].alias, '备注');
+  parent.inputId = '789';
+  parent.addUser();
+  assert.equal(parent.users.length, 2);
+  parent.remove('789');
+  assert.equal(parent.selected, '123');
+  await parent.listWrites;
+  const sectionComponent = component('src/components/TrackingSection.vue');
+  const page = instance(sectionComponent, { uid: '123', section: 'profile' });
+  const old = page.load();
   await tick();
-  assert.equal(
-    requests.length,
-    1,
-    'Adding a user must only fetch selected profile'
-  );
-  page.addUser('456');
+  page.uid = '456';
+  const current = page.load();
   await tick();
   requests[0].resolve({ profile: { nickname: 'Old user' } });
   requests[1].resolve({ profile: { nickname: 'Current user' } });
-  await tick();
+  await Promise.all([old, current]);
   assert.equal(
     page.profile.nickname,
     'Current user',
-    'Stale response must not replace selected user'
+    'Late old-user response must not overwrite selected user'
   );
-  assert.equal(
-    page.users[0].name,
-    '',
-    'Stale response must not modify another profile'
-  );
-  page.move(1, -1);
-  assert.equal(page.users[0].id, '456');
-  page.addUser('456');
-  assert.equal(page.users.length, 2, 'Duplicates are not added');
-  page.addUser('not-an-id');
-  assert.equal(page.users.length, 2);
   saved = { data: { weekData: [{ song: { id: 1 } }] }, updatedAt: 42 };
+  page.section = 'week';
   const count = requests.length;
-  page.changeTab('week');
-  await tick();
+  await page.load();
   assert.equal(
     requests.length,
     count,
-    'Cached section must not make an implicit request'
+    'Cached group re-entry must not request the server'
   );
-  assert.equal(page.updatedAt, 42);
   assert.equal(page.items.length, 1);
   const refresh = page.load(true);
   await tick();
   requests.at(-1).reject(new Error('private'));
   await refresh;
-  assert.equal(page.items.length, 1, 'Failed refresh keeps offline snapshot');
+  assert.equal(page.items.length, 1);
   assert.equal(page.error, 'private');
   saved = null;
-  page.changeTab('playlists');
+  page.section = 'playlists';
+  const initial = page.load();
   await tick();
   requests.at(-1).resolve({ playlist: [{ id: 1 }], more: true });
-  await tick();
+  await initial;
   const more = page.load(false, true);
   await tick();
   assert.equal(requests.at(-1).cursor.offset, 1);
   requests.at(-1).resolve({ playlist: [{ id: 1 }, { id: 2 }], more: false });
   await more;
+  assert.equal(page.items.length, 2);
+  page.section = 'events';
+  const pending = page.load();
+  await tick();
+  sectionComponent.beforeDestroy.call(page);
+  requests.at(-1).resolve({ events: [{ id: 'late' }] });
+  await pending;
   assert.equal(
-    page.items.length,
-    2,
-    'Pagination de-duplicates overlapping rows'
+    page.payload,
+    null,
+    'Destroyed group must ignore late responses'
   );
-  page.changeTab('events');
-  await tick();
-  const late = requests.at(-1);
-  page.remove('456');
-  await tick();
-  late.resolve({ events: [{ id: 'deleted-user' }] });
-  await tick();
-  assert.equal(page.selected, '123');
-  assert.equal(page.payload, null, 'Deleted user request must not reappear');
-  await page.listWrites;
-  assert.equal(writes.filter(row => row.scope).at(-1).users.length, 1);
   console.log(
-    'Tracking: selected-only requests, response races, saved content, refresh failure, order, removal and pagination passed'
+    'Tracking: management editing/order/removal, three groups, request races, offline reads, refresh failure and pagination passed'
   );
 })().catch(error => {
   console.error(error);

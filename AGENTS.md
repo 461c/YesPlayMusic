@@ -38,3 +38,5 @@
 - Tracking is a local, account/API-scoped list of public profiles. Fetch only the selected user/section with manual pagination/refresh, no background polling or playlist crawling. Preserve offline snapshots and distinguish unavailable/private content from empty activity; do not present listening rankings as exact playback timelines.
 
 - Tracking is opt-in (`settings.showTracking`, default false); expose its toggle in Settings → 其它. Hide the navbar entry and redirect direct tracking navigation to Settings when disabled; retain saved tracking users and snapshots.
+
+- Tracking displays one selected person, with a top-right user selector and exactly three content groups: 动态与资料, 歌单与听歌, 人际与电台. Put add/edit/alias/order/delete actions on its management view, not the content view. Omit listening-rank play counts and explanatory filler. Fetch only sections in the visible group; cumulative rankings load only when chosen.
