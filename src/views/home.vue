@@ -254,5 +254,7 @@ footer {
 </style>
 
 <style lang="scss" scoped>
-.index-row:first-of-type { margin-top: 32px; }
+.index-row:first-of-type {
+  margin-top: 32px;
+}
 </style>
