@@ -36,3 +36,5 @@
 
 - Publish one Android APK only: YesPlayMusic-Android-Tablet.apk, application label YesPlayMusic, field-tested applicationId com.luna.music. Preserve Java component names and signing certificate, and document the 汽水音乐 package conflict and old original-package data separation. No visibly labeled Huawei edition or second APK.
 - Tracking is a local, account/API-scoped list of public profiles. Fetch only the selected user/section with manual pagination/refresh, no background polling or playlist crawling. Preserve offline snapshots and distinguish unavailable/private content from empty activity; do not present listening rankings as exact playback timelines.
+
+- Tracking is opt-in (`settings.showTracking`, default false); expose its toggle in Settings → 其它. Hide the navbar entry and redirect direct tracking navigation to Settings when disabled; retain saved tracking users and snapshots.

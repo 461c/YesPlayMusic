@@ -438,6 +438,25 @@
       <h3>其它</h3>
       <div class="item">
         <div class="left">
+          <div class="title">显示跟踪页面</div>
+          <div class="description"
+            >开启后在顶部导航栏显示跟踪入口，关闭不会删除已添加的用户。</div
+          >
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="show-tracking"
+              v-model="showTracking"
+              type="checkbox"
+              name="show-tracking"
+            />
+            <label for="show-tracking"></label>
+          </div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
           <div class="title">
             {{ $t('settings.MusicGenrePreference.text') }}
           </div>
@@ -1161,6 +1180,14 @@ export default {
         if (value === this.settings.musicQuality) return;
         this.$store.commit('changeMusicQuality', value);
         if (!this.isAndroid) this.clearCache();
+      },
+    },
+    showTracking: {
+      get() {
+        return this.settings.showTracking === true;
+      },
+      set(value) {
+        this.$store.commit('updateSettings', { key: 'showTracking', value });
       },
     },
     allowConcurrentPlayback: {

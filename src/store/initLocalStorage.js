@@ -31,6 +31,7 @@ let localStorage = {
     enableDiscordRichPresence: false,
     enableGlobalShortcut: true,
     showLibraryDefault: false,
+    showTracking: false,
     subTitleDefault: false,
     linuxEnableCustomTitlebar: false,
     trayIconTheme: 'auto',

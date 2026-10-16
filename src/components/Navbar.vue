@@ -26,6 +26,7 @@
           >{{ $t('nav.library') }}</router-link
         >
         <router-link
+          v-if="settings.showTracking"
           to="/tracking"
           :class="{ active: $route.name === 'tracking' }"
           >跟踪</router-link
