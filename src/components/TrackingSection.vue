@@ -118,31 +118,6 @@
           ></article
         >
       </template>
-      <template v-else-if="tab === 'follows' || tab === 'followers'">
-        <div v-for="item in items" :key="item.userId" class="social-person"
-          ><img
-            v-if="item.avatarUrl"
-            v-image-fade
-            :src="item.avatarUrl | resizeImage(96)"
-            loading="lazy"
-            alt=""
-          /><div
-            ><strong>{{ item.nickname }}</strong
-            ><small>ID {{ item.userId }}</small
-            ><p>{{ item.signature }}</p></div
-          ></div
-        >
-      </template>
-      <template v-else-if="tab === 'radios'">
-        <article v-for="item in items" :key="item.id" class="event"
-          ><h3>{{ item.name }}</h3
-          ><p>{{ item.desc }}</p
-          ><small
-            >订阅 {{ item.subCount || 0 }} · 节目
-            {{ item.programCount || 0 }}</small
-          ></article
-        >
-      </template>
       <p v-if="tab !== 'profile' && !items.length" class="muted">暂无内容</p>
       <button
         v-if="hasMore"
@@ -198,8 +173,6 @@ export default {
         ['累计听歌', d.listenSongs],
         ['村龄（天）', d.createDays],
         ['创建歌单', p.playlistCount],
-        ['关注', p.follows],
-        ['粉丝', p.followeds],
         ['动态', p.eventCount],
         [
           '生日',
@@ -225,9 +198,6 @@ export default {
         week: d.weekData,
         all: d.allData,
         events: d.events,
-        follows: d.follow,
-        followers: d.followeds,
-        radios: d.djRadios,
       }[this.tab];
       return Array.isArray(list)
         ? list.filter(
@@ -237,7 +207,7 @@ export default {
     },
     hasMore() {
       return (
-        ['playlists', 'events', 'follows', 'followers'].includes(this.tab) &&
+        ['playlists', 'events'].includes(this.tab) &&
         Boolean(this.payload?.more)
       );
     },
@@ -291,8 +261,6 @@ export default {
           const key = {
             playlists: 'playlist',
             events: 'events',
-            follows: 'follow',
-            followers: 'followeds',
           }[section];
           const seen = new Set();
           data[key] = [...(previous[key] || []), ...(data[key] || [])].filter(
@@ -497,30 +465,6 @@ small {
     height: 110px;
     object-fit: cover;
     border-radius: 8px;
-  }
-}
-.social-person {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 0;
-  img {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-  }
-  div {
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  p {
-    font-size: 13px;
-    opacity: 0.65;
-    margin-top: 8px;
-  }
-  button {
-    font-size: 12px;
   }
 }
 .load-more {

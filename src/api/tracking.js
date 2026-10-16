@@ -7,9 +7,6 @@ export const trackingSections = [
   { key: 'week', title: '最近一周', url: '/user/record', type: 1 },
   { key: 'all', title: '累计排行', url: '/user/record', type: 0 },
   { key: 'events', title: '动态', url: '/user/event' },
-  { key: 'follows', title: '关注', url: '/user/follows' },
-  { key: 'followers', title: '粉丝', url: '/user/followeds' },
-  { key: 'radios', title: '电台', url: '/user/audio' },
 ];
 
 export function readTrackingSection(uid, section, cursor = {}) {

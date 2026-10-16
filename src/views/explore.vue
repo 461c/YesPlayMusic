@@ -1,6 +1,9 @@
 <template>
   <div class="explore-page">
-    <h1>{{ $t('explore.explore') }}</h1>
+    <div class="explore-header"
+      ><h1>{{ $t('explore.explore') }}</h1
+      ><ExploreSearch
+    /></div>
     <div class="buttons">
       <div
         v-for="category in settings.enabledPlaylistCategories"
@@ -73,10 +76,12 @@ import { getRecommendPlayList } from '@/utils/playList';
 import ButtonTwoTone from '@/components/ButtonTwoTone.vue';
 import CoverRow from '@/components/CoverRow.vue';
 import SvgIcon from '@/components/SvgIcon.vue';
+import ExploreSearch from '@/components/ExploreSearch.vue';
 
 export default {
   name: 'Explore',
   components: {
+    ExploreSearch,
     CoverRow,
     ButtonTwoTone,
     SvgIcon,
@@ -194,6 +199,21 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.explore-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+@media (max-width: 650px) {
+  .explore-header {
+    gap: 12px;
+    h1 {
+      font-size: 36px;
+    }
+  }
+}
 h1 {
   color: var(--color-text);
   font-size: 56px;

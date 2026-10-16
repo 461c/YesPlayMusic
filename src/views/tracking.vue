@@ -109,7 +109,7 @@
               @notice="notice = $event"
             />
           </template>
-          <template v-else-if="group === 'music'">
+          <template v-else-if="group === 'playlists'">
             <TrackingSection
               :uid="selected"
               :scope="scope"
@@ -117,6 +117,8 @@
               title="歌单"
               @notice="notice = $event"
             />
+          </template>
+          <template v-else>
             <div class="rank-range"
               ><button
                 :class="{ active: rank === 'week' }"
@@ -131,29 +133,6 @@
               :scope="scope"
               :section="rank"
               title="听歌排行"
-              @notice="notice = $event"
-            />
-          </template>
-          <template v-else>
-            <TrackingSection
-              :uid="selected"
-              :scope="scope"
-              section="follows"
-              title="关注"
-              @notice="notice = $event"
-            />
-            <TrackingSection
-              :uid="selected"
-              :scope="scope"
-              section="followers"
-              title="粉丝"
-              @notice="notice = $event"
-            />
-            <TrackingSection
-              :uid="selected"
-              :scope="scope"
-              section="radios"
-              title="电台"
               @notice="notice = $event"
             />
           </template>
@@ -194,8 +173,8 @@ export default {
       listWrites: Promise.resolve(),
       groups: [
         { key: 'activity', title: '动态与资料' },
-        { key: 'music', title: '歌单与听歌' },
-        { key: 'social', title: '人际与电台' },
+        { key: 'playlists', title: '歌单' },
+        { key: 'listening', title: '听歌' },
       ],
     };
   },

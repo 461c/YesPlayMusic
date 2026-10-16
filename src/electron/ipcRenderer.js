@@ -25,10 +25,11 @@ export function ipcRenderer(vueInstance) {
     }
   });
 
-  ipcRenderer.on('search', () => {
-    // 触发数据响应
-    self.$refs.navbar.$refs.searchInput.focus();
-    self.$refs.navbar.inputFocus = true;
+  ipcRenderer.on('search', async () => {
+    if (store.state.showLyrics) store.commit('toggleLyrics');
+    await self.$router.push({ name: 'explore' });
+    await self.$nextTick();
+    self.$root.$emit('focus-explore-search');
   });
 
   ipcRenderer.on('play', () => {

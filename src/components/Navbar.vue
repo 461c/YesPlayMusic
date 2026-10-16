@@ -33,22 +33,6 @@
         >
       </div>
       <div class="right-part">
-        <div class="search-box">
-          <div class="container" :class="{ active: inputFocus }">
-            <svg-icon icon-class="search" />
-            <div class="input">
-              <input
-                ref="searchInput"
-                v-model="keywords"
-                type="search"
-                :placeholder="inputFocus ? '' : $t('nav.search')"
-                @keydown.enter="doSearch"
-                @focus="inputFocus = true"
-                @blur="inputFocus = false"
-              />
-            </div>
-          </div>
-        </div>
         <img
           v-image-fade
           class="avatar"
@@ -99,9 +83,7 @@ export default {
   },
   data() {
     return {
-      inputFocus: false,
       langs: ['zh-CN', 'zh-TW', 'en', 'tr'],
-      keywords: '',
       enableWin32Titlebar: false,
       enableLinuxTitlebar: false,
     };
@@ -134,19 +116,6 @@ export default {
     go(where) {
       if (where === 'back') this.$router.go(-1);
       else this.$router.go(1);
-    },
-    doSearch() {
-      if (!this.keywords) return;
-      if (
-        this.$route.name === 'search' &&
-        this.$route.params.keywords === this.keywords
-      ) {
-        return;
-      }
-      this.$router.push({
-        name: 'search',
-        params: { keywords: this.keywords },
-      });
     },
     showUserProfileMenu(e) {
       this.$refs.userProfileMenu.openMenu(e);
@@ -280,69 +249,6 @@ nav.has-custom-titlebar {
   }
 }
 
-.search {
-  .svg-icon {
-    height: 18px;
-    width: 18px;
-  }
-}
-
-.search-box {
-  display: flex;
-  justify-content: flex-end;
-  -webkit-app-region: no-drag;
-
-  .container {
-    display: flex;
-    align-items: center;
-    height: 32px;
-    background: var(--color-secondary-bg-for-transparent);
-    border-radius: 8px;
-    width: 200px;
-  }
-
-  .svg-icon {
-    height: 15px;
-    width: 15px;
-    color: var(--color-text);
-    opacity: 0.28;
-    margin: {
-      left: 8px;
-      right: 4px;
-    }
-  }
-
-  input {
-    font-size: 16px;
-    border: none;
-    background: transparent;
-    width: 96%;
-    font-weight: 600;
-    margin-top: -1px;
-    color: var(--color-text);
-  }
-
-  .active {
-    background: var(--color-primary-bg-for-transparent);
-    input,
-    .svg-icon {
-      opacity: 1;
-      color: var(--color-primary);
-    }
-  }
-}
-
-[data-theme='dark'] {
-  .search-box {
-    .active {
-      input,
-      .svg-icon {
-        color: var(--color-text);
-      }
-    }
-  }
-}
-
 .right-part {
   flex: 1;
   display: flex;
@@ -379,9 +285,6 @@ nav.has-custom-titlebar {
     margin-right: 2px;
     padding: 6px 8px;
   }
-  .search-box .container {
-    width: 150px;
-  }
 }
 @media (max-width: 650px) {
   nav {
@@ -397,9 +300,6 @@ nav.has-custom-titlebar {
   .navigation-links a {
     font-size: 15px;
     padding: 6px;
-  }
-  .search-box .container {
-    width: 95px;
   }
 }
 </style>

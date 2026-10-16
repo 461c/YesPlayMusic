@@ -39,4 +39,6 @@
 
 - Tracking is opt-in (`settings.showTracking`, default false); expose its toggle in Settings → 其它. Hide the navbar entry and redirect direct tracking navigation to Settings when disabled; retain saved tracking users and snapshots.
 
-- Tracking displays one selected person, with a top-right user selector and exactly three content groups: 动态与资料, 歌单与听歌, 人际与电台. Put add/edit/alias/order/delete actions on its management view, not the content view. Omit listening-rank play counts and explanatory filler. Fetch only sections in the visible group; cumulative rankings load only when chosen.
+- Tracking displays one selected person, with a top-right user selector and exactly three content groups: 动态与资料, 歌单, 听歌. Put add/edit/alias/order/delete actions on its management view, not the content view. Omit listening-rank play counts and explanatory filler. Fetch only sections in the visible group; cumulative rankings load only when chosen.
+
+- Search lives at the top-right of Explore, never the fixed navbar. Preserve desktop search shortcut by opening Explore and focusing its search field. Tracking has no social or radio sections/endpoints.
