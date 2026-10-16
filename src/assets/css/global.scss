@@ -145,6 +145,6 @@ img[data-image-pending] {
 
 body[data-theme='dark'] .player,
 body[data-theme='dark'] nav {
-  -webkit-backdrop-filter: saturate(180%) blur(10px);
-  backdrop-filter: saturate(180%) blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
