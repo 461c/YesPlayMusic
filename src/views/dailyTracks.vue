@@ -148,6 +148,6 @@ export default {
 }
 
 .gradient {
-  background: linear-gradient(to left, #dd2476, #ff512f);
+  background: var(--color-primary-gradient);
 }
 </style>

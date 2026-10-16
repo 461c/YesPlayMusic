@@ -44,7 +44,7 @@
         <template v-else-if="tab === 'follows' || tab === 'fans'">
           <CoverRow
             type="user"
-            :items="people"
+            :items="items"
             :column-number="6"
             @open-user="$emit('open-user', $event)"
           />
@@ -88,9 +88,7 @@
             ></article
           >
         </template>
-        <p v-if="tab !== 'profile' && !visibleItems.length" class="muted"
-          >暂无内容</p
-        >
+        <p v-if="tab !== 'profile' && !items.length" class="muted">暂无内容</p>
         <button
           v-if="hasMore"
           :disabled="loading"
@@ -122,7 +120,6 @@ export default {
     title: { type: String, required: true },
     playlistId: { type: Number, default: 0 },
     cacheEnabled: { type: Boolean, default: false },
-    peopleKind: { type: String, default: 'users' },
   },
   data() {
     return {
@@ -146,17 +143,6 @@ export default {
         };
       });
       return mapTrackPlayableStatus(tracks, this.payload?.privileges || []);
-    },
-    people() {
-      if (this.tab !== 'follows') return this.items;
-      return this.items.filter(item =>
-        this.peopleKind === 'artists'
-          ? Number(item.artistId) > 0
-          : !(Number(item.artistId) > 0)
-      );
-    },
-    visibleItems() {
-      return ['follows', 'fans'].includes(this.tab) ? this.people : this.items;
     },
     tab() {
       return this.section;

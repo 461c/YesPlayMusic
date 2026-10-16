@@ -45,6 +45,12 @@ const sandbox = {
     new Promise((resolve, reject) =>
       requests.push({ uid, section, cursor, resolve, reject })
     ),
+  mapState: () => ({}),
+  mapActions: () => ({}),
+  mapMutations: () => ({}),
+  SvgIcon: {},
+  MvRow: {},
+  ContextMenu: {},
   TrackingSection: {},
   CoverRow: {},
   TrackList: {},
@@ -151,6 +157,33 @@ function verifyArtworkCache() {
 verifyArtworkCache();
 const tick = () => new Promise(resolve => setImmediate(resolve));
 (async () => {
+  const library = component('src/views/library.vue');
+  const libraryState = {
+    data: { user: { userId: 123 } },
+    liked: {
+      playlists: [
+        { id: 1, creator: { userId: 123 }, specialType: 5 },
+        { id: 2, creator: { userId: '123' } },
+        { id: 3, creator: { userId: 456 } },
+      ],
+    },
+    currentTab: 'created',
+  };
+  assert.equal(
+    library.computed.filterPlaylists
+      .call(libraryState)
+      .map(item => item.id)
+      .join(','),
+    '2'
+  );
+  libraryState.currentTab = 'saved';
+  assert.equal(
+    library.computed.filterPlaylists
+      .call(libraryState)
+      .map(item => item.id)
+      .join(','),
+    '3'
+  );
   const parent = instance(component('src/views/tracking.vue'));
   parent.ready = true;
   parent.managing = true;
@@ -160,7 +193,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   parent.addUser();
   assert.equal(
     parent.groups.map(item => item.key).join(','),
-    'activity,listening,follows,artists,fans,created,saved'
+    'activity,listening,follows,fans,created,saved'
   );
   const playlists = [
     { id: 1, specialType: 5, creator: { userId: 456 } },
@@ -307,12 +340,12 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     .resolve({ follow: [{ userId: 7 }, { userId: 8 }], more: false });
   await nextFollows;
   assert.equal(page.items.length, 2);
-  page.peopleKind = 'artists';
   page.payload.follow = [{ userId: 7 }, { userId: 8, artistId: 80 }];
-  assert.equal(page.people.length, 1);
-  assert.equal(page.people[0].userId, 8);
-  page.peopleKind = 'users';
-  assert.equal(page.people[0].userId, 7);
+  assert.equal(
+    page.items.length,
+    2,
+    'Followed artists and users must all remain visible'
+  );
   page.section = 'fans';
   const fans = page.load();
   await tick();

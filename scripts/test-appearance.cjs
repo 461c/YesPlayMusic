@@ -85,3 +85,71 @@ assert.equal(changes, 3, 'System events must preserve a manual preference');
 console.log(
   'Appearance: live root/background changes, native preference, foreground refresh and manual choice passed'
 );
+
+const themeRoot = {},
+  themeBody = {};
+const paletteContext = {
+  document: {
+    documentElement: {
+      style: { setProperty: (key, value) => (themeRoot[key] = value) },
+    },
+    body: {
+      getAttribute: () => 'light',
+      style: { setProperty: (key, value) => (themeBody[key] = value) },
+    },
+  },
+};
+vm.createContext(paletteContext);
+vm.runInContext(
+  common
+    .slice(
+      common.indexOf('const themeColorPresets'),
+      common.indexOf('export function isTrackPlayable')
+    )
+    .replace(/export /g, ''),
+  paletteContext
+);
+const primaries = new Set();
+for (const appearance of ['light', 'dark']) {
+  for (const preset of ['default', 'sunset', 'ocean', 'forest']) {
+    paletteContext.changeThemeColor(preset, appearance);
+    assert.deepEqual(
+      themeRoot,
+      themeBody,
+      'Root and overlays use the same theme tokens'
+    );
+    assert(
+      /^#[0-9a-f]{6}$/i.test(themeBody['--color-primary']),
+      'Flat controls must receive a solid color'
+    );
+    assert(/^rgb\(/.test(themeBody['--color-secondary-bg']));
+    assert(/^rgba\(/.test(themeBody['--color-navbar-bg']));
+    assert(/^#[0-9a-f]{6}$/i.test(themeBody['--color-on-primary']));
+    if (appearance === 'light') primaries.add(themeBody['--color-primary']);
+    if (appearance === 'dark')
+      assert.equal(
+        themeBody['--color-player-bg'],
+        themeBody['--color-navbar-bg']
+      );
+    if (preset !== 'default')
+      assert(themeBody['--color-primary-gradient'].includes('gradient'));
+  }
+}
+assert.equal(primaries.size, 4);
+paletteContext.changeThemeColor('sunset', 'light');
+const sunsetSurface = themeBody['--color-secondary-bg'];
+paletteContext.changeThemeColor('forest', 'light');
+assert.notEqual(
+  themeBody['--color-secondary-bg'],
+  sunsetSurface,
+  'Secondary surfaces follow theme hue'
+);
+paletteContext.changeThemeColor('unknown', 'light');
+assert.equal(
+  themeBody['--color-primary'],
+  '#335eea',
+  'Unknown/removed themes reset every token to default'
+);
+console.log(
+  'Theme palette: four presets, light/dark, global/overlay tokens, tinted surfaces and solid accents passed'
+);

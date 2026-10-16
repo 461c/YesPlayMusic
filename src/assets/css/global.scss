@@ -39,8 +39,10 @@
   --color-body-bg: #ffffff;
   --color-text: #000;
   --color-primary: #335eea;
+  --color-primary-readable: #335eea;
   --color-primary-bg: #eaeffd;
   --color-primary-gradient: var(--color-primary);
+  --color-on-primary: #ffffff;
   --color-secondary: #7a7a7b;
   --color-secondary-bg: #f5f5f7;
   --color-navbar-bg: rgba(255, 255, 255, 0.86);
@@ -57,8 +59,10 @@
   --color-body-bg: #000000;
   --color-text: #ffffff;
   --color-primary: #335eea;
+  --color-primary-readable: #335eea;
   --color-primary-bg: #bbcdff;
   --color-primary-gradient: var(--color-primary);
+  --color-on-primary: #ffffff;
   --color-secondary: #7a7a7b;
   --color-secondary-bg: #242424;
   --color-navbar-bg: rgba(30, 30, 34, 0.8);
@@ -147,4 +151,19 @@ body[data-theme='dark'] .player,
 body[data-theme='dark'] nav {
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
+}
+
+body {
+  accent-color: var(--color-primary);
+}
+::selection {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+a,
+button,
+input,
+select,
+textarea {
+  outline-color: var(--color-primary);
 }

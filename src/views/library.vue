@@ -55,21 +55,17 @@
       <div class="tabs-row">
         <div class="tabs">
           <div
-            class="tab dropdown"
-            :class="{ active: currentTab === 'playlists' }"
-            @click="updateCurrentTab('playlists')"
+            class="tab"
+            :class="{ active: currentTab === 'created' }"
+            @click="updateCurrentTab('created')"
+            >创建</div
           >
-            <span class="text">{{
-              {
-                all: $t('contextMenu.allPlaylists'),
-                mine: $t('contextMenu.minePlaylists'),
-                liked: $t('contextMenu.likedPlaylists'),
-              }[playlistFilter]
-            }}</span>
-            <span class="icon" @click.stop="openPlaylistTabMenu"
-              ><svg-icon icon-class="dropdown"
-            /></span>
-          </div>
+          <div
+            class="tab"
+            :class="{ active: currentTab === 'saved' }"
+            @click="updateCurrentTab('saved')"
+            >收藏</div
+          >
           <div
             class="tab"
             :class="{ active: currentTab === 'albums' }"
@@ -82,14 +78,14 @@
             :class="{ active: currentTab === 'artists' }"
             @click="updateCurrentTab('artists')"
           >
-            {{ $t('library.artists') }}
+            关注
           </div>
           <div
             class="tab"
             :class="{ active: currentTab === 'mvs' }"
             @click="updateCurrentTab('mvs')"
           >
-            {{ $t('library.mvs') }}
+            视频
           </div>
           <div
             class="tab"
@@ -103,11 +99,11 @@
             :class="{ active: currentTab === 'playHistory' }"
             @click="updateCurrentTab('playHistory')"
           >
-            {{ $t('library.playHistory.title') }}
+            排行
           </div>
         </div>
         <button
-          v-show="currentTab === 'playlists'"
+          v-show="currentTab === 'created'"
           class="tab-button"
           @click="openAddPlaylistModal"
           ><svg-icon icon-class="plus" />{{ $t('library.newPlayList') }}
@@ -120,7 +116,7 @@
         </button>
       </div>
 
-      <div v-show="currentTab === 'playlists'">
+      <div v-show="currentTab === 'created' || currentTab === 'saved'">
         <div v-if="liked.playlists.length > 1">
           <CoverRow
             :items="filterPlaylists"
@@ -197,19 +193,6 @@
       @change="uploadSongToCloudDisk"
     />
 
-    <ContextMenu ref="playlistTabMenu">
-      <div class="item" @click="changePlaylistFilter('all')">{{
-        $t('contextMenu.allPlaylists')
-      }}</div>
-      <hr />
-      <div class="item" @click="changePlaylistFilter('mine')">{{
-        $t('contextMenu.minePlaylists')
-      }}</div>
-      <div class="item" @click="changePlaylistFilter('liked')">{{
-        $t('contextMenu.likedPlaylists')
-      }}</div>
-    </ContextMenu>
-
     <ContextMenu ref="playModeTabMenu">
       <div class="item" @click="playLikedSongs">{{
         $t('library.likedSongs')
@@ -257,7 +240,10 @@ export default {
       refreshing: false,
       likedSongs: [],
       lyric: undefined,
-      currentTab: 'playlists',
+      currentTab:
+        this.$store.state.data.libraryPlaylistFilter === 'liked'
+          ? 'saved'
+          : 'created',
       playHistoryMode: 'week',
     };
   },
@@ -299,18 +285,14 @@ export default {
         .slice(startLyricLineIndex, startLyricLineIndex + lyricsToPick)
         .map(extractLyricPart);
     },
-    playlistFilter() {
-      return this.data.libraryPlaylistFilter || 'all';
-    },
     filterPlaylists() {
       const playlists = this.liked.playlists.slice(1);
-      const userId = this.data.user.userId;
-      if (this.playlistFilter === 'mine') {
-        return playlists.filter(p => p.creator.userId === userId);
-      } else if (this.playlistFilter === 'liked') {
-        return playlists.filter(p => p.creator.userId !== userId);
-      }
-      return playlists;
+      const userId = String(this.data.user.userId);
+      return playlists.filter(p =>
+        this.currentTab === 'created'
+          ? String(p.creator?.userId) === userId
+          : String(p.creator?.userId) !== userId
+      );
     },
     playHistoryList() {
       if (this.show && this.playHistoryMode === 'week') {
@@ -388,11 +370,17 @@ export default {
       );
     },
     updateCurrentTab(tab) {
-      if (!isAccountLoggedIn() && tab !== 'playlists') {
+      if (!isAccountLoggedIn() && !['created', 'saved'].includes(tab)) {
         this.showToast(locale.t('toast.needToLogin'));
         return;
       }
       this.currentTab = tab;
+      if (['created', 'saved'].includes(tab)) {
+        this.updateData({
+          key: 'libraryPlaylistFilter',
+          value: tab === 'created' ? 'mine' : 'liked',
+        });
+      }
       this.$parent.$refs.main.scrollTo({ top: 375, behavior: 'smooth' });
     },
     goToLikedSongsList() {
@@ -424,15 +412,8 @@ export default {
         value: true,
       });
     },
-    openPlaylistTabMenu(e) {
-      this.$refs.playlistTabMenu.openMenu(e);
-    },
     openPlayModeTabMenu(e) {
       this.$refs.playModeTabMenu.openMenu(e);
-    },
-    changePlaylistFilter(type) {
-      this.updateData({ key: 'libraryPlaylistFilter', value: type });
-      window.scrollTo({ top: 375, behavior: 'smooth' });
     },
     selectUploadFiles() {
       this.$refs.cloudDiskUploadInput.click();

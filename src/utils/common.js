@@ -74,17 +74,73 @@ export function changeThemeColor(themeColor, appearance) {
   const preset = themeColorPresets[resolvedTheme] || themeColorPresets.default;
   const theme = preset[resolvedAppearance] || preset.light || preset;
   if (!theme) return;
-  const target = document.body || document.documentElement;
-  target.style.setProperty('--color-primary', theme.primary);
-  target.style.setProperty('--color-primary-bg', theme.primaryBg);
-  target.style.setProperty(
-    '--color-primary-bg-for-transparent',
-    theme.primaryBgForTransparent
+  const dark = resolvedAppearance === 'dark';
+  const rgb = theme.primary
+    .match(/[0-9a-f]{2}/gi)
+    .map(value => parseInt(value, 16));
+  const tint = resolvedTheme === 'default' ? 0 : 0.08;
+  const mix = base =>
+    base
+      .map((value, i) => Math.round(value * (1 - tint) + rgb[i] * tint))
+      .join(', ');
+  const surface = mix(dark ? [36, 36, 36] : [245, 245, 247]);
+  const navbar = mix(dark ? [30, 30, 34] : [255, 255, 255]);
+  const player = dark ? navbar : mix([245, 245, 247]);
+  const luminanceOf = channels => {
+    const linear = channels.map(value => {
+      const channel = value / 255;
+      return channel <= 0.04045
+        ? channel / 12.92
+        : Math.pow((channel + 0.055) / 1.055, 2.4);
+    });
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  };
+  const luminance = luminanceOf(rgb);
+  const bgLuminance = luminanceOf(
+    theme.primaryBg.match(/[0-9a-f]{2}/gi).map(value => parseInt(value, 16))
   );
-  target.style.setProperty(
-    '--color-primary-gradient',
-    theme.primaryGradient || theme.primary
-  );
+  let readable = rgb.slice();
+  for (let step = 0; step < 24; step++) {
+    const light = luminanceOf(readable);
+    if (
+      (Math.max(light, bgLuminance) + 0.05) /
+        (Math.min(light, bgLuminance) + 0.05) >=
+      4.5
+    )
+      break;
+    readable = readable.map(value =>
+      Math.round(value * 0.85 + (bgLuminance > 0.179 ? 0 : 255) * 0.15)
+    );
+  }
+  const readableAccent =
+    '#' + readable.map(value => value.toString(16).padStart(2, '0')).join('');
+  const onPrimary =
+    (luminance + 0.05) / 0.05 > 1.05 / (luminance + 0.05)
+      ? '#000000'
+      : '#ffffff';
+  const tokens = {
+    '--color-primary': theme.primary,
+    '--color-primary-readable': readableAccent,
+    '--color-primary-bg': theme.primaryBg,
+    '--color-primary-bg-for-transparent': theme.primaryBgForTransparent,
+    '--color-primary-gradient': theme.primaryGradient || theme.primary,
+    '--color-on-primary': onPrimary,
+    '--color-secondary-bg': `rgb(${surface})`,
+    '--color-secondary-bg-for-transparent': `rgba(${mix(
+      dark ? [255, 255, 255] : [209, 209, 214]
+    )}, ${dark ? 0.08 : 0.28})`,
+    '--color-navbar-bg': `rgba(${navbar}, ${dark ? 0.8 : 0.86})`,
+    '--color-player-bg': `rgba(${player}, ${dark ? 0.8 : 0.76})`,
+    '--color-scrollbar-thumb': dark
+      ? `rgb(${mix([50, 50, 50])})`
+      : `rgba(${mix([128, 128, 128])}, 0.38)`,
+  };
+  for (const target of [document.documentElement, document.body].filter(
+    Boolean
+  )) {
+    for (const [key, value] of Object.entries(tokens))
+      target.style.setProperty(key, value);
+  }
 }
 
 export function isTrackPlayable(track) {

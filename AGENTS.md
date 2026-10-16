@@ -39,9 +39,9 @@
 
 - Tracking is opt-in (`settings.showTracking`, default false); expose its toggle in Settings → 其它. Hide the navbar entry and redirect direct tracking navigation to Settings when disabled; retain saved tracking users and snapshots.
 
-- Tracking displays one selected person, with a top-right user selector and library-style groups: 动态 (profile/events), 排行, 关注, 创建, 收藏, with a selected-user liked-songs card and twelve-song/four-row preview above. Put add/edit/alias/order/delete actions on its management view, not the content view. Omit listening-rank play counts and explanatory filler. Fetch only sections in the visible group; cumulative rankings load only when chosen.
+- Tracking displays one selected person, with a top-right user selector and library-style groups: 动态 (profile/events), 排行, 关注, 粉丝, 创建, 收藏, with a selected-user liked-songs card and twelve-song/four-row preview above. Put add/edit/alias/order/delete actions on its management view, not the content view. Omit listening-rank play counts and explanatory filler. Fetch only sections in the visible group; cumulative rankings load only when chosen.
 
-- Search lives at the top-right of Explore, never the fixed navbar. Preserve desktop search shortcut by opening Explore and focusing its search field. Tracking exposes the requested public following and fans lists, with followed singers in a separate tab; do not add radio endpoints.
+- Search lives at the top-right of Explore, never the fixed navbar. Preserve desktop search shortcut by opening Explore and focusing its search field. Tracking exposes the requested public following and fans lists, with all followed users and singers in one combined list; do not add radio endpoints.
 
 - Keep Android phone adjustments inside max-width:600px; preserve tablet layouts, custom bottom, and lyrics translateY travel. Phone cover grids use 2 columns (3 from 480px), compact player retains play/next/queue/lyrics, and playlist headers stack with bounded covers.
 - Paint the local WebView/navigation immediately on startup, never replace it with an API loading screen. Native startup events/getter gate adapter requests asynchronously; startup waiting must not consume the normal HTTP timeout and must support cancellation/failure without freezing offline navigation.
@@ -60,3 +60,5 @@
 
 - Navbar uses the solid page background at the top and fades in its tinted surface together with the divider after scrolling. Tracking has exactly one refresh action after the user selector and management control, refreshing only mounted/visible sections. Profile tiles wrap at at most six per row and permit long values. Normalize liked/rank track privileges; do not mark missing playback flags as unavailable.
 - Tracking metadata/artwork persistence is limited to explicitly added users. Temporary following/fans navigation may keep transient view state but must neither read nor write persistent tracking snapshots nor enroll artwork, including when navigating back. Images are enrolled only from ordinary responses and downloaded only on demand; no crawling or prefetch for tracking.
+
+- Library playlists use separate 创建 and 收藏 tabs (no all-playlists dropdown); keep group labels concise and consistent with Tracking, including 关注 and 排行. Never filter artist accounts out of Tracking follows. Theme presets must apply solid accents to sliders/loading/subscription controls as well as gradients; tint control/bar surfaces subtly while keeping dark pages black, and maintain readable foregrounds on accent buttons.

@@ -242,7 +242,9 @@ export default {
               width: 192,
               margin: 0,
               color: {
-                dark: '#335eea',
+                dark: getComputedStyle(document.body)
+                  .getPropertyValue('--color-primary-readable')
+                  .trim(),
                 light: '#00000000',
               },
               type: 'svg',

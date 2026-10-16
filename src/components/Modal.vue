@@ -166,7 +166,7 @@ export default {
     }
   }
   button.primary {
-    color: var(--color-primary-bg);
+    color: var(--color-on-primary);
     background: var(--color-primary-gradient);
     font-weight: 500;
   }

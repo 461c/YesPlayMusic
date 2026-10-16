@@ -1983,8 +1983,8 @@ h4 {
       }
       &:hover {
         opacity: 1;
-        background: #eaeffd;
-        color: #335eea;
+        background: var(--color-primary-bg);
+        color: var(--color-primary);
       }
       &:active {
         opacity: 1;

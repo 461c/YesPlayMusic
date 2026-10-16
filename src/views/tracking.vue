@@ -230,20 +230,13 @@
                 >
               </template>
               <TrackingSection
-                v-else-if="['follows', 'artists', 'fans'].includes(group)"
+                v-else-if="['follows', 'fans'].includes(group)"
                 :uid="selected"
                 :scope="scope"
                 :cache-enabled="isSavedUser"
                 ref="people"
                 :section="group === 'fans' ? 'fans' : 'follows'"
-                :people-kind="group === 'artists' ? 'artists' : 'users'"
-                :title="
-                  group === 'fans'
-                    ? '粉丝'
-                    : group === 'artists'
-                    ? '歌手'
-                    : '关注'
-                "
+                :title="group === 'fans' ? '粉丝' : '关注'"
                 @open-user="openUser"
                 @notice="notice = $event"
               />
@@ -317,7 +310,6 @@ export default {
         { key: 'activity', title: '动态' },
         { key: 'listening', title: '排行' },
         { key: 'follows', title: '关注' },
-        { key: 'artists', title: '歌手' },
         { key: 'fans', title: '粉丝' },
         { key: 'created', title: '创建' },
         { key: 'saved', title: '收藏' },
