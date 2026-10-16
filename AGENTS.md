@@ -33,3 +33,5 @@
 - Persist library fields and ordinary playlist-detail responses in IndexedDB, scoped by account/API. Restore library data before refreshing; never gate the library page on network success. Offline/failed refreshes retain saved content. Switching accounts clears in-memory library state. Cached track/lyric/album reads must not start duplicate or unhandled refresh requests. Only metadata already requested during normal use is saved; never crawl playlists for offline support.
 
 - Android must disable whole-WebView edge stretching with OVER_SCROLL_NEVER and prevent main's scroll chaining with overscroll-behavior: none. Fixed navbar/player must never scale or move with top/bottom boundary gestures; preserve normal scrolling and independent page/lyrics/player animations.
+
+- Publish the optional Huawei compatibility APK with `-PhuaweiCompat=true` (`com.luna.music`, explicit YesPlayMusic label) alongside the ordinary package. Preserve original Java component names and signing certificate. Document the 汽水音乐 installation conflict and independent data; community package filtering workaround is not official vendor admission or proof of physical-device success.

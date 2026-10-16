@@ -2,6 +2,8 @@
 
 下载 [YesPlayMusic-Android-Tablet.apk](https://github.com/461c/YesPlayMusic/raw/refs/heads/android/YesPlayMusic-Android-Tablet.apk)，在平板上允许该下载来源安装应用。支持 Android 7.0（API 24）及以上，建议使用更新的 Android System WebView。
 
+**鸿蒙 4.2 播控中心：** 可选下载 [YesPlayMusic-Android-HarmonyOS.apk](https://github.com/461c/YesPlayMusic/raw/refs/heads/android/YesPlayMusic-Android-HarmonyOS.apk)。此版本采用社区验证的兼容包名，与汽水音乐冲突，需重新登录；普通版可保留。安装前阅读 [兼容版说明与实机验证方法](HARMONYOS.md)。
+
 应用内置 Node.js 和 `@neteaseapireborn/api`，启动时自动将接口文件安装到应用私有目录，在本机 `127.0.0.1` 上启动接口，等待就绪后打开界面。无需自建服务器、安装 Termux 或填写 API 地址。API 在应用内的独立服务进程运行，与 WebView 和播放器原生库隔离，通过绑定保持与播放服务相同的后台重要性。接口仅本机可访问；退出界面时不会终止后台播放所需的接口，系统结束应用进程后，下次启动会自动重新启动。
 
 从旧版升级后默认切换为内置接口。设置中的接口地址留空即使用内置接口；仍可填写自己的 HTTP/HTTPS 地址作为可选覆盖。登录与音乐内容仍需要联网访问网易云，本地接口不代表离线音乐服务。支持 arm64-v8a、armeabi-v7a、x86_64。应用等待本地接口完成启动，启动失败会显示提示。
@@ -37,7 +39,7 @@
 
 “缓存与存储”提供自动缓存开关、容量上限、占用大小、完整音源与部分缓存数量，以及清除按钮。关闭自动缓存只停止后续新加载音源的写入，保留已有缓存；切换音质也不会删除其他档位的缓存。达到容量限制时优先淘汰最久未使用的片段，修改容量不需要重启播放器。清除不会主动停止播放，继续播放时可能再次产生缓存。
 
-设置页按播放与音质、缓存与存储、外观与界面、歌词、内容与服务、桌面与快捷键、网络与高级、关于分组；平板隐藏桌面专属选项。页脚保留原作者署名，并注明由 [kuanzzz.pages.dev](https://kuanzzz.pages.dev) 修改。
+设置页使用播放、缓存、外观、其它四个栏目；平板隐藏桌面专属选项。页脚保留原作者署名，并注明由 [kuanzzz.pages.dev](https://kuanzzz.pages.dev) 修改。
 
 默认仅构建和发布 APK；手动触发工作流时可选择设备测试。可选离线 PCM 测试覆盖系统快捷面板、MediaBrowser 队列、播放控制和续播；可选界面测试覆盖主题切换、顶部安全区和自定义 bottom 下的播放栏滑动。测试截图与媒体会话诊断保存在 Android-UI-verification 构建产物中。
 

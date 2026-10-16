@@ -6,6 +6,7 @@ on:
     paths:
       - 'android/**'
       - 'scripts/*android-api*'
+      - 'scripts/check-android-packages.py'
       - 'src/**'
       - 'public/**'
       - '.env.android'
@@ -106,12 +107,22 @@ jobs:
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk YesPlayMusic-Android-Tablet.apk
           sha256sum YesPlayMusic-Android-Tablet.apk > YesPlayMusic-Android-Tablet.apk.sha256
+      - name: Build Huawei control-center compatibility APK
+        run: |
+          gradle -p android assembleRelease -PhuaweiCompat=true --no-daemon
+          cp android/app/build/outputs/apk/release/app-release.apk YesPlayMusic-Android-HarmonyOS.apk
+          sha256sum YesPlayMusic-Android-HarmonyOS.apk > YesPlayMusic-Android-HarmonyOS.apk.sha256
+          python3 scripts/check-android-api-assets.py YesPlayMusic-Android-HarmonyOS.apk
+      - name: Verify package identities, media entry points and signing certificates
+        run: python3 scripts/check-android-packages.py
       - uses: actions/upload-artifact@v4
         with:
           name: YesPlayMusic-Android-Tablet
           path: |
             YesPlayMusic-Android-Tablet.apk
             YesPlayMusic-Android-Tablet.apk.sha256
+            YesPlayMusic-Android-HarmonyOS.apk
+            YesPlayMusic-Android-HarmonyOS.apk.sha256
           if-no-files-found: error
       - name: Publish APK to android branch
         env:
@@ -132,6 +143,9 @@ jobs:
           fi
           cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-Tablet.apk" .
           cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-Tablet.apk.sha256" .
+          cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-HarmonyOS.apk" .
+          cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-HarmonyOS.apk.sha256" .
+          cp "$GITHUB_WORKSPACE/android/HARMONYOS.md" HARMONYOS.md
           cp "$GITHUB_WORKSPACE/android/INSTALL.md" README.md
           if [ -d "$GITHUB_WORKSPACE/android-ui-report" ]; then
             rm -rf ui-verification
