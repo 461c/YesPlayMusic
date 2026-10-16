@@ -2,7 +2,7 @@
 
 下载 [YesPlayMusic-Android-Tablet.apk](https://github.com/461c/YesPlayMusic/raw/refs/heads/android/YesPlayMusic-Android-Tablet.apk)，在平板上允许该下载来源安装应用。支持 Android 7.0（API 24）及以上，建议使用更新的 Android System WebView。
 
-**鸿蒙 4.2 播控中心：** 可选下载 [YesPlayMusic-Android-HarmonyOS.apk](https://github.com/461c/YesPlayMusic/raw/refs/heads/android/YesPlayMusic-Android-HarmonyOS.apk)。此版本采用社区验证的兼容包名，与汽水音乐冲突，需重新登录；普通版可保留。安装前阅读 [兼容版说明与实机验证方法](HARMONYOS.md)。
+当前只发布一个版本，应用名称统一为 **YesPlayMusic**。沿用已测试的兼容包名 `com.luna.music`，可覆盖此前安装的兼容版；与汽水音乐不能共存。原 `com.yesplaymusic.tablet` 版的数据独立，升级到当前版本需重新登录。详见 [系统播控说明](HARMONYOS.md)。
 
 应用内置 Node.js 和 `@neteaseapireborn/api`，启动时自动将接口文件安装到应用私有目录，在本机 `127.0.0.1` 上启动接口，等待就绪后打开界面。无需自建服务器、安装 Termux 或填写 API 地址。API 在应用内的独立服务进程运行，与 WebView 和播放器原生库隔离，通过绑定保持与播放服务相同的后台重要性。接口仅本机可访问；退出界面时不会终止后台播放所需的接口，系统结束应用进程后，下次启动会自动重新启动。
 
@@ -44,3 +44,5 @@
 默认仅构建和发布 APK；手动触发工作流时可选择设备测试。可选离线 PCM 测试覆盖系统快捷面板、MediaBrowser 队列、播放控制和续播；可选界面测试覆盖主题切换、顶部安全区和自定义 bottom 下的播放栏滑动。测试截图与媒体会话诊断保存在 Android-UI-verification 构建产物中。
 
 歌词浮层打开时，平板播放栏通过 translateY 向下移到屏幕外，关闭时滑回原位；动画不修改 bottom，兼容用户 CSS 修改停靠位置，歌词打开期间不接受播放栏交互。使用歌词顶部收起按钮或系统返回键关闭浮层。平板不显示桌面自定义滚动条，也不应用桌面滚动条样式，保留系统默认滚动行为和页面滚动位置记忆。
+
+顶部“跟踪”页支持按用户 ID 添加、删除、上移和下移，本地保存列表和已获取内容。按栏目读取公开资料、歌单、最近一周/累计听歌排行、动态、关注、粉丝和电台；仅访问已选择的用户与栏目，分页手动加载，无后台轮询。听歌排行不是带精确时间的逐次播放记录；服务隐私设置、登录权限或接口失效可能限制内容。
