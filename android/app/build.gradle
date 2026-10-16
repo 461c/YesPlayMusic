@@ -1,19 +1,16 @@
 plugins { id 'com.android.application' }
 
-// Huawei 4.x control center filters supported applications by package identity.
-// Opt-in compatibility artifact; never change the ordinary app's identity.
-def huaweiCompat = providers.gradleProperty('huaweiCompat').orElse('false').get().toBoolean()
-
+// Keep the field-tested package identity for installable updates.
 android {
     namespace 'com.yesplaymusic.tablet'
     compileSdk 35
     defaultConfig {
-        applicationId huaweiCompat ? 'com.luna.music' : 'com.yesplaymusic.tablet'
-        manifestPlaceholders = [applicationLabel: huaweiCompat ? 'YesPlayMusic 鸿蒙兼容' : 'YesPlayMusic']
+        applicationId 'com.luna.music'
+        manifestPlaceholders = [applicationLabel: 'YesPlayMusic']
         minSdk 24
         targetSdk 35
-        versionCode 41117
-        versionName '0.4.11-android.17'
+        versionCode 41118
+        versionName '0.4.11-android.18'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
         externalNativeBuild { cmake { cppFlags '-std=c++20'; arguments '-DANDROID_STL=c++_shared' } }

@@ -5,6 +5,12 @@ import { isLooseLoggedIn, isAccountLoggedIn } from '@/utils/auth';
 Vue.use(VueRouter);
 const routes = [
   {
+    path: '/tracking',
+    name: 'tracking',
+    component: () => import('@/views/tracking.vue'),
+    meta: { keepAlive: true, savePosition: true },
+  },
+  {
     path: '/',
     name: 'home',
     component: () => import('@/views/home.vue'),

@@ -89,6 +89,7 @@ service.interceptors.response.use(
     }
 
     if (
+      !error.config?.skipAuthRedirect &&
       response &&
       typeof data === 'object' &&
       data.code === 301 &&

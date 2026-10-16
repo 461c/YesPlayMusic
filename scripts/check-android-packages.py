@@ -1,4 +1,4 @@
-"""Check both distributable APKs after the second Gradle build changes applicationId."""
+"""Check the single distributable APK and its stable compatibility identity."""
 import os
 from pathlib import Path
 import re
@@ -11,13 +11,12 @@ def run(tool, *args):
 
 certificates = []
 for filename, package, label in [
-    ('YesPlayMusic-Android-Tablet.apk', 'com.yesplaymusic.tablet', 'YesPlayMusic'),
-    ('YesPlayMusic-Android-HarmonyOS.apk', 'com.luna.music', 'YesPlayMusic 鸿蒙兼容'),
+    ('YesPlayMusic-Android-Tablet.apk', 'com.luna.music', 'YesPlayMusic'),
 ]:
     badging = run('aapt', 'dump', 'badging', filename)
     assert f"package: name='{package}'" in badging, badging
     assert f"application-label:'{label}'" in badging, badging
-    assert "versionCode='41117'" in badging, badging
+    assert "versionCode='41118'" in badging, badging
     manifest = run('aapt', 'dump', 'xmltree', filename, 'AndroidManifest.xml')
     for entry in [
         'com.yesplaymusic.tablet.MainActivity',
@@ -35,4 +34,4 @@ for filename, package, label in [
     assert digest, signing
     certificates.append(digest.group(1))
     print(f'{filename}: {package}; media entries verified; certificate {digest.group(1)}')
-assert certificates[0] == certificates[1], 'Ordinary and compatibility APK signing certificates differ'
+assert len(certificates) == 1

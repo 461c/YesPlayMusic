@@ -25,6 +25,11 @@
           :class="{ active: $route.name === 'library' }"
           >{{ $t('nav.library') }}</router-link
         >
+        <router-link
+          to="/tracking"
+          :class="{ active: $route.name === 'tracking' }"
+          >跟踪</router-link
+        >
       </div>
       <div class="right-part">
         <div class="search-box">
@@ -358,6 +363,42 @@ nav.has-custom-titlebar {
   .search-button {
     display: none;
     -webkit-app-region: no-drag;
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+.navigation-links {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .navigation-links a {
+    margin-left: 2px;
+    margin-right: 2px;
+    padding: 6px 8px;
+  }
+  .search-box .container {
+    width: 150px;
+  }
+}
+@media (max-width: 650px) {
+  nav {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .navigation-buttons {
+    display: none;
+  }
+  .navigation-links {
+    justify-content: flex-start;
+  }
+  .navigation-links a {
+    font-size: 15px;
+    padding: 6px;
+  }
+  .search-box .container {
+    width: 95px;
   }
 }
 </style>

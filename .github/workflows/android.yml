@@ -7,6 +7,7 @@ on:
       - 'android/**'
       - 'scripts/*android-api*'
       - 'scripts/check-android-packages.py'
+      - 'scripts/test-tracking.cjs'
       - 'src/**'
       - 'public/**'
       - '.env.android'
@@ -44,6 +45,8 @@ jobs:
           cache: yarn
       - name: Install web build dependencies
         run: yarn install --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
+      - name: Verify tracking state and request isolation
+        run: node scripts/test-tracking.cjs
       - name: Build tablet interface
         run: yarn android:web
       - name: Bundle local music API
@@ -93,8 +96,8 @@ jobs:
           disable-animations: true
           script: |
             bash scripts/smoke-android-api.sh
-            gradle -p android connectedDebugAndroidTest --no-daemon || { cat android/app/build/outputs/androidTest-results/connected/debug/TEST-*.xml; adb pull /sdcard/Android/data/com.yesplaymusic.tablet/files/android-ui android-ui-report || true; exit 1; }
-            adb pull /sdcard/Android/data/com.yesplaymusic.tablet/files/android-ui android-ui-report
+            gradle -p android connectedDebugAndroidTest --no-daemon || { cat android/app/build/outputs/androidTest-results/connected/debug/TEST-*.xml; adb pull /sdcard/Android/data/com.luna.music/files/android-ui android-ui-report || true; exit 1; }
+            adb pull /sdcard/Android/data/com.luna.music/files/android-ui android-ui-report
             adb shell dumpsys media_session > android-ui-report/media-session.txt
       - name: Save Android UI verification
         if: always() && github.event_name == 'workflow_dispatch' && inputs.device_tests
@@ -107,13 +110,7 @@ jobs:
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk YesPlayMusic-Android-Tablet.apk
           sha256sum YesPlayMusic-Android-Tablet.apk > YesPlayMusic-Android-Tablet.apk.sha256
-      - name: Build Huawei control-center compatibility APK
-        run: |
-          gradle -p android assembleRelease -PhuaweiCompat=true --no-daemon
-          cp android/app/build/outputs/apk/release/app-release.apk YesPlayMusic-Android-HarmonyOS.apk
-          sha256sum YesPlayMusic-Android-HarmonyOS.apk > YesPlayMusic-Android-HarmonyOS.apk.sha256
-          python3 scripts/check-android-api-assets.py YesPlayMusic-Android-HarmonyOS.apk
-      - name: Verify package identities, media entry points and signing certificates
+      - name: Verify package identity, media entry points and signing certificate
         run: python3 scripts/check-android-packages.py
       - uses: actions/upload-artifact@v4
         with:
@@ -121,8 +118,6 @@ jobs:
           path: |
             YesPlayMusic-Android-Tablet.apk
             YesPlayMusic-Android-Tablet.apk.sha256
-            YesPlayMusic-Android-HarmonyOS.apk
-            YesPlayMusic-Android-HarmonyOS.apk.sha256
           if-no-files-found: error
       - name: Publish APK to android branch
         env:
@@ -143,8 +138,7 @@ jobs:
           fi
           cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-Tablet.apk" .
           cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-Tablet.apk.sha256" .
-          cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-HarmonyOS.apk" .
-          cp "$GITHUB_WORKSPACE/YesPlayMusic-Android-HarmonyOS.apk.sha256" .
+          rm -f YesPlayMusic-Android-HarmonyOS.apk YesPlayMusic-Android-HarmonyOS.apk.sha256
           cp "$GITHUB_WORKSPACE/android/HARMONYOS.md" HARMONYOS.md
           cp "$GITHUB_WORKSPACE/android/INSTALL.md" README.md
           if [ -d "$GITHUB_WORKSPACE/android-ui-report" ]; then

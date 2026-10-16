@@ -34,4 +34,5 @@
 
 - Android must disable whole-WebView edge stretching with OVER_SCROLL_NEVER and prevent main's scroll chaining with overscroll-behavior: none. Fixed navbar/player must never scale or move with top/bottom boundary gestures; preserve normal scrolling and independent page/lyrics/player animations.
 
-- Publish the optional Huawei compatibility APK with `-PhuaweiCompat=true` (`com.luna.music`, explicit YesPlayMusic label) alongside the ordinary package. Preserve original Java component names and signing certificate. Document the 汽水音乐 installation conflict and independent data; community package filtering workaround is not official vendor admission or proof of physical-device success.
+- Publish one Android APK only: YesPlayMusic-Android-Tablet.apk, application label YesPlayMusic, field-tested applicationId com.luna.music. Preserve Java component names and signing certificate, and document the 汽水音乐 package conflict and old original-package data separation. No visibly labeled Huawei edition or second APK.
+- Tracking is a local, account/API-scoped list of public profiles. Fetch only the selected user/section with manual pagination/refresh, no background polling or playlist crawling. Preserve offline snapshots and distinguish unavailable/private content from empty activity; do not present listening rankings as exact playback timelines.
