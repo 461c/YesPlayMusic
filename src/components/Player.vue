@@ -1,10 +1,10 @@
 <template>
   <div
     class="player"
-    :class="{
-      'lyrics-open': showLyrics,
-      docked: settings.floatingPlayer === false,
-    }"
+    :class="[
+      { 'lyrics-open': showLyrics, docked: settings.floatingPlayer === false },
+      forcedButtonClasses,
+    ]"
     :role="showLyrics && !isAndroid ? 'button' : null"
     :tabindex="showLyrics && !isAndroid ? 0 : null"
     :aria-label="showLyrics && !isAndroid ? '收起歌词' : null"
@@ -64,7 +64,7 @@
               </span>
             </div>
           </div>
-          <div class="like-button">
+          <div v-if="buttonVisible('like')" class="like-button">
             <button-icon
               :title="
                 player.isCurrentTrackLiked
@@ -90,12 +90,16 @@
         <div class="blank"></div>
         <div class="container" @click.stop>
           <button-icon
+            v-if="buttonVisible('previous')"
+            class="previous-button"
             v-show="!player.isPersonalFM"
             :title="$t('player.previous')"
             @click.native="playPrevTrack"
             ><svg-icon icon-class="previous"
           /></button-icon>
           <button-icon
+            v-if="buttonVisible('fmTrash')"
+            class="fm-trash-button"
             v-show="player.isPersonalFM"
             title="不喜欢"
             @click.native="moveToFMTrash"
@@ -108,7 +112,11 @@
           >
             <svg-icon :icon-class="player.playing ? 'pause' : 'play'"
           /></button-icon>
-          <button-icon :title="$t('player.next')" @click.native="playNextTrack"
+          <button-icon
+            v-if="buttonVisible('next')"
+            class="next-button"
+            :title="$t('player.next')"
+            @click.native="playNextTrack"
             ><svg-icon icon-class="next"
           /></button-icon>
         </div>
@@ -118,6 +126,8 @@
         <div class="blank"></div>
         <div class="container" @click.stop>
           <button-icon
+            v-if="buttonVisible('queue')"
+            class="queue-button"
             :title="$t('player.nextUp')"
             :class="{
               active: $route.name === 'next',
@@ -127,6 +137,8 @@
             ><svg-icon icon-class="list"
           /></button-icon>
           <button-icon
+            v-if="buttonVisible('repeat')"
+            class="repeat-button"
             :class="{
               active: player.repeatMode !== 'off',
               disabled: player.isPersonalFM,
@@ -148,6 +160,8 @@
             />
           </button-icon>
           <button-icon
+            v-if="buttonVisible('shuffle')"
+            class="shuffle-button"
             :class="{ active: player.shuffle, disabled: player.isPersonalFM }"
             :title="$t('player.shuffle')"
             @click.native="switchShuffle"
@@ -155,12 +169,13 @@
           /></button-icon>
           <button-icon
             v-if="settings.enableReversedMode"
+            class="reverse-button"
             :class="{ active: player.reversed, disabled: player.isPersonalFM }"
             :title="$t('player.reversed')"
             @click.native="switchReversed"
             ><svg-icon icon-class="sort-up"
           /></button-icon>
-          <div class="volume-control">
+          <div v-if="buttonVisible('volume')" class="volume-control">
             <button-icon :title="$t('player.mute')" @click.native="mute">
               <svg-icon v-show="volume > 0.5" icon-class="volume" />
               <svg-icon v-show="volume === 0" icon-class="volume-mute" />
@@ -184,6 +199,7 @@
           </div>
 
           <button-icon
+            v-if="buttonVisible('lyrics')"
             class="lyrics-button"
             :title="showLyrics ? '收起歌词' : '展开歌词'"
             :aria-expanded="showLyrics ? 'true' : 'false'"
@@ -221,6 +237,24 @@ export default {
     };
   },
   computed: {
+    forcedButtonClasses() {
+      const keys = [
+        'previous',
+        'next',
+        'like',
+        'queue',
+        'repeat',
+        'shuffle',
+        'volume',
+        'lyrics',
+        'fmTrash',
+      ];
+      const classes = keys
+        .filter(key => this.settings.playerButtons?.[key] === true)
+        .map(key => 'show-' + key);
+      if (classes.length) classes.push('custom-buttons');
+      return classes;
+    },
     ...mapState(['player', 'settings', 'data', 'showLyrics']),
     currentTrack() {
       return this.player.currentTrack;
@@ -275,6 +309,9 @@ export default {
     },
   },
   methods: {
+    buttonVisible(key) {
+      return this.settings.playerButtons?.[key] !== false;
+    },
     ...mapMutations(['toggleLyrics']),
     ...mapActions(['showToast', 'likeATrack']),
     updateLyricsTravel() {
@@ -583,5 +620,22 @@ export default {
   border-radius: 0;
   box-shadow: none;
   border-top: 1px solid rgba(128, 128, 128, 0.16);
+}
+</style>
+
+<style lang="scss" scoped>
+.player.docked .progress-bar {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+</style>
+<style>
+.player.docked .progress-bar .vue-slider {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.player.docked .progress-bar .vue-slider-rail {
+  border-radius: 0;
 }
 </style>

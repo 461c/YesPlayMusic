@@ -186,6 +186,7 @@
           </button>
         </div>
       </div>
+      <PlayerButtonSettings />
       <h3>外观</h3>
       <div class="item"
         ><div class="left"
@@ -955,6 +956,7 @@ import { applyCustomCss } from '@/utils/customCss';
 import { isAndroid } from '@/utils/androidAudio';
 import pkg from '../../package.json';
 import HomeSectionSettings from '@/components/HomeSectionSettings.vue';
+import PlayerButtonSettings from '@/components/PlayerButtonSettings.vue';
 
 const electron =
   process.env.IS_ELECTRON === true ? window.require('electron') : null;
@@ -965,7 +967,7 @@ const validShortcutCodes = ['=', '-', '~', '[', ']', ';', "'", ',', '.', '/'];
 
 export default {
   name: 'Settings',
-  components: { HomeSectionSettings },
+  components: { HomeSectionSettings, PlayerButtonSettings },
   data() {
     return {
       mediaDiagnostic: '',

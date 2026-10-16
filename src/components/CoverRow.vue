@@ -14,12 +14,16 @@
       />
       <div class="text">
         <div
-          v-if="showPlayCount && $store.state.settings.showPlayCounts !== false"
+          v-if="
+            showPlayCount &&
+            playCount(item) != null &&
+            $store.state.settings.showPlayCounts !== false
+          "
           class="info"
         >
           <span class="play-count"
             ><svg-icon icon-class="play" />{{
-              item.playCount | formatPlayCount
+              playCount(item) | formatPlayCount
             }}
           </span>
         </div>
@@ -69,6 +73,9 @@ export default {
     },
   },
   methods: {
+    playCount(item) {
+      return item.playCount ?? item.playcount;
+    },
     getSubText(item) {
       if (this.subText === 'copywriter') return item.copywriter;
       if (this.subText === 'description') return item.description;

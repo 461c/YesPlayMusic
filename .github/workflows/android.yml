@@ -9,7 +9,7 @@ on:
       - 'scripts/check-android-packages.py'
       - 'scripts/test-tracking.cjs'
       - 'scripts/test-home-sections.cjs'
-      - 'scripts/test-page-transitions.cjs'
+      - 'scripts/test-player-options.cjs'
       - 'scripts/test-android-startup.cjs'
       - 'src/**'
       - 'public/**'
@@ -50,8 +50,8 @@ jobs:
         run: yarn install --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
       - name: Verify UI state, navigation and API readiness
         run: |
+          node scripts/test-player-options.cjs
           node scripts/test-home-sections.cjs
-          node scripts/test-page-transitions.cjs
           node scripts/test-tracking.cjs
           node scripts/test-android-startup.cjs
       - name: Build tablet interface

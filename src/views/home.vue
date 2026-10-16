@@ -1,9 +1,5 @@
 <template>
   <div class="home" :data-page-ready="homeReady ? 'true' : 'false'">
-    <div class="home-heading"
-      ><h1>首页</h1
-      ><router-link to="/settings#home-sections">自定义栏目</router-link></div
-    >
     <p v-if="!sections.length" class="empty-home">尚未启用栏目</p>
     <section
       v-for="section in sections"
@@ -255,4 +251,8 @@ footer {
   color: var(--color-text);
   opacity: 0.6;
 }
+</style>
+
+<style lang="scss" scoped>
+.index-row:first-of-type { margin-top: 32px; }
 </style>

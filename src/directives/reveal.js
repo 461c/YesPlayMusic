@@ -8,13 +8,7 @@ export const pageReveal = {
   componentUpdated(el, binding) {
     if (binding.value === binding.oldValue) return;
     pageAnimations.get(el)?.cancel();
-    if (
-      !binding.value ||
-      document.documentElement.hasAttribute('data-page-transition') ||
-      reducedMotion() ||
-      !el.animate
-    )
-      return;
+    if (!binding.value || reducedMotion() || !el.animate) return;
     const animation = el.animate(
       [
         { opacity: 0, transform: 'translateY(5px)' },

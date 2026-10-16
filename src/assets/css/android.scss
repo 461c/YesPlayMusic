@@ -91,11 +91,9 @@ body[data-platform='android'] {
     overflow-wrap: anywhere;
   }
   @media (max-width: 700px) {
-    .right-control-buttons .container > .button-icon:nth-child(2),
-    .right-control-buttons .container > .button-icon:nth-child(3),
-    .right-control-buttons
-      .container
-      > .button-icon:nth-child(4):not(.lyrics-button) {
+    .right-control-buttons .repeat-button,
+    .right-control-buttons .shuffle-button,
+    .right-control-buttons .reverse-button {
       display: none;
     }
     .player .playing img {
@@ -188,10 +186,8 @@ body[data-platform='android'] {
     .player .middle-control-buttons .container {
       padding: 0;
     }
-    .player
-      .middle-control-buttons
-      .container
-      > .button-icon:not(.play):not(:last-child) {
+    .player .middle-control-buttons .previous-button,
+    .player .middle-control-buttons .fm-trash-button {
       display: none;
     }
     .player .middle-control-buttons .button-icon {
@@ -207,10 +203,9 @@ body[data-platform='android'] {
       width: 38px;
       min-width: 38px;
     }
-    .player
-      .right-control-buttons
-      .container
-      > .button-icon:not(:first-child):not(.lyrics-button) {
+    .player .right-control-buttons .repeat-button,
+    .player .right-control-buttons .shuffle-button,
+    .player .right-control-buttons .reverse-button {
       display: none;
     }
     .player .right-control-buttons .lyrics-button {
@@ -533,4 +528,71 @@ body[data-platform='android'] .player.docked {
     margin: 0;
     min-width: 0;
   }
+}
+
+// Explicit choices override only responsive defaults; absent keys retain the old layout.
+body[data-platform='android'] {
+  .player.show-previous .middle-control-buttons .previous-button,
+  .player.show-fmTrash .middle-control-buttons .fm-trash-button,
+  .player.show-repeat .right-control-buttons .repeat-button,
+  .player.show-shuffle .right-control-buttons .shuffle-button,
+  .player.show-volume .right-control-buttons .volume-control,
+  .player.show-like .playing .like-button {
+    display: flex;
+  }
+}
+@media (max-width: 600px) {
+  body[data-platform='android'] {
+    main {
+      padding-bottom: calc(
+        var(--phone-player-height, 64px) + 32px + var(--player-bottom-gap) +
+          var(--android-inset-bottom, 0px)
+      );
+    }
+    .player {
+      height: var(--phone-player-height, 64px);
+    }
+    .player.docked {
+      height: calc(
+        var(--phone-player-height, 64px) + var(--android-inset-bottom, 0px)
+      );
+    }
+    .player.custom-buttons .controls {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: 48px 42px;
+    }
+    .player.custom-buttons .playing {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .player.custom-buttons .middle-control-buttons {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .player.custom-buttons .right-control-buttons {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      min-width: 0;
+      justify-content: center;
+    }
+    .player.custom-buttons .right-control-buttons .container {
+      justify-content: flex-start;
+      overflow-x: auto;
+      max-width: 100%;
+    }
+    .player.custom-buttons .right-control-buttons .button-icon {
+      flex-shrink: 0;
+    }
+    .player.show-like .like-button {
+      margin-left: 4px;
+    }
+  }
+}
+
+body[data-platform='android'] .player.docked .progress-bar {
+  width: calc(
+    100% + var(--android-inset-left, 0px) + var(--android-inset-right, 0px)
+  );
+  margin-left: calc(0px - var(--android-inset-left, 0px));
+  margin-right: calc(0px - var(--android-inset-right, 0px));
 }

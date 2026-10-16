@@ -1,7 +1,6 @@
 <template>
-  <section class="tracking-section">
+  <section class="tracking-section" :aria-label="title">
     <div class="section-heading"
-      ><h2>{{ title }}</h2
       ><button :disabled="loading" @click="load(true)">{{
         loading ? '加载中…' : '刷新'
       }}</button></div
@@ -468,11 +467,19 @@ small {
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 12px;
   div {
-    background: transparent;
-    padding: 10px 0;
+    background: var(--color-secondary-bg);
+    border-radius: 10px;
+    padding: 16px;
   }
   dd {
     font-size: 24px;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.section-heading {
+  justify-content: flex-end;
+  margin-bottom: 10px;
 }
 </style>

@@ -1,5 +1,9 @@
 <template>
-  <div id="app" :class="{ 'user-select-none': userSelectNone }">
+  <div
+    id="app"
+    :class="{ 'user-select-none': userSelectNone }"
+    :style="{ '--phone-player-height': phonePlayerHeight }"
+  >
     <Scrollbar v-show="!showLyrics" ref="scrollbar" />
     <Navbar v-show="showNavbar" ref="navbar" :scrolled="pageScrolled" />
     <main
@@ -38,7 +42,6 @@ import { ipcRenderer } from './electron/ipcRenderer';
 import { isAccountLoggedIn, isLooseLoggedIn } from '@/utils/auth';
 import Lyrics from './views/lyrics.vue';
 import { mapState } from 'vuex';
-import { installPageTransitions } from '@/utils/pageTransitions';
 
 export default {
   name: 'App',
@@ -56,10 +59,15 @@ export default {
       isElectron: process.env.IS_ELECTRON, // true || undefined
       userSelectNone: false,
       pageScrolled: false,
-      removePageTransitions: null,
     };
   },
   computed: {
+    phonePlayerHeight() {
+      const buttons = this.settings.playerButtons || {};
+      return Object.keys(buttons).some(key => buttons[key] === true)
+        ? '100px'
+        : '64px';
+    },
     ...mapState(['showLyrics', 'settings', 'player', 'enableScrolling']),
     isAccountLoggedIn() {
       return isAccountLoggedIn();
@@ -87,11 +95,7 @@ export default {
     window.addEventListener('keydown', this.handleKeydown);
     this.fetchData();
   },
-  mounted() {
-    this.removePageTransitions = installPageTransitions(this.$router, this);
-  },
   beforeDestroy() {
-    this.removePageTransitions?.();
     window.removeEventListener('keydown', this.handleKeydown);
   },
   methods: {
@@ -197,44 +201,5 @@ body:not([data-platform='android']) main::-webkit-scrollbar {
 .player.slide-up-enter,
 .player.slide-up-leave-to {
   transform: translateY(calc(100% + var(--player-bottom-gap)));
-}
-</style>
-
-<style>
-html {
-  view-transition-name: none;
-}
-main {
-  view-transition-name: route-content;
-}
-html[data-page-transition] .page-enter-active,
-html[data-page-transition] .page-leave-active {
-  transition: none;
-}
-html[data-page-transition] .page-enter,
-html[data-page-transition] .page-leave-to {
-  transform: none;
-  opacity: 1;
-}
-::view-transition-group(route-content) {
-  animation-duration: 100ms;
-}
-::view-transition-old(route-content) {
-  animation: route-fade-out 100ms ease both;
-}
-::view-transition-new(route-content) {
-  animation: route-fade-in 100ms ease both;
-}
-@keyframes route-fade-out {
-  to {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-@keyframes route-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
 }
 </style>

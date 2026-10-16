@@ -34,6 +34,7 @@ let localStorage = {
     showTracking: false,
     homeSections: null,
     floatingPlayer: true,
+    playerButtons: {},
     showPlayCounts: true,
     showCoverPlayButton: true,
     subTitleDefault: false,
