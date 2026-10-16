@@ -6,6 +6,8 @@ export const trackingSections = [
   { key: 'playlists', title: '歌单', url: '/user/playlist' },
   { key: 'week', title: '最近一周', url: '/user/record', type: 1 },
   { key: 'all', title: '累计排行', url: '/user/record', type: 0 },
+  { key: 'follows', title: '关注', url: '/user/follows' },
+  { key: 'likes', title: '喜欢的音乐', url: '/playlist/detail' },
   { key: 'events', title: '动态', url: '/user/event' },
 ];
 

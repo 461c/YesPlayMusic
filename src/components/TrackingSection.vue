@@ -1,89 +1,103 @@
 <template>
   <section class="tracking-section" :aria-label="title">
-    <div class="section-heading"
-      ><button :disabled="loading" @click="load(true)">{{
-        loading ? '加载中…' : '刷新'
-      }}</button></div
+    <slot
+      :items="items"
+      :tracks="tracks"
+      :payload="payload"
+      :loading="loading"
+      :error="error"
+      :more="hasMore"
+      :load="load"
     >
-    <p v-if="error" role="status" class="muted">{{ error }}</p>
-    <div v-if="payload" v-page-reveal>
-      <template v-if="tab === 'profile'">
-        <div class="profile-card"
-          ><p v-if="profile.signature">{{ profile.signature }}</p
-          ><p v-if="profile.description">{{ profile.description }}</p
-          ><p
-            v-if="
-              profile.detailDescription &&
-              profile.detailDescription !== profile.description
-            "
-            >{{ profile.detailDescription }}</p
-          ></div
-        >
-        <dl class="stats"
-          ><div v-for="stat in profileStats" :key="stat.label"
-            ><dt>{{ stat.label }}</dt
-            ><dd>{{ stat.value }}</dd></div
-          ></dl
-        >
-        <p v-if="payload.identify && payload.identify.imageDesc"
-          >身份认证：{{ payload.identify.imageDesc }}</p
-        >
-        <p v-if="profile.artistId"
-          ><router-link :to="'/artist/' + profile.artistId"
-            >查看歌手主页</router-link
-          ></p
-        >
-      </template>
-      <template v-else-if="tab === 'playlists'">
-        <CoverRow type="playlist" :items="items" :show-play-count="true" />
-      </template>
-      <template v-else-if="tab === 'week' || tab === 'all'">
-        <TrackList
-          :tracks="tracks"
-          type="playlist"
-          dbclick-track-func="playAList"
-        />
-      </template>
-      <template v-else-if="tab === 'events'">
-        <article v-for="item in items" :key="item.id" class="event"
-          ><small>{{ date(item.eventTime || item.showTime) }}</small
-          ><p>{{ eventData(item).msg || '分享了一条动态' }}</p
-          ><router-link
-            v-if="eventData(item).song"
-            :to="'/album/' + (eventData(item).song.album || {}).id"
-            >分享歌曲：{{ eventData(item).song.name }}</router-link
-          ><router-link
-            v-if="eventData(item).playlist"
-            :to="'/playlist/' + eventData(item).playlist.id"
-            >分享歌单：{{ eventData(item).playlist.name }}</router-link
-          ><router-link
-            v-if="eventData(item).album"
-            :to="'/album/' + eventData(item).album.id"
-            >分享专辑：{{ eventData(item).album.name }}</router-link
-          ><div class="event-images"
-            ><img
-              v-for="(pic, index) in item.pics || []"
-              :key="index"
-              v-image-fade
-              :src="(pic.originUrl || pic.squareUrl) | resizeImage(224)"
-              loading="lazy"
-              alt="动态图片" /></div
-          ><small
-            >赞 {{ (item.info || {}).likedCount || 0 }} · 评论
-            {{ (item.info || {}).commentCount || 0 }} · 转发
-            {{ (item.info || {}).shareCount || 0 }}</small
-          ></article
-        >
-      </template>
-      <p v-if="tab !== 'profile' && !items.length" class="muted">暂无内容</p>
-      <button
-        v-if="hasMore"
-        :disabled="loading"
-        class="load-more"
-        @click="load(false, true)"
-        >加载更多</button
+      <div class="section-heading"
+        ><button :disabled="loading" @click="load(true)">{{
+          loading ? '加载中…' : '刷新'
+        }}</button></div
       >
-    </div>
+      <p v-if="error" role="status" class="muted">{{ error }}</p>
+      <div v-if="payload" v-page-reveal>
+        <template v-if="tab === 'profile'">
+          <div class="profile-card"
+            ><p v-if="profile.signature">{{ profile.signature }}</p
+            ><p v-if="profile.description">{{ profile.description }}</p
+            ><p
+              v-if="
+                profile.detailDescription &&
+                profile.detailDescription !== profile.description
+              "
+              >{{ profile.detailDescription }}</p
+            ></div
+          >
+          <dl class="stats"
+            ><div v-for="stat in profileStats" :key="stat.label"
+              ><dt>{{ stat.label }}</dt
+              ><dd>{{ stat.value }}</dd></div
+            ></dl
+          >
+          <p v-if="payload.identify && payload.identify.imageDesc"
+            >身份认证：{{ payload.identify.imageDesc }}</p
+          >
+          <p v-if="profile.artistId"
+            ><router-link :to="'/artist/' + profile.artistId"
+              >查看歌手主页</router-link
+            ></p
+          >
+        </template>
+        <template v-else-if="tab === 'playlists'">
+          <CoverRow type="playlist" :items="items" :show-play-count="true" />
+        </template>
+        <template v-else-if="tab === 'follows'">
+          <CoverRow type="user" :items="items" :column-number="6" />
+        </template>
+        <template v-else-if="tab === 'week' || tab === 'all'">
+          <TrackList
+            :tracks="tracks"
+            :column-number="1"
+            type="tracklist"
+            dbclick-track-func="playAList"
+          />
+        </template>
+        <template v-else-if="tab === 'events'">
+          <article v-for="item in items" :key="item.id" class="event"
+            ><small>{{ date(item.eventTime || item.showTime) }}</small
+            ><p>{{ eventData(item).msg || '分享了一条动态' }}</p
+            ><router-link
+              v-if="eventData(item).song"
+              :to="'/album/' + (eventData(item).song.album || {}).id"
+              >分享歌曲：{{ eventData(item).song.name }}</router-link
+            ><router-link
+              v-if="eventData(item).playlist"
+              :to="'/playlist/' + eventData(item).playlist.id"
+              >分享歌单：{{ eventData(item).playlist.name }}</router-link
+            ><router-link
+              v-if="eventData(item).album"
+              :to="'/album/' + eventData(item).album.id"
+              >分享专辑：{{ eventData(item).album.name }}</router-link
+            ><div class="event-images"
+              ><img
+                v-for="(pic, index) in item.pics || []"
+                :key="index"
+                v-image-fade
+                :src="(pic.originUrl || pic.squareUrl) | resizeImage(224)"
+                loading="lazy"
+                alt="动态图片" /></div
+            ><small
+              >赞 {{ (item.info || {}).likedCount || 0 }} · 评论
+              {{ (item.info || {}).commentCount || 0 }} · 转发
+              {{ (item.info || {}).shareCount || 0 }}</small
+            ></article
+          >
+        </template>
+        <p v-if="tab !== 'profile' && !items.length" class="muted">暂无内容</p>
+        <button
+          v-if="hasMore"
+          :disabled="loading"
+          class="load-more"
+          @click="load(false, true)"
+          >加载更多</button
+        >
+      </div>
+    </slot>
   </section>
 </template>
 <script>
@@ -102,6 +116,7 @@ export default {
     scope: { type: String, required: true },
     section: { type: String, required: true },
     title: { type: String, required: true },
+    playlistId: { type: Number, default: 0 },
   },
   data() {
     return {
@@ -115,7 +130,7 @@ export default {
   computed: {
     tracks() {
       return this.items.map(item => {
-        const song = { ...item.song };
+        const song = { ...(item.song || item) };
         delete song.playCount;
         return {
           ...song,
@@ -132,7 +147,12 @@ export default {
       return this.uid;
     },
     identity() {
-      return JSON.stringify([this.scope, this.uid, this.section]);
+      return JSON.stringify([
+        this.scope,
+        this.uid,
+        this.section,
+        this.playlistId,
+      ]);
     },
     profile() {
       return this.payload?.profile || {};
@@ -167,6 +187,8 @@ export default {
       const d = this.payload || {};
       const list = {
         playlists: d.playlist,
+        likes: d.playlist?.tracks?.slice(0, 6),
+        follows: d.follow,
         week: d.weekData,
         all: d.allData,
         events: d.events,
@@ -179,7 +201,7 @@ export default {
     },
     hasMore() {
       return (
-        ['playlists', 'events'].includes(this.tab) &&
+        ['playlists', 'events', 'follows'].includes(this.tab) &&
         Boolean(this.payload?.more)
       );
     },
@@ -198,11 +220,18 @@ export default {
   },
   methods: {
     async load(force = false, append = false) {
-      if (!this.uid || (append && this.loading)) return;
+      if (
+        !this.uid ||
+        (this.tab === 'likes' && !this.playlistId) ||
+        (append && this.loading)
+      )
+        return;
       const epoch = ++this.generation,
         scope = this.scope,
         uid = this.uid,
-        section = this.tab;
+        section = this.tab,
+        snapshotKey =
+          section === 'likes' ? `likes:${this.playlistId}` : section;
       const current = () => epoch === this.generation && scope === this.scope;
       const previous = append ? this.payload : null;
       this.loading = true;
@@ -213,26 +242,35 @@ export default {
       }
       try {
         if (!append) {
-          const saved = await readTrackingSnapshot(scope, uid, section);
+          const saved = await readTrackingSnapshot(scope, uid, snapshotKey);
           if (!current()) return;
           if (saved) {
             this.payload = saved.data;
             this.updatedAt = saved.updatedAt;
           }
           // Re-entering a section reads its local snapshot; refresh is explicit.
-          if (saved && !force) return;
+          if (saved && !force) {
+            if (section === 'profile')
+              this.$emit('profile', { uid, profile: saved.data.profile });
+            return;
+          }
         }
         const cursor = append
           ? section === 'events'
             ? { lasttime: previous.lasttime }
             : { offset: this.items.length }
           : {};
-        const data = await readTrackingSection(uid, section, cursor);
+        const data = await readTrackingSection(
+          uid,
+          section,
+          section === 'likes' ? { id: this.playlistId, s: 0 } : cursor
+        );
         if (!current()) return;
         if (append) {
           const key = {
             playlists: 'playlist',
             events: 'events',
+            follows: 'follow',
           }[section];
           const seen = new Set();
           data[key] = [...(previous[key] || []), ...(data[key] || [])].filter(
@@ -248,7 +286,7 @@ export default {
         this.updatedAt = Date.now();
         if (section === 'profile')
           this.$emit('profile', { uid, profile: data.profile });
-        await saveTrackingSnapshot(scope, uid, section, data).catch(() => {
+        await saveTrackingSnapshot(scope, uid, snapshotKey, data).catch(() => {
           if (current()) this.$emit('notice', '离线副本保存失败');
         });
       } catch (error) {

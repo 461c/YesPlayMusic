@@ -61,8 +61,8 @@
   --color-primary-gradient: var(--color-primary);
   --color-secondary: #7a7a7b;
   --color-secondary-bg: #242424;
-  --color-navbar-bg: #000000;
-  --color-player-bg: rgba(24, 24, 28, 0.76);
+  --color-navbar-bg: rgba(30, 30, 34, 0.8);
+  --color-player-bg: var(--color-navbar-bg);
   --color-primary-bg-for-transparent: rgba(255, 255, 255, 0.12);
   --color-secondary-bg-for-transparent: rgba(255, 255, 255, 0.08);
   --color-scrollbar-thumb: #323232;
@@ -141,4 +141,10 @@ body:not([data-platform='android']) ::-webkit-scrollbar-thumb {
 // Preserve each image's existing opacity/hover styling after loading.
 img[data-image-pending] {
   opacity: 0 !important;
+}
+
+body[data-theme='dark'] .player,
+body[data-theme='dark'] nav {
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  backdrop-filter: saturate(180%) blur(10px);
 }

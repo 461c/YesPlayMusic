@@ -24,7 +24,6 @@
           :column-number="2"
           dbclick-track-func="playAList"
         />
-        <MvRow v-else-if="section.type === 'mv'" :mvs="rows[section.key]" />
         <CoverRow
           v-else
           :type="
@@ -55,12 +54,11 @@ import { homeSections } from '@/utils/homeSections';
 import { fetchHomeSection } from '@/api/home';
 import CoverRow from '@/components/CoverRow.vue';
 import TrackList from '@/components/TrackList.vue';
-import MvRow from '@/components/MvRow.vue';
 import FMCard from '@/components/FMCard.vue';
 import DailyTracksCard from '@/components/DailyTracksCard.vue';
 export default {
   name: 'Home',
-  components: { CoverRow, TrackList, MvRow, FMCard, DailyTracksCard },
+  components: { CoverRow, TrackList, FMCard, DailyTracksCard },
   data() {
     return {
       rows: {},

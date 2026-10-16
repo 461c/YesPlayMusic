@@ -205,6 +205,9 @@ export function changeAppearance(appearance) {
     appearance = systemAppearance();
   }
   document.body.setAttribute('data-theme', appearance);
+  document.documentElement.style.backgroundColor =
+    appearance === 'dark' ? '#000' : '#fff';
+  document.documentElement.style.colorScheme = appearance;
   updateAndroidAppearance(appearance, preference);
   document
     .querySelector('meta[name="theme-color"]')

@@ -1,5 +1,5 @@
 <template>
-  <div v-page-reveal class="tracking-page">
+  <div v-page-reveal class="tracking-page library-page">
     <header>
       <h1
         ><img
@@ -84,65 +84,171 @@
       </div>
     </div>
     <template v-else>
-      <div v-if="selected" :key="selected" v-page-reveal>
-        <div class="groups tabs" role="tablist" aria-label="内容分组"
-          ><button
-            v-for="item in groups"
-            :key="item.key"
-            role="tab"
-            :aria-selected="group === item.key"
-            :class="{ active: group === item.key }"
-            @click="group = item.key"
-            >{{ item.title }}</button
-          ></div
-        >
-        <div :key="group" v-page-reveal>
-          <template v-if="group === 'activity'">
-            <TrackingSection
-              :uid="selected"
-              :scope="scope"
-              section="profile"
-              title="资料"
-              @profile="updateProfile"
-              @notice="notice = $event"
-            />
-            <TrackingSection
-              :uid="selected"
-              :scope="scope"
-              section="events"
-              title="动态"
-              @notice="notice = $event"
-            />
-          </template>
-          <template v-else-if="group === 'playlists'">
-            <TrackingSection
-              :uid="selected"
-              :scope="scope"
-              section="playlists"
-              title="歌单"
-              @notice="notice = $event"
-            />
-          </template>
-          <template v-else>
-            <div class="rank-range"
-              ><button
-                :class="{ active: rank === 'week' }"
-                @click="rank = 'week'"
-                >最近一周</button
-              ><button :class="{ active: rank === 'all' }" @click="rank = 'all'"
-                >所有时间</button
-              ></div
+      <TrackingSection
+        v-if="selected"
+        :key="selected"
+        :uid="selected"
+        :scope="scope"
+        section="playlists"
+        title="歌单"
+        class="tracking-collection"
+        @notice="notice = $event"
+      >
+        <template #default="{ items, loading, error, more, load }">
+          <div class="section-one">
+            <div
+              class="liked-songs"
+              :class="{ unavailable: !likedPlaylist(items) }"
+              @click="openLikes(items)"
             >
-            <TrackingSection
-              :uid="selected"
-              :scope="scope"
-              :section="rank"
-              title="听歌排行"
-              @notice="notice = $event"
-            />
-          </template>
-        </div>
-      </div>
+              <div class="top">
+                <img
+                  v-if="likedPlaylist(items)"
+                  v-image-fade
+                  :src="likedPlaylist(items).coverImgUrl | resizeImage(224)"
+                  alt=""
+                />
+                <p v-else>{{ loading ? '加载中…' : '喜欢的音乐暂不可见' }}</p>
+              </div>
+              <div class="bottom">
+                <div class="titles">
+                  <div class="title">喜欢的音乐</div>
+                  <div v-if="likedPlaylist(items)" class="sub-title"
+                    >{{ likedPlaylist(items).trackCount }} 首歌曲</div
+                  >
+                </div>
+                <button
+                  v-if="likedPlaylist(items)"
+                  aria-label="播放喜欢的音乐"
+                  @click.stop="playLikes(items)"
+                  ><svg-icon icon-class="play"
+                /></button>
+              </div>
+            </div>
+            <div class="songs">
+              <TrackingSection
+                v-if="likedPlaylist(items)"
+                :uid="selected"
+                :scope="scope"
+                section="likes"
+                title="喜欢的音乐"
+                :playlist-id="Number(likedPlaylist(items).id)"
+                class="likes-preview"
+              >
+                <template
+                  #default="{
+                    tracks,
+                    loading: likesLoading,
+                    error: likesError,
+                  }"
+                >
+                  <TrackList
+                    v-if="tracks.length"
+                    :id="Number(likedPlaylist(items).id)"
+                    :tracks="tracks"
+                    :column-number="3"
+                    type="tracklist"
+                    dbclick-track-func="playPlaylistByID"
+                  />
+                  <p v-else class="muted">{{
+                    likesLoading ? '加载中…' : likesError || '暂无可见歌曲'
+                  }}</p>
+                </template>
+              </TrackingSection>
+            </div>
+          </div>
+          <div class="section-two">
+            <div class="tabs-row">
+              <div class="tabs" role="tablist" aria-label="内容分组">
+                <button
+                  v-for="item in groups"
+                  :key="item.key"
+                  class="tab"
+                  role="tab"
+                  :aria-selected="group === item.key"
+                  :class="{ active: group === item.key }"
+                  @click="group = item.key"
+                  >{{ item.title }}</button
+                >
+              </div>
+            </div>
+            <div :key="group" v-page-reveal>
+              <template v-if="group === 'activity'">
+                <TrackingSection
+                  :uid="selected"
+                  :scope="scope"
+                  section="profile"
+                  title="资料"
+                  @profile="updateProfile"
+                  @notice="notice = $event"
+                />
+                <TrackingSection
+                  :uid="selected"
+                  :scope="scope"
+                  section="events"
+                  title="动态"
+                  @notice="notice = $event"
+                />
+              </template>
+              <template v-else-if="group === 'created' || group === 'saved'">
+                <div class="collection-actions"
+                  ><button :disabled="loading" @click="load(true)">{{
+                    loading ? '加载中…' : '刷新'
+                  }}</button></div
+                >
+                <p v-if="error" role="status" class="muted">{{ error }}</p>
+                <CoverRow
+                  :items="groupPlaylists(items)"
+                  type="playlist"
+                  sub-text="creator"
+                  :show-play-count="true"
+                />
+                <p
+                  v-if="!loading && !error && !groupPlaylists(items).length"
+                  class="muted"
+                  >暂无内容</p
+                >
+                <button
+                  v-if="more"
+                  :disabled="loading"
+                  class="load-more"
+                  @click="load(false, true)"
+                  >加载更多</button
+                >
+              </template>
+              <TrackingSection
+                v-else-if="group === 'follows'"
+                :uid="selected"
+                :scope="scope"
+                section="follows"
+                title="关注"
+                @notice="notice = $event"
+              />
+              <template v-else-if="group === 'listening'">
+                <button
+                  class="playHistory-button"
+                  :class="{ 'playHistory-button--selected': rank === 'week' }"
+                  @click="rank = 'week'"
+                  >最近一周</button
+                >
+                <button
+                  class="playHistory-button"
+                  :class="{ 'playHistory-button--selected': rank === 'all' }"
+                  @click="rank = 'all'"
+                  >所有时间</button
+                >
+                <TrackingSection
+                  :uid="selected"
+                  :scope="scope"
+                  :section="rank"
+                  title="听歌排行"
+                  @notice="notice = $event"
+                />
+              </template>
+            </div>
+          </div>
+        </template>
+      </TrackingSection>
       <button v-else-if="ready" class="empty-add" @click="managing = true"
         >添加用户</button
       >
@@ -150,6 +256,8 @@
   </div>
 </template>
 <script>
+import CoverRow from '@/components/CoverRow.vue';
+import TrackList from '@/components/TrackList.vue';
 import TrackingSection from '@/components/TrackingSection.vue';
 import {
   trackingScope,
@@ -160,7 +268,7 @@ import {
 } from '@/utils/trackingStore';
 export default {
   name: 'Tracking',
-  components: { TrackingSection },
+  components: { TrackingSection, CoverRow, TrackList },
   data() {
     return {
       users: [],
@@ -177,9 +285,11 @@ export default {
       scopeGeneration: 0,
       listWrites: Promise.resolve(),
       groups: [
-        { key: 'activity', title: '动态与资料' },
-        { key: 'playlists', title: '歌单' },
-        { key: 'listening', title: '听歌' },
+        { key: 'activity', title: '动态' },
+        { key: 'listening', title: '排行' },
+        { key: 'follows', title: '关注' },
+        { key: 'created', title: '创建' },
+        { key: 'saved', title: '收藏' },
       ],
     };
   },
@@ -203,6 +313,32 @@ export default {
     this.scopeGeneration++;
   },
   methods: {
+    likedPlaylist(items) {
+      return items.find(
+        item =>
+          String(item.creator?.userId) === this.selected &&
+          Number(item.specialType) === 5
+      );
+    },
+    groupPlaylists(items) {
+      const likes = this.likedPlaylist(items);
+      return items.filter(
+        item =>
+          item !== likes &&
+          (this.group === 'created'
+            ? String(item.creator?.userId) === this.selected
+            : String(item.creator?.userId) !== this.selected)
+      );
+    },
+    openLikes(items) {
+      const playlist = this.likedPlaylist(items);
+      if (playlist) this.$router.push('/playlist/' + playlist.id);
+    },
+    playLikes(items) {
+      const playlist = this.likedPlaylist(items);
+      if (playlist)
+        this.$store.state.player.playPlaylistByID(playlist.id, 'first', true);
+    },
     async restore() {
       const epoch = ++this.scopeGeneration;
       this.users = [];
@@ -311,6 +447,8 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
+@import '~@/assets/css/library.scss';
+
 .tracking-page {
   color: var(--color-text);
   padding-bottom: 32px;
@@ -320,21 +458,35 @@ header {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 28px 0;
+}
+header h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tracking-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
 }
 .header-actions,
 .person-actions,
 .add-user,
-.edit-user,
-.groups,
-.rank-range {
+.edit-user {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-button,
+.header-actions button,
+.person-actions button,
+.add-user button,
+.edit-user button,
 input,
-select {
+select,
+.collection-actions button,
+.load-more,
+.empty-add {
   color: var(--color-text);
   font: inherit;
   border: none;
@@ -346,35 +498,8 @@ select {
 button:disabled {
   opacity: 0.35;
 }
-button:focus-visible,
-input:focus,
-select:focus {
-  outline: 2px solid var(--color-primary);
-}
 select {
   max-width: 240px;
-}
-.person-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin: 20px 0;
-  a {
-    font-size: 13px;
-    color: var(--color-primary);
-  }
-}
-.groups {
-  flex-wrap: wrap;
-  margin-bottom: 28px;
-}
-.active {
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-}
-.rank-range {
-  justify-content: flex-end;
-  margin-top: 32px;
 }
 .add-user {
   margin: 24px 0;
@@ -415,7 +540,8 @@ select {
     flex: 1;
   }
 }
-.notice {
+.notice,
+.muted {
   margin: 12px 0;
   opacity: 0.7;
 }
@@ -423,64 +549,52 @@ select {
   display: block;
   margin: 60px auto;
 }
-@media (max-width: 650px) {
+.tracking-page .tracking-collection,
+.tracking-page .likes-preview {
+  margin: 0;
+}
+.liked-songs {
+  min-height: 190px;
+  .top {
+    padding-bottom: 16px;
+    img {
+      width: 76px;
+      height: 76px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+  }
+}
+.liked-songs.unavailable {
+  cursor: default;
+}
+.collection-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+.load-more {
+  display: block;
+  margin: 24px auto;
+}
+.tabs button {
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+@media (max-width: 600px) {
+  header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 26px;
+  }
   select {
     max-width: 155px;
   }
   .person-actions {
     flex-wrap: wrap;
-  }
-  h1 {
-    font-size: 26px;
-  }
-}
-</style>
-
-<style lang="scss" scoped>
-header h1 {
-  font-size: 42px;
-  color: var(--color-text);
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.tracking-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-.groups {
-  margin-top: 32px;
-  margin-bottom: 24px;
-  gap: 14px;
-}
-.groups button {
-  opacity: 0.68;
-  font-weight: 600;
-  font-size: 18px;
-  padding: 8px 14px;
-  background: transparent;
-  color: var(--color-text);
-}
-.groups button.active {
-  opacity: 1;
-  background: var(--color-secondary-bg);
-}
-@media (max-width: 600px) {
-  header {
-    flex-wrap: wrap;
-  }
-  header h1 {
-    font-size: 26px;
-  }
-  .groups {
-    gap: 6px;
-  }
-  .groups button {
-    font-size: 15px;
   }
 }
 </style>

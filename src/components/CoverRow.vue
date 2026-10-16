@@ -2,11 +2,26 @@
   <div class="cover-row" :style="rowStyles">
     <div
       v-for="item in items"
-      :key="item.id"
+      :key="item.id || item.userId"
       class="item"
-      :class="{ artist: type === 'artist' }"
+      :class="{ artist: type === 'artist' || type === 'user' }"
     >
+      <a
+        v-if="type === 'user'"
+        class="user-cover"
+        :href="userLink(item)"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img
+          v-image-fade
+          :src="item.avatarUrl | resizeImage(512)"
+          loading="lazy"
+          :alt="item.nickname"
+        />
+      </a>
       <Cover
+        v-else
         :id="item.id"
         :image-url="getImageUrl(item)"
         :type="type"
@@ -34,9 +49,21 @@
           <span v-if="isPrivacy(item)" class="lock-icon">
             <svg-icon icon-class="lock"
           /></span>
-          <router-link :to="getTitleLink(item)">{{ item.name }}</router-link>
+          <a
+            v-if="type === 'user'"
+            :href="userLink(item)"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ item.nickname }}</a
+          >
+          <router-link v-else :to="getTitleLink(item)">{{
+            item.name
+          }}</router-link>
         </div>
-        <div v-if="type !== 'artist' && subText !== 'none'" class="info">
+        <div
+          v-if="!['artist', 'user'].includes(type) && subText !== 'none'"
+          class="info"
+        >
           <span v-html="getSubText(item)"></span>
         </div>
       </div>
@@ -73,6 +100,11 @@ export default {
     },
   },
   methods: {
+    userLink(item) {
+      return `https://music.163.com/#/user/home?id=${encodeURIComponent(
+        item.userId
+      )}`;
+    },
     playCount(item) {
       return item.playCount ?? item.playcount;
     },
@@ -128,6 +160,16 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.user-cover {
+  display: block;
+  img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+}
 .cover-row {
   display: grid;
 }

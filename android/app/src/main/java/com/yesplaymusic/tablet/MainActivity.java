@@ -246,6 +246,7 @@ public final class MainActivity extends Activity {
     }
     @Override public void onConfigurationChanged(Configuration configuration) {
         super.onConfigurationChanged(configuration);
+        applyAppearance(startupDark());
         content.requestApplyInsets();
         emitEnvironment();
     }
@@ -412,6 +413,7 @@ public final class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume(); visible = true;
         web.onResume(); web.resumeTimers();
+        applyAppearance(startupDark());
         emitEnvironment();
         handler.removeCallbacks(progress); handler.post(progress);
     }

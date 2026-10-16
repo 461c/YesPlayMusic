@@ -56,6 +56,10 @@ const updateSystemAppearance = () => {
     changeThemeColor(store.state.settings.themeColor);
   }
 };
+window.addEventListener('pageshow', updateSystemAppearance);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) updateSystemAppearance();
+});
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 if (systemTheme.addEventListener) {
   systemTheme.addEventListener('change', updateSystemAppearance);

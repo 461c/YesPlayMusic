@@ -11,6 +11,20 @@ const { homeSectionCatalog, normalizeHomeSections, homeSections } =
   moduleContext.module.exports;
 assert(homeSectionCatalog.length >= 20);
 assert.equal(
+  homeSectionCatalog.find(item => item.key === 'forYou').title,
+  'For You'
+);
+assert.equal(
+  normalizeHomeSections([
+    'recommendedMV',
+    'latestMV',
+    'relax',
+    'workout',
+    'charts',
+  ]).join(','),
+  'charts'
+);
+assert.equal(
   normalizeHomeSections([]).length,
   0,
   'Empty selection must not restore defaults'

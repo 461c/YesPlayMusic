@@ -10,6 +10,7 @@ on:
       - 'scripts/test-tracking.cjs'
       - 'scripts/test-home-sections.cjs'
       - 'scripts/test-player-options.cjs'
+      - 'scripts/test-appearance.cjs'
       - 'scripts/test-android-startup.cjs'
       - 'src/**'
       - 'public/**'
@@ -50,6 +51,7 @@ jobs:
         run: yarn install --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
       - name: Verify UI state, navigation and API readiness
         run: |
+          node scripts/test-appearance.cjs
           node scripts/test-player-options.cjs
           node scripts/test-home-sections.cjs
           node scripts/test-tracking.cjs

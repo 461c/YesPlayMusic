@@ -25,7 +25,7 @@ export const homeSectionCatalog = [
     default: true,
     more: '/explore?category=推荐歌单',
   },
-  { key: 'forYou', title: '每日推荐与私人 FM', type: 'forYou', default: true },
+  { key: 'forYou', title: 'For You', type: 'forYou', default: true },
   {
     key: 'artists',
     title: '推荐歌手',
@@ -83,28 +83,10 @@ export const homeSectionCatalog = [
   playlist('classical', '古典', '古典'),
   playlist('jazz', '爵士', '爵士'),
   playlist('acg', 'ACG', 'ACG'),
-  playlist('relax', '治愈', '治愈'),
-  playlist('workout', '运动', '运动'),
   songs('newChinese', '华语新歌', 7),
   songs('newWestern', '欧美新歌', 96),
   songs('newJapanese', '日语新歌', 8),
   songs('newKorean', '韩语新歌', 16),
-  {
-    key: 'recommendedMV',
-    title: '推荐 MV',
-    type: 'mv',
-    url: '/personalized/mv',
-    field: 'result',
-    default: true,
-  },
-  {
-    key: 'latestMV',
-    title: '最新 MV',
-    type: 'mv',
-    url: '/mv/first',
-    field: 'data',
-    params: { limit: 8 },
-  },
 ];
 const known = new Set(homeSectionCatalog.map(item => item.key));
 export function normalizeHomeSections(value, apple = true) {

@@ -66,9 +66,35 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   parent.addUser();
   parent.inputId = '456';
   parent.addUser();
-  assert.equal(parent.groups.length, 3);
+  assert.equal(
+    parent.groups.map(item => item.key).join(','),
+    'activity,listening,follows,created,saved'
+  );
+  const playlists = [
+    { id: 1, specialType: 5, creator: { userId: 456 } },
+    { id: 2, creator: { userId: 456 } },
+    { id: 3, creator: { userId: 999 } },
+  ];
   assert.equal(requests.length, 0, 'Management must not fetch user content');
   parent.move(1, -1);
+  parent.selectUser('456');
+  assert.equal(parent.likedPlaylist(playlists).id, 1);
+  parent.group = 'created';
+  assert.equal(
+    parent
+      .groupPlaylists(playlists)
+      .map(item => item.id)
+      .join(','),
+    '2'
+  );
+  parent.group = 'saved';
+  assert.equal(
+    parent
+      .groupPlaylists(playlists)
+      .map(item => item.id)
+      .join(','),
+    '3'
+  );
   assert.equal(parent.users[0].id, '456');
   parent.edit(parent.users[0]);
   parent.editAlias = '备注';
@@ -120,6 +146,16 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(page.items.length, 1);
   assert.equal(page.error, 'private');
   saved = null;
+  page.section = 'likes';
+  page.playlistId = 1;
+  const likes = page.load();
+  await tick();
+  assert.equal(requests.at(-1).cursor.id, 1);
+  requests
+    .at(-1)
+    .resolve({ playlist: { tracks: [{ id: 42, name: 'liked song' }] } });
+  await likes;
+  assert.equal(page.tracks[0].id, 42);
   page.section = 'playlists';
   const initial = page.load();
   await tick();
@@ -130,6 +166,19 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(requests.at(-1).cursor.offset, 1);
   requests.at(-1).resolve({ playlist: [{ id: 1 }, { id: 2 }], more: false });
   await more;
+  assert.equal(page.items.length, 2);
+  page.section = 'follows';
+  const follows = page.load();
+  await tick();
+  requests.at(-1).resolve({ follow: [{ userId: 7 }], more: true });
+  await follows;
+  const nextFollows = page.load(false, true);
+  await tick();
+  assert.equal(requests.at(-1).cursor.offset, 1);
+  requests
+    .at(-1)
+    .resolve({ follow: [{ userId: 7 }, { userId: 8 }], more: false });
+  await nextFollows;
   assert.equal(page.items.length, 2);
   page.section = 'events';
   const pending = page.load();
@@ -143,7 +192,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     'Destroyed group must ignore late responses'
   );
   console.log(
-    'Tracking: management editing/order/removal, three groups, request races, offline reads, refresh failure and pagination passed'
+    'Tracking: management editing/order/removal, library groups and playlist ownership, request races, offline reads, refresh failure and pagination passed'
   );
 })().catch(error => {
   console.error(error);
