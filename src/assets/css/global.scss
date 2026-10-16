@@ -44,11 +44,11 @@
   --color-primary-gradient: var(--color-primary);
   --color-on-primary: #ffffff;
   --color-secondary: #7a7a7b;
-  --color-secondary-bg: #f5f5f7;
+  --color-secondary-bg: #f5f5f5;
   --color-navbar-bg: rgba(255, 255, 255, 0.86);
-  --color-player-bg: rgba(245, 245, 247, 0.76);
+  --color-player-bg: rgba(245, 245, 245, 0.76);
   --color-primary-bg-for-transparent: rgba(189, 207, 255, 0.28);
-  --color-secondary-bg-for-transparent: rgba(209, 209, 214, 0.28);
+  --color-secondary-bg-for-transparent: rgba(209, 209, 209, 0.28);
   --color-scrollbar-thumb: rgba(128, 128, 128, 0.38);
   --player-bottom-gap: 12px;
   --player-side-gap: 12px;
@@ -65,7 +65,7 @@
   --color-on-primary: #ffffff;
   --color-secondary: #7a7a7b;
   --color-secondary-bg: #242424;
-  --color-navbar-bg: rgba(30, 30, 34, 0.8);
+  --color-navbar-bg: rgba(30, 30, 30, 0.8);
   --color-player-bg: var(--color-navbar-bg);
   --color-primary-bg-for-transparent: rgba(255, 255, 255, 0.12);
   --color-secondary-bg-for-transparent: rgba(255, 255, 255, 0.08);
@@ -151,19 +151,4 @@ body[data-theme='dark'] .player,
 body[data-theme='dark'] nav {
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-}
-
-body {
-  accent-color: var(--color-primary);
-}
-::selection {
-  background: var(--color-primary-bg);
-  color: var(--color-primary);
-}
-a,
-button,
-input,
-select,
-textarea {
-  outline-color: var(--color-primary);
 }

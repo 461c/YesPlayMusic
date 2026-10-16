@@ -55,7 +55,7 @@
 /* volume style */
 .volume-control .vue-slider-process {
   opacity: 0.8;
-  background-color: var(--color-primary);
+  background-color: var(--color-text);
   border-radius: 15px;
 }
 
@@ -114,11 +114,11 @@
 }
 
 .lyrics-page .vue-slider-process {
-  background-color: var(--color-primary);
+  background-color: #060606;
 }
 
 .lyrics-page .vue-slider-dot-handle {
-  background-color: var(--color-primary);
+  background-color: #060606;
   box-shadow: unset;
 }
 
@@ -127,11 +127,11 @@
 }
 
 body[data-theme='dark'] .lyrics-page .vue-slider-process {
-  background-color: var(--color-primary);
+  background-color: #fafafa;
 }
 
 body[data-theme='dark'] .lyrics-page .vue-slider-dot-handle {
-  background-color: var(--color-primary);
+  background-color: #fff;
 }
 
 .lyrics-page[data-theme='dark'] .vue-slider-rail {
@@ -140,5 +140,5 @@ body[data-theme='dark'] .lyrics-page .vue-slider-dot-handle {
 
 .lyrics-page[data-theme='dark'] .vue-slider-process,
 .lyrics-page[data-theme='dark'] .vue-slider-dot-handle {
-  background-color: var(--color-primary);
+  background-color: #fff;
 }

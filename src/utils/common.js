@@ -78,14 +78,6 @@ export function changeThemeColor(themeColor, appearance) {
   const rgb = theme.primary
     .match(/[0-9a-f]{2}/gi)
     .map(value => parseInt(value, 16));
-  const tint = resolvedTheme === 'default' ? 0 : 0.08;
-  const mix = base =>
-    base
-      .map((value, i) => Math.round(value * (1 - tint) + rgb[i] * tint))
-      .join(', ');
-  const surface = mix(dark ? [36, 36, 36] : [245, 245, 247]);
-  const navbar = mix(dark ? [30, 30, 34] : [255, 255, 255]);
-  const player = dark ? navbar : mix([245, 245, 247]);
   const luminanceOf = channels => {
     const linear = channels.map(value => {
       const channel = value / 255;
@@ -95,7 +87,6 @@ export function changeThemeColor(themeColor, appearance) {
     });
     return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
   };
-  const luminance = luminanceOf(rgb);
   const bgLuminance = luminanceOf(
     theme.primaryBg.match(/[0-9a-f]{2}/gi).map(value => parseInt(value, 16))
   );
@@ -114,26 +105,24 @@ export function changeThemeColor(themeColor, appearance) {
   }
   const readableAccent =
     '#' + readable.map(value => value.toString(16).padStart(2, '0')).join('');
-  const onPrimary =
-    (luminance + 0.05) / 0.05 > 1.05 / (luminance + 0.05)
-      ? '#000000'
-      : '#ffffff';
   const tokens = {
     '--color-primary': theme.primary,
     '--color-primary-readable': readableAccent,
     '--color-primary-bg': theme.primaryBg,
     '--color-primary-bg-for-transparent': theme.primaryBgForTransparent,
     '--color-primary-gradient': theme.primaryGradient || theme.primary,
-    '--color-on-primary': onPrimary,
-    '--color-secondary-bg': `rgb(${surface})`,
-    '--color-secondary-bg-for-transparent': `rgba(${mix(
-      dark ? [255, 255, 255] : [209, 209, 214]
-    )}, ${dark ? 0.08 : 0.28})`,
-    '--color-navbar-bg': `rgba(${navbar}, ${dark ? 0.8 : 0.86})`,
-    '--color-player-bg': `rgba(${player}, ${dark ? 0.8 : 0.76})`,
-    '--color-scrollbar-thumb': dark
-      ? `rgb(${mix([50, 50, 50])})`
-      : `rgba(${mix([128, 128, 128])}, 0.38)`,
+    '--color-on-primary': '#ffffff',
+    '--color-secondary-bg': dark ? '#242424' : '#f5f5f5',
+    '--color-secondary-bg-for-transparent': dark
+      ? 'rgba(255, 255, 255, 0.08)'
+      : 'rgba(209, 209, 209, 0.28)',
+    '--color-navbar-bg': dark
+      ? 'rgba(30, 30, 30, 0.8)'
+      : 'rgba(255, 255, 255, 0.86)',
+    '--color-player-bg': dark
+      ? 'rgba(30, 30, 30, 0.8)'
+      : 'rgba(245, 245, 245, 0.76)',
+    '--color-scrollbar-thumb': dark ? '#323232' : 'rgba(128, 128, 128, 0.38)',
   };
   for (const target of [document.documentElement, document.body].filter(
     Boolean

@@ -110,6 +110,7 @@ vm.runInContext(
   paletteContext
 );
 const primaries = new Set();
+const neutralPalettes = {};
 for (const appearance of ['light', 'dark']) {
   for (const preset of ['default', 'sunset', 'ocean', 'forest']) {
     paletteContext.changeThemeColor(preset, appearance);
@@ -122,9 +123,29 @@ for (const appearance of ['light', 'dark']) {
       /^#[0-9a-f]{6}$/i.test(themeBody['--color-primary']),
       'Flat controls must receive a solid color'
     );
-    assert(/^rgb\(/.test(themeBody['--color-secondary-bg']));
+    assert.equal(
+      themeBody['--color-secondary-bg'],
+      appearance === 'dark' ? '#242424' : '#f5f5f5'
+    );
     assert(/^rgba\(/.test(themeBody['--color-navbar-bg']));
-    assert(/^#[0-9a-f]{6}$/i.test(themeBody['--color-on-primary']));
+    assert.equal(
+      themeBody['--color-on-primary'],
+      '#ffffff',
+      'White button glyphs must remain white'
+    );
+    const neutral = [
+      '--color-secondary-bg',
+      '--color-secondary-bg-for-transparent',
+      '--color-navbar-bg',
+      '--color-player-bg',
+      '--color-scrollbar-thumb',
+    ].map(key => themeBody[key]);
+    if (!neutralPalettes[appearance]) neutralPalettes[appearance] = neutral;
+    assert.deepEqual(
+      neutral,
+      neutralPalettes[appearance],
+      'All neutral tokens must be identical across accent themes'
+    );
     if (appearance === 'light') primaries.add(themeBody['--color-primary']);
     if (appearance === 'dark')
       assert.equal(
@@ -139,10 +160,10 @@ assert.equal(primaries.size, 4);
 paletteContext.changeThemeColor('sunset', 'light');
 const sunsetSurface = themeBody['--color-secondary-bg'];
 paletteContext.changeThemeColor('forest', 'light');
-assert.notEqual(
+assert.equal(
   themeBody['--color-secondary-bg'],
   sunsetSurface,
-  'Secondary surfaces follow theme hue'
+  'Neutral surfaces must not follow accent hue'
 );
 paletteContext.changeThemeColor('unknown', 'light');
 assert.equal(
@@ -151,5 +172,5 @@ assert.equal(
   'Unknown/removed themes reset every token to default'
 );
 console.log(
-  'Theme palette: four presets, light/dark, global/overlay tokens, tinted surfaces and solid accents passed'
+  'Theme palette: four presets, light/dark, global/overlay tokens, neutral surfaces, white glyphs and solid accents passed'
 );
