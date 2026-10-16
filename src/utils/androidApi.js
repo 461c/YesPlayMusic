@@ -17,7 +17,48 @@ function base64(blob) {
   });
 }
 
+// Interface deployment must not block rendering or consume the HTTP request timeout.
+function waitForApi(config) {
+  const bridge = window.YesPlayMusicAndroid;
+  if (!bridge.getApiStartupState || bridge.getApiStartupState() === 'ready')
+    return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let timer;
+    const cleanup = () => {
+      clearTimeout(timer);
+      window.removeEventListener('yesplaymusic-api-startup', check);
+      config.signal?.removeEventListener('abort', abort);
+      config.cancelToken?.unsubscribe(abort);
+    };
+    const fail = message => {
+      cleanup();
+      const error = new Error(message);
+      error.config = config;
+      error.code = 'ERR_NETWORK';
+      reject(error);
+    };
+    const abort = () => {
+      cleanup();
+      reject(new axios.Cancel('Request canceled'));
+    };
+    const check = () => {
+      const state = bridge.getApiStartupState();
+      if (state === 'ready') {
+        cleanup();
+        resolve();
+      } else if (state === 'error') fail('本地音乐接口启动失败');
+    };
+    timer = setTimeout(() => fail('本地音乐接口启动超时'), 60000);
+    window.addEventListener('yesplaymusic-api-startup', check);
+    config.signal?.addEventListener('abort', abort);
+    config.cancelToken?.subscribe(abort);
+    if (config.signal?.aborted || config.cancelToken?.reason) return abort();
+    check(); // Covers startup finishing between the first read and listener registration.
+  });
+}
+
 export default async function androidApiAdapter(config) {
+  await waitForApi(config);
   const request = {
     url: axios.getUri({
       ...config,

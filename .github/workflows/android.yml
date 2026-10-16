@@ -8,6 +8,7 @@ on:
       - 'scripts/*android-api*'
       - 'scripts/check-android-packages.py'
       - 'scripts/test-tracking.cjs'
+      - 'scripts/test-android-startup.cjs'
       - 'src/**'
       - 'public/**'
       - '.env.android'
@@ -46,7 +47,9 @@ jobs:
       - name: Install web build dependencies
         run: yarn install --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
       - name: Verify tracking state and request isolation
-        run: node scripts/test-tracking.cjs
+        run: |
+          node scripts/test-tracking.cjs
+          node scripts/test-android-startup.cjs
       - name: Build tablet interface
         run: yarn android:web
       - name: Bundle local music API

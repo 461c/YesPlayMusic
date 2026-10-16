@@ -1,5 +1,5 @@
 <template>
-  <div v-page-reveal="show" v-show="show" ref="library">
+  <div v-page-reveal="show" v-show="show" ref="library" class="library-page">
     <h1>
       <img
         v-image-fade

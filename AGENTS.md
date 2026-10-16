@@ -42,3 +42,6 @@
 - Tracking displays one selected person, with a top-right user selector and exactly three content groups: 动态与资料, 歌单, 听歌. Put add/edit/alias/order/delete actions on its management view, not the content view. Omit listening-rank play counts and explanatory filler. Fetch only sections in the visible group; cumulative rankings load only when chosen.
 
 - Search lives at the top-right of Explore, never the fixed navbar. Preserve desktop search shortcut by opening Explore and focusing its search field. Tracking has no social or radio sections/endpoints.
+
+- Keep Android phone adjustments inside max-width:600px; preserve tablet layouts, custom bottom, and lyrics translateY travel. Phone cover grids use 2 columns (3 from 480px), compact player retains play/next/queue/lyrics, and playlist headers stack with bounded covers.
+- Paint the local WebView/navigation immediately on startup, never replace it with an API loading screen. Native startup events/getter gate adapter requests asynchronously; startup waiting must not consume the normal HTTP timeout and must support cancellation/failure without freezing offline navigation.

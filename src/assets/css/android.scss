@@ -122,3 +122,391 @@ body[data-platform='android'] {
     }
   }
 }
+
+// Phone-only overrides. Tablet rules above keep their existing dimensions.
+@media (max-width: 600px) {
+  body[data-platform='android'] {
+    --player-side-gap: 8px;
+    main {
+      padding-left: calc(16px + var(--android-inset-left, 0px));
+      padding-right: calc(16px + var(--android-inset-right, 0px));
+      overflow-x: hidden !important;
+    }
+    nav {
+      padding-left: calc(12px + var(--android-inset-left, 0px));
+      padding-right: calc(12px + var(--android-inset-right, 0px));
+    }
+    nav .navigation-buttons {
+      display: none;
+    }
+    nav .navigation-links {
+      flex: 1;
+      justify-content: center;
+      min-width: 0;
+    }
+    nav .navigation-links a {
+      font-size: 15px;
+      padding: 8px 7px;
+      margin: 0 2px;
+    }
+    nav .right-part {
+      flex: 0 0 auto;
+    }
+    nav .avatar {
+      width: 30px;
+      height: 30px;
+      margin-left: 8px;
+    }
+
+    .player .controls {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      padding: 0 10px;
+      gap: 2px;
+    }
+    .player .blank,
+    .player .like-button,
+    .player .volume-control {
+      display: none;
+    }
+    .player .playing,
+    .player .playing .container {
+      min-width: 0;
+    }
+    .player .playing img {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    .player .track-info {
+      margin-left: 8px;
+      height: 42px;
+    }
+    .player .track-info .name {
+      font-size: 14px;
+    }
+    .player .middle-control-buttons .container {
+      padding: 0;
+    }
+    .player
+      .middle-control-buttons
+      .container
+      > .button-icon:not(.play):not(:last-child) {
+      display: none;
+    }
+    .player .middle-control-buttons .button-icon {
+      width: 40px;
+      height: 42px;
+      margin: 0;
+    }
+    .player .right-control-buttons .container {
+      gap: 0;
+    }
+    .player .right-control-buttons .button-icon {
+      margin: 0 !important;
+      width: 38px;
+      min-width: 38px;
+    }
+    .player
+      .right-control-buttons
+      .container
+      > .button-icon:not(:first-child):not(.lyrics-button) {
+      display: none;
+    }
+    .player .right-control-buttons .lyrics-button {
+      display: flex;
+    }
+
+    .cover-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 24px 12px !important;
+    }
+    .cover-row > .item {
+      min-width: 0;
+    }
+    .cover-row .title {
+      font-size: 14px !important;
+      line-height: 1.45;
+    }
+    .cover-row .info {
+      font-size: 12px;
+    }
+    .track-list > div:not(.context-menu) {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+    .track {
+      min-width: 0;
+      padding: 8px 6px;
+    }
+    .track .title-and-artist,
+    .track .title-and-artist > .container {
+      min-width: 0;
+    }
+    .track .title {
+      font-size: 15px !important;
+      padding-right: 6px;
+    }
+    .track > .album {
+      display: none !important;
+    }
+    .track > img {
+      width: 40px;
+      height: 40px;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    .track .time {
+      font-size: 12px;
+      width: 38px;
+      margin-right: 0;
+      flex-shrink: 0;
+    }
+    .track .actions {
+      margin: 0 6px;
+    }
+
+    .playlist,
+    .album-page {
+      margin-top: 20px;
+    }
+    .playlist-info {
+      flex-direction: column;
+      align-items: stretch;
+      margin-bottom: 28px;
+      gap: 18px;
+    }
+    .playlist-info > .cover {
+      align-self: center;
+      flex: none;
+    }
+    .playlist-info > .cover img,
+    .playlist-info > .cover .shadow {
+      width: clamp(152px, 55vw, 220px) !important;
+      height: clamp(152px, 55vw, 220px) !important;
+    }
+    .playlist-info > .info {
+      min-width: 0;
+      margin-left: 0 !important;
+    }
+    .playlist-info .info .title {
+      font-size: 26px !important;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+    .playlist-info .info .artist {
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    .playlist-info .info .description {
+      margin-top: 12px;
+    }
+    .playlist-info .info .buttons {
+      margin-top: 18px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .playlist-info .info .buttons button {
+      margin-right: 0;
+    }
+    .playlist-info > .search-box {
+      position: static;
+      width: 100%;
+      margin: 0;
+      transform: none;
+    }
+    .playlist-info > .search-box .container {
+      width: 100%;
+    }
+    .special-playlist {
+      margin-top: 48px;
+      margin-bottom: 36px;
+    }
+    .special-playlist .title {
+      font-size: 40px;
+      letter-spacing: 1px;
+    }
+    .special-playlist .subtitle {
+      font-size: 14px;
+      margin: 18px 0;
+    }
+    .playlist .user-info h1 {
+      font-size: 26px;
+      flex-wrap: wrap;
+    }
+    .playlist .user-info .avatar {
+      width: 38px;
+      height: 38px;
+    }
+    .playlist .search-box-likepage {
+      max-width: 100%;
+    }
+
+    .home .index-row .title {
+      font-size: 23px;
+    }
+    .home .index-row .title a {
+      font-size: 13px;
+    }
+    .home .for-you-row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+    .home .fm {
+      height: 170px;
+    }
+    .home .fm .cover {
+      max-width: 40%;
+      object-fit: cover;
+    }
+    .home .fm .right-part {
+      min-width: 0;
+    }
+    .home .fm .title {
+      font-size: 18px;
+    }
+    .home .daily-recommend-card {
+      height: 170px;
+    }
+    .home .daily-recommend-card .container {
+      height: 170px;
+    }
+    .home .daily-recommend-card .title-box {
+      width: 120px;
+      height: 120px;
+      margin-left: 16px;
+    }
+    .home .daily-recommend-card .title-box .title {
+      font-size: 50px;
+    }
+    .artist-page .artist-info {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .artist-page .artist-info .head {
+      margin-right: 0;
+    }
+    .artist-page .artist-info .head img {
+      width: 150px;
+      height: 150px;
+    }
+    .artist-page .artist-info .name {
+      font-size: 32px;
+    }
+    .artist-page .artist-info .buttons {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .artist-page .latest-release .release {
+      flex-direction: column;
+      gap: 18px;
+    }
+    .library-page > h1 {
+      font-size: 26px;
+      overflow-wrap: anywhere;
+    }
+    .library-page .section-one {
+      flex-direction: column;
+    }
+    .library-page .section-one .songs {
+      margin: 16px 0 0;
+      flex: none;
+    }
+    .library-page .liked-songs {
+      flex: none;
+      min-height: 155px;
+    }
+    .library-page .section-two {
+      margin-top: 28px;
+    }
+    .library-page .tabs-row {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .library-page .tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      width: 100%;
+      padding-bottom: 4px;
+    }
+    .library-page .tabs .tab {
+      flex-shrink: 0;
+      padding: 8px 10px;
+      margin-right: 4px;
+      font-size: 15px;
+    }
+    .explore-header h1 {
+      font-size: 32px;
+    }
+    .explore-header .search-box .container {
+      width: min(170px, 46vw);
+    }
+    .explore-page .buttons .button {
+      font-size: 14px;
+      margin-right: 8px;
+      padding: 8px 12px;
+    }
+    .search-page > .row {
+      flex-direction: column;
+      gap: 24px;
+    }
+    .search-page > .row > .artists,
+    .search-page > .row > .albums {
+      width: 100%;
+      margin: 0;
+    }
+    .search-page > .row .cover-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+    .settings-page .item {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .settings-page select {
+      min-width: 140px;
+      max-width: min(192px, 55vw);
+    }
+    .settings-page .item .right {
+      max-width: 100%;
+    }
+    .settings-page .item .left {
+      min-width: 0;
+    }
+    .settings-page .android-current-quality {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .settings-page .android-current-quality .right {
+      max-width: 100%;
+      align-items: flex-start;
+      text-align: left;
+    }
+    .modal {
+      width: calc(100vw - 32px) !important;
+      max-width: 460px;
+      box-sizing: border-box;
+    }
+    .context-menu .menu {
+      max-width: calc(100vw - 24px);
+      box-sizing: border-box;
+    }
+    .lyrics-page .left-side {
+      display: none;
+    }
+    .lyrics-page .right-side {
+      width: 100%;
+      margin-right: 0;
+    }
+    .lyrics-page .lyrics-container {
+      padding-left: 12px !important;
+      padding-right: 12px;
+      max-width: 100% !important;
+      box-sizing: border-box;
+    }
+  }
+}
+@media (min-width: 480px) and (max-width: 600px) {
+  body[data-platform='android'] .cover-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}

@@ -50,6 +50,8 @@ public final class MainActivity extends Activity {
     private final List<JSONObject> pending = new ArrayList<>();
     private volatile String snapshot = "{}";
     private boolean pageReady = false;
+    private volatile boolean apiStartupFailed = false;
+    private java.util.concurrent.CompletableFuture<String> observedApiStartup;
     private boolean visible = false;
     private volatile String environment = "{}";
     private int insetTop, insetBottom, insetLeft, insetRight;
@@ -75,7 +77,7 @@ public final class MainActivity extends Activity {
         // Native edge stretching scales the entire WebView, including fixed navbar/player.
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         content = new android.widget.FrameLayout(this);
-        content.setBackgroundColor(android.graphics.Color.BLACK);
+        content.setBackgroundColor(appearanceDark ? android.graphics.Color.BLACK : android.graphics.Color.WHITE);
         content.addView(web, new android.widget.FrameLayout.LayoutParams(-1, -1));
         setContentView(content);
         content.setOnApplyWindowInsetsListener((view, insets) -> {
@@ -96,7 +98,7 @@ public final class MainActivity extends Activity {
             return insets;
         });
         web.addOnLayoutChangeListener((view, l, t, r, b, oldL, oldT, oldR, oldB) -> emitEnvironment());
-        web.setBackgroundColor(android.graphics.Color.BLACK);
+        web.setBackgroundColor(appearanceDark ? android.graphics.Color.BLACK : android.graphics.Color.WHITE);
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -134,6 +136,7 @@ public final class MainActivity extends Activity {
             }
             @Override public void onPageFinished(WebView view, String url) {
                 pageReady = true;
+                emitApiStartup();
                 emitEnvironment();
                 emitState();
             }
@@ -154,24 +157,34 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 1);
         }
-        // Keep the UI on the asset origin; wait until native API requests can succeed.
-        android.widget.TextView loading = new android.widget.TextView(this);
-        loading.setText("正在启动本地音乐接口…");
-        loading.setTextColor(android.graphics.Color.WHITE);
-        loading.setGravity(android.view.Gravity.CENTER);
-        setContentView(loading);
-        LocalApi.ensureStarted(this).whenComplete((address, error) -> handler.post(() -> {
-            if (destroyed) return;
-            if (error != null) {
-                new AlertDialog.Builder(this).setTitle("本地音乐接口启动失败")
-                    .setMessage("请完全关闭应用后重试。若仍无法启动，请提供设备型号和系统版本。")
-                    .setPositiveButton("退出", (dialog, which) -> finish()).setCancelable(false).show();
-                return;
-            }
-            setContentView(content);
-            content.requestApplyInsets();
-            loadPage();
+        // Paint navigation immediately. API requests wait asynchronously for startup in the adapter.
+        content.requestApplyInsets();
+        loadPage();
+        startApi();
+    }
+
+    private void startApi() {
+        if (destroyed) return;
+        java.util.concurrent.CompletableFuture<String> startup = LocalApi.ensureStarted(this);
+        if (observedApiStartup == startup) return;
+        observedApiStartup = startup;
+        apiStartupFailed = false;
+        startup.whenComplete((address, error) -> handler.post(() -> {
+            if (destroyed || observedApiStartup != startup) return;
+            apiStartupFailed = error != null;
+            emitApiStartup();
+            if (error != null) showError("本地音乐接口启动失败，可重启应用后重试");
         }));
+    }
+
+    private String apiStartupState() {
+        if (ApiClient.preferences(this).getBoolean("useRemoteApi", false) || !LocalApi.address().isEmpty()) return "ready";
+        return apiStartupFailed ? "error" : "starting";
+    }
+    private void emitApiStartup() {
+        if (!pageReady || destroyed) return;
+        web.evaluateJavascript("window.dispatchEvent(new CustomEvent('yesplaymusic-api-startup',{detail:"
+            + JSONObject.quote(apiStartupState()) + "}));", null);
     }
 
     private void loadPage() { pageReady = false; web.loadUrl("https://appassets.androidplatform.net/"); }
@@ -325,6 +338,12 @@ public final class MainActivity extends Activity {
             handler.post(() -> { lyricsOpen = open; updateSystemBarIcons(); });
         }
         @JavascriptInterface public String getState() { return snapshot; }
+        @JavascriptInterface public String getApiStartupState() {
+            String state = apiStartupState();
+            // Recover a stopped API process without requiring a network request to start it.
+            if ("starting".equals(state)) handler.post(MainActivity.this::startApi);
+            return state;
+        }
         @JavascriptInterface public String getApiUrl() {
             return ApiClient.preferences(MainActivity.this).getBoolean("useRemoteApi", false)
                 ? ApiClient.baseUrl(MainActivity.this) : "";
