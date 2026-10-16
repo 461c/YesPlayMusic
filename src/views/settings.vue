@@ -102,6 +102,7 @@
           </select>
         </div>
       </div>
+      <PlayerButtonSettings />
       <h3>缓存</h3>
       <div v-if="isElectron || isAndroid" class="item">
         <div class="left">
@@ -186,7 +187,6 @@
           </button>
         </div>
       </div>
-      <PlayerButtonSettings />
       <h3>外观</h3>
       <div class="item"
         ><div class="left"
