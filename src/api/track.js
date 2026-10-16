@@ -1,3 +1,4 @@
+import { observeTrackedTrackArtwork } from '@/utils/trackingArtwork';
 import { cachedResource } from '@/utils/cachedResource';
 import { observeTrackArtwork } from '@/utils/libraryArtwork';
 import store from '@/store';
@@ -60,6 +61,7 @@ export function getTrackDetail(ids) {
       },
     }).then(data => {
       observeTrackArtwork(data.songs || []);
+      observeTrackedTrackArtwork(data.songs || []);
       data.songs.map(song => {
         const privileges = data.privileges.find(t => t.id === song.id);
         cacheTrackDetail(song, privileges);
@@ -74,6 +76,7 @@ export function getTrackDetail(ids) {
       getTrackDetailFromCache(idsInArray).then(result => {
         if (result) {
           observeTrackArtwork(result.songs || []);
+          observeTrackedTrackArtwork(result.songs || []);
           result.songs = mapTrackPlayableStatus(
             result.songs,
             result.privileges

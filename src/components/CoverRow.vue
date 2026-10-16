@@ -10,8 +10,7 @@
         v-if="type === 'user'"
         class="user-cover"
         :href="userLink(item)"
-        target="_blank"
-        rel="noopener noreferrer"
+        @click.prevent="$emit('open-user', item)"
       >
         <img
           v-image-fade
@@ -52,8 +51,7 @@
           <a
             v-if="type === 'user'"
             :href="userLink(item)"
-            target="_blank"
-            rel="noopener noreferrer"
+            @click.prevent="$emit('open-user', item)"
             >{{ item.nickname }}</a
           >
           <router-link v-else :to="getTitleLink(item)">{{

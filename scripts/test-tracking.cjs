@@ -4,6 +4,23 @@ const vm = require('vm');
 const requests = [],
   writes = [];
 let saved = null;
+let snapshotReads = 0;
+const artwork = [];
+const playableContext = {
+  module: { exports: {} },
+  isAccountLoggedIn: () => false,
+  store: { state: { data: { user: {} } } },
+};
+const common = fs.readFileSync('src/utils/common.js', 'utf8');
+vm.runInNewContext(
+  common
+    .slice(
+      common.indexOf('export function isTrackPlayable'),
+      common.indexOf('export function randomNum')
+    )
+    .replace(/export /g, '') + '\nmodule.exports = { mapTrackPlayableStatus };',
+  playableContext
+);
 const sandbox = {
   Date,
   Promise,
@@ -11,10 +28,17 @@ const sandbox = {
   Set,
   String,
   trackingScope: id => String(id),
-  normalizeTrackingId: value => (/^[1-9]\d*$/.test(value) ? value : null),
+  normalizeTrackingId: value =>
+    /^[1-9]\d*$/.test(String(value)) ? String(value) : null,
   readTrackingList: async () => [],
   saveTrackingList: async (scope, users) => writes.push({ scope, users }),
-  readTrackingSnapshot: async () => saved,
+  readTrackingSnapshot: async () => {
+    snapshotReads++;
+    return saved;
+  },
+  observeTrackingArtwork: (...args) => artwork.push(args),
+  removeTrackingArtwork() {},
+  mapTrackPlayableStatus: playableContext.module.exports.mapTrackPlayableStatus,
   saveTrackingSnapshot: async (...args) => writes.push(args),
   deleteTrackingSnapshots: async () => {},
   readTrackingSection: (uid, section, cursor) =>
@@ -40,6 +64,7 @@ function instance(component, props = {}) {
   const instance = {
     ...component.data(),
     scope: 'account-A',
+    cacheEnabled: true,
     $store: { state: { player: {} } },
     $emit() {},
     $set(array, index, value) {
@@ -57,6 +82,73 @@ function instance(component, props = {}) {
     );
   return instance;
 }
+function verifyArtworkCache() {
+  const storage = new Map([['data', JSON.stringify({ user: { userId: 1 } })]]);
+  const enrolled = [];
+  const context = {
+    module: { exports: {} },
+    localStorage: {
+      getItem: key => storage.get(key),
+      setItem: (key, value) => storage.set(key, value),
+    },
+    trackingScope: id => `account-${id}`,
+    window: {
+      YesPlayMusicAndroid: {
+        allowLibraryArtwork: value => enrolled.push(...JSON.parse(value)),
+      },
+    },
+  };
+  const source = fs
+    .readFileSync('src/utils/trackingArtwork.js', 'utf8')
+    .replace(/import[\s\S]*?from ['"][^'"]+['"];?/g, '')
+    .replace(/export /g, '');
+  vm.runInNewContext(
+    source +
+      '\nmodule.exports={observeTrackingArtwork,observeTrackedPlaylistArtwork,observeTrackedTrackArtwork,removeTrackingArtwork};',
+    context
+  );
+  const cache = context.module.exports;
+  cache.observeTrackingArtwork('account-1', '10', 'playlists', {
+    playlist: [{ id: 20, coverImgUrl: 'cover' }],
+  });
+  assert.equal(enrolled.join(','), 'cover');
+  cache.observeTrackedPlaylistArtwork({
+    id: 21,
+    tracks: [{ id: 211, al: { picUrl: 'unknown' } }],
+  });
+  assert.equal(
+    enrolled.length,
+    1,
+    'Untracked playlists must not enroll artwork'
+  );
+  cache.observeTrackedPlaylistArtwork({
+    id: 20,
+    tracks: [{ id: 201, al: { picUrl: 'known' } }],
+  });
+  cache.observeTrackedTrackArtwork([
+    { id: 201, al: { picUrl: 'known-detail' } },
+    { id: 999, al: { picUrl: 'random' } },
+  ]);
+  assert.equal(enrolled.join(','), 'cover,known,known-detail');
+  cache.removeTrackingArtwork('account-1', '10');
+  cache.observeTrackedPlaylistArtwork({ id: 20, coverImgUrl: 'removed' });
+  assert.equal(
+    enrolled.length,
+    3,
+    'Removing a saved user stops future enrollment'
+  );
+  cache.observeTrackingArtwork('account-1', '10', 'playlists', {
+    playlist: [{ id: 20, coverImgUrl: 'cover' }],
+  });
+  storage.set('data', JSON.stringify({ user: { userId: 2 } }));
+  cache.observeTrackedPlaylistArtwork({ id: 20, coverImgUrl: 'other-account' });
+  assert.equal(
+    enrolled.length,
+    4,
+    'Artwork membership must be account/API scoped'
+  );
+}
+verifyArtworkCache();
 const tick = () => new Promise(resolve => setImmediate(resolve));
 (async () => {
   const parent = instance(component('src/views/tracking.vue'));
@@ -68,7 +160,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   parent.addUser();
   assert.equal(
     parent.groups.map(item => item.key).join(','),
-    'activity,listening,follows,created,saved'
+    'activity,listening,follows,artists,fans,created,saved'
   );
   const playlists = [
     { id: 1, specialType: 5, creator: { userId: 456 } },
@@ -96,6 +188,21 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     '3'
   );
   assert.equal(parent.users[0].id, '456');
+  parent.group = 'follows';
+  const savedUsers = parent.users.length;
+  parent.openUser({ userId: 999, nickname: 'Temporary' });
+  assert.equal(parent.selected, '999');
+  assert.equal(parent.isSavedUser, false);
+  assert.equal(parent.selectedUser.name, 'Temporary');
+  assert.equal(
+    parent.users.length,
+    savedUsers,
+    'Opening a user must never enroll them'
+  );
+  parent.backUser();
+  assert.equal(parent.selected, '456');
+  assert.equal(parent.group, 'follows');
+  assert.equal(parent.isSavedUser, true);
   parent.edit(parent.users[0]);
   parent.editAlias = '备注';
   parent.saveEdit('456');
@@ -151,11 +258,31 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   const likes = page.load();
   await tick();
   assert.equal(requests.at(-1).cursor.id, 1);
-  requests
-    .at(-1)
-    .resolve({ playlist: { tracks: [{ id: 42, name: 'liked song' }] } });
+  requests.at(-1).resolve({
+    playlist: {
+      id: 1,
+      tracks: Array.from({ length: 20 }, (_, i) => ({
+        id: 42 + i,
+        name: 'liked song',
+        fee: 0,
+      })),
+    },
+  });
   await likes;
   assert.equal(page.tracks[0].id, 42);
+  assert.equal(page.tracks.length, 12, 'Three columns must have four rows');
+  assert.equal(
+    page.tracks[0].playable,
+    true,
+    'Missing playback flags are normalized'
+  );
+  page.payload.privileges = [{ id: 42, st: -1 }];
+  page.payload.playlist.tracks[0].noCopyrightRcmd = {};
+  assert.equal(
+    page.tracks[0].playable,
+    false,
+    'Real availability restrictions remain'
+  );
   page.section = 'playlists';
   const initial = page.load();
   await tick();
@@ -180,6 +307,64 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     .resolve({ follow: [{ userId: 7 }, { userId: 8 }], more: false });
   await nextFollows;
   assert.equal(page.items.length, 2);
+  page.peopleKind = 'artists';
+  page.payload.follow = [{ userId: 7 }, { userId: 8, artistId: 80 }];
+  assert.equal(page.people.length, 1);
+  assert.equal(page.people[0].userId, 8);
+  page.peopleKind = 'users';
+  assert.equal(page.people[0].userId, 7);
+  page.section = 'fans';
+  const fans = page.load();
+  await tick();
+  requests.at(-1).resolve({ followeds: [{ userId: 12 }], more: true });
+  await fans;
+  const nextFans = page.load(false, true);
+  await tick();
+  assert.equal(requests.at(-1).cursor.offset, 1);
+  requests
+    .at(-1)
+    .resolve({ followeds: [{ userId: 12 }, { userId: 13 }], more: false });
+  await nextFans;
+  assert.equal(page.items.length, 2);
+  const temp = instance(sectionComponent, {
+    uid: '999',
+    section: 'profile',
+    cacheEnabled: false,
+  });
+  saved = { data: { profile: { nickname: 'Must not read' } }, updatedAt: 1 };
+  const beforeTemporary = {
+    reads: snapshotReads,
+    writes: writes.length,
+    artwork: artwork.length,
+  };
+  const temporaryRequest = temp.load();
+  await tick();
+  requests.at(-1).resolve({ profile: { nickname: 'Temporary profile' } });
+  await temporaryRequest;
+  assert.equal(temp.profile.nickname, 'Temporary profile');
+  assert.equal(
+    snapshotReads,
+    beforeTemporary.reads,
+    'Temporary browsing must not read persistent snapshots'
+  );
+  assert.equal(
+    writes.length,
+    beforeTemporary.writes,
+    'Temporary browsing must not write persistent snapshots'
+  );
+  assert.equal(
+    artwork.length,
+    beforeTemporary.artwork,
+    'Temporary browsing must not enroll artwork'
+  );
+  saved = null;
+  let refreshCalls = 0;
+  parent.$refs = {
+    collection: { load: async () => refreshCalls++ },
+    people: { load: async () => refreshCalls++ },
+  };
+  await parent.refreshCurrent();
+  assert.equal(refreshCalls, 2, 'Refresh only mounted sections');
   page.section = 'events';
   const pending = page.load();
   await tick();
@@ -192,7 +377,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     'Destroyed group must ignore late responses'
   );
   console.log(
-    'Tracking: management editing/order/removal, library groups and playlist ownership, request races, offline reads, refresh failure and pagination passed'
+    'Tracking: management editing/order/removal, library groups and playlist ownership, temporary browsing isolation, artwork membership, playable preview, request races, offline reads, refresh failure and pagination passed'
   );
 })().catch(error => {
   console.error(error);

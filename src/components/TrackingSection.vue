@@ -9,11 +9,6 @@
       :more="hasMore"
       :load="load"
     >
-      <div class="section-heading"
-        ><button :disabled="loading" @click="load(true)">{{
-          loading ? '加载中…' : '刷新'
-        }}</button></div
-      >
       <p v-if="error" role="status" class="muted">{{ error }}</p>
       <div v-if="payload" v-page-reveal>
         <template v-if="tab === 'profile'">
@@ -46,8 +41,13 @@
         <template v-else-if="tab === 'playlists'">
           <CoverRow type="playlist" :items="items" :show-play-count="true" />
         </template>
-        <template v-else-if="tab === 'follows'">
-          <CoverRow type="user" :items="items" :column-number="6" />
+        <template v-else-if="tab === 'follows' || tab === 'fans'">
+          <CoverRow
+            type="user"
+            :items="people"
+            :column-number="6"
+            @open-user="$emit('open-user', $event)"
+          />
         </template>
         <template v-else-if="tab === 'week' || tab === 'all'">
           <TrackList
@@ -88,7 +88,9 @@
             ></article
           >
         </template>
-        <p v-if="tab !== 'profile' && !items.length" class="muted">暂无内容</p>
+        <p v-if="tab !== 'profile' && !visibleItems.length" class="muted"
+          >暂无内容</p
+        >
         <button
           v-if="hasMore"
           :disabled="loading"
@@ -101,6 +103,8 @@
   </section>
 </template>
 <script>
+import { mapTrackPlayableStatus } from '@/utils/common';
+import { observeTrackingArtwork } from '@/utils/trackingArtwork';
 import CoverRow from '@/components/CoverRow.vue';
 import TrackList from '@/components/TrackList.vue';
 import { readTrackingSection } from '@/api/tracking';
@@ -117,6 +121,8 @@ export default {
     section: { type: String, required: true },
     title: { type: String, required: true },
     playlistId: { type: Number, default: 0 },
+    cacheEnabled: { type: Boolean, default: false },
+    peopleKind: { type: String, default: 'users' },
   },
   data() {
     return {
@@ -129,7 +135,7 @@ export default {
   },
   computed: {
     tracks() {
-      return this.items.map(item => {
+      const tracks = this.items.map(item => {
         const song = { ...(item.song || item) };
         delete song.playCount;
         return {
@@ -139,6 +145,18 @@ export default {
           dt: song.dt || song.duration || 0,
         };
       });
+      return mapTrackPlayableStatus(tracks, this.payload?.privileges || []);
+    },
+    people() {
+      if (this.tab !== 'follows') return this.items;
+      return this.items.filter(item =>
+        this.peopleKind === 'artists'
+          ? Number(item.artistId) > 0
+          : !(Number(item.artistId) > 0)
+      );
+    },
+    visibleItems() {
+      return ['follows', 'fans'].includes(this.tab) ? this.people : this.items;
     },
     tab() {
       return this.section;
@@ -152,6 +170,7 @@ export default {
         this.uid,
         this.section,
         this.playlistId,
+        this.cacheEnabled,
       ]);
     },
     profile() {
@@ -166,6 +185,8 @@ export default {
         ['村龄（天）', d.createDays],
         ['创建歌单', p.playlistCount],
         ['动态', p.eventCount],
+        ['关注', p.follows],
+        ['粉丝', p.followeds],
         [
           '生日',
           p.birthday > 0
@@ -187,8 +208,9 @@ export default {
       const d = this.payload || {};
       const list = {
         playlists: d.playlist,
-        likes: d.playlist?.tracks?.slice(0, 6),
+        likes: d.playlist?.tracks?.slice(0, 12),
         follows: d.follow,
+        fans: d.followeds,
         week: d.weekData,
         all: d.allData,
         events: d.events,
@@ -201,7 +223,7 @@ export default {
     },
     hasMore() {
       return (
-        ['playlists', 'events', 'follows'].includes(this.tab) &&
+        ['playlists', 'events', 'follows', 'fans'].includes(this.tab) &&
         Boolean(this.payload?.more)
       );
     },
@@ -223,7 +245,7 @@ export default {
       if (
         !this.uid ||
         (this.tab === 'likes' && !this.playlistId) ||
-        (append && this.loading)
+        ((append || force) && this.loading)
       )
         return;
       const epoch = ++this.generation,
@@ -237,16 +259,21 @@ export default {
       this.loading = true;
       this.error = '';
       if (!append) {
-        this.payload = null;
-        this.updatedAt = 0;
+        if (!force) {
+          this.payload = null;
+          this.updatedAt = 0;
+        }
       }
       try {
         if (!append) {
-          const saved = await readTrackingSnapshot(scope, uid, snapshotKey);
+          const saved = this.cacheEnabled
+            ? await readTrackingSnapshot(scope, uid, snapshotKey)
+            : null;
           if (!current()) return;
           if (saved) {
             this.payload = saved.data;
             this.updatedAt = saved.updatedAt;
+            observeTrackingArtwork(scope, uid, section, saved.data);
           }
           // Re-entering a section reads its local snapshot; refresh is explicit.
           if (saved && !force) {
@@ -271,6 +298,7 @@ export default {
             playlists: 'playlist',
             events: 'events',
             follows: 'follow',
+            fans: 'followeds',
           }[section];
           const seen = new Set();
           data[key] = [...(previous[key] || []), ...(data[key] || [])].filter(
@@ -286,9 +314,14 @@ export default {
         this.updatedAt = Date.now();
         if (section === 'profile')
           this.$emit('profile', { uid, profile: data.profile });
-        await saveTrackingSnapshot(scope, uid, snapshotKey, data).catch(() => {
-          if (current()) this.$emit('notice', '离线副本保存失败');
-        });
+        if (this.cacheEnabled) {
+          observeTrackingArtwork(scope, uid, section, data);
+          await saveTrackingSnapshot(scope, uid, snapshotKey, data).catch(
+            () => {
+              if (current()) this.$emit('notice', '离线副本保存失败');
+            }
+          );
+        }
       } catch (error) {
         if (current()) this.error = error.message || '加载失败';
       } finally {
@@ -519,5 +552,32 @@ small {
 .section-heading {
   justify-content: flex-end;
   margin-bottom: 10px;
+}
+</style>
+
+<style lang="scss" scoped>
+.stats {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  div,
+  dt,
+  dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  dd {
+    font-size: 21px;
+    line-height: 1.35;
+  }
+}
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

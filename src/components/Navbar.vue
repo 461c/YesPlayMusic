@@ -155,9 +155,14 @@ nav {
   }
   backdrop-filter: saturate(180%) blur(20px);
 
-  background-color: var(--color-navbar-bg);
+  background-color: var(--color-body-bg);
+  transition: background-color 0.2s ease;
   z-index: 100;
   -webkit-app-region: drag;
+}
+
+nav.scrolled {
+  background-color: var(--color-navbar-bg);
 }
 
 nav::after {
@@ -176,6 +181,7 @@ nav.scrolled::after {
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
+  nav,
   nav::after {
     transition-duration: 0.01ms;
   }

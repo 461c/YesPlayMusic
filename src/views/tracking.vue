@@ -17,17 +17,26 @@
         }}</h1
       >
       <div class="header-actions">
+        <button v-if="!managing && userHistory.length" @click="backUser"
+          >返回</button
+        >
         <template v-if="!managing">
           <select
             v-if="users.length"
             :value="selected"
             aria-label="切换用户"
             @change="selectUser($event.target.value)"
+            ><option v-if="!isSavedUser && selected" :value="selected">{{
+              selectedUser.name || selected
+            }}</option
             ><option v-for="user in users" :key="user.id" :value="user.id">{{
               user.alias || user.name || user.id
             }}</option></select
           >
           <button @click="managing = true">管理</button>
+          <button :disabled="!selected || refreshing" @click="refreshCurrent">{{
+            refreshing ? '刷新中…' : '刷新'
+          }}</button>
         </template>
         <button v-else @click="managing = false">返回</button>
       </div>
@@ -85,10 +94,12 @@
     </div>
     <template v-else>
       <TrackingSection
+        ref="collection"
         v-if="selected"
         :key="selected"
         :uid="selected"
         :scope="scope"
+        :cache-enabled="isSavedUser"
         section="playlists"
         title="歌单"
         class="tracking-collection"
@@ -130,6 +141,8 @@
                 v-if="likedPlaylist(items)"
                 :uid="selected"
                 :scope="scope"
+                :cache-enabled="isSavedUser"
+                ref="likes"
                 section="likes"
                 title="喜欢的音乐"
                 :playlist-id="Number(likedPlaylist(items).id)"
@@ -147,6 +160,7 @@
                     :id="Number(likedPlaylist(items).id)"
                     :tracks="tracks"
                     :column-number="3"
+                    :single-click-play="true"
                     type="tracklist"
                     dbclick-track-func="playPlaylistByID"
                   />
@@ -177,6 +191,8 @@
                 <TrackingSection
                   :uid="selected"
                   :scope="scope"
+                  :cache-enabled="isSavedUser"
+                  ref="profile"
                   section="profile"
                   title="资料"
                   @profile="updateProfile"
@@ -185,17 +201,14 @@
                 <TrackingSection
                   :uid="selected"
                   :scope="scope"
+                  :cache-enabled="isSavedUser"
+                  ref="events"
                   section="events"
                   title="动态"
                   @notice="notice = $event"
                 />
               </template>
               <template v-else-if="group === 'created' || group === 'saved'">
-                <div class="collection-actions"
-                  ><button :disabled="loading" @click="load(true)">{{
-                    loading ? '加载中…' : '刷新'
-                  }}</button></div
-                >
                 <p v-if="error" role="status" class="muted">{{ error }}</p>
                 <CoverRow
                   :items="groupPlaylists(items)"
@@ -217,11 +230,21 @@
                 >
               </template>
               <TrackingSection
-                v-else-if="group === 'follows'"
+                v-else-if="['follows', 'artists', 'fans'].includes(group)"
                 :uid="selected"
                 :scope="scope"
-                section="follows"
-                title="关注"
+                :cache-enabled="isSavedUser"
+                ref="people"
+                :section="group === 'fans' ? 'fans' : 'follows'"
+                :people-kind="group === 'artists' ? 'artists' : 'users'"
+                :title="
+                  group === 'fans'
+                    ? '粉丝'
+                    : group === 'artists'
+                    ? '歌手'
+                    : '关注'
+                "
+                @open-user="openUser"
                 @notice="notice = $event"
               />
               <template v-else-if="group === 'listening'">
@@ -240,6 +263,8 @@
                 <TrackingSection
                   :uid="selected"
                   :scope="scope"
+                  :cache-enabled="isSavedUser"
+                  ref="ranking"
                   :section="rank"
                   title="听歌排行"
                   @notice="notice = $event"
@@ -256,6 +281,7 @@
   </div>
 </template>
 <script>
+import { removeTrackingArtwork } from '@/utils/trackingArtwork';
 import CoverRow from '@/components/CoverRow.vue';
 import TrackList from '@/components/TrackList.vue';
 import TrackingSection from '@/components/TrackingSection.vue';
@@ -273,6 +299,9 @@ export default {
     return {
       users: [],
       selected: '',
+      visiting: null,
+      userHistory: [],
+      refreshing: false,
       inputId: '',
       ready: false,
       notice: '',
@@ -288,6 +317,8 @@ export default {
         { key: 'activity', title: '动态' },
         { key: 'listening', title: '排行' },
         { key: 'follows', title: '关注' },
+        { key: 'artists', title: '歌手' },
+        { key: 'fans', title: '粉丝' },
         { key: 'created', title: '创建' },
         { key: 'saved', title: '收藏' },
       ],
@@ -298,7 +329,14 @@ export default {
       return trackingScope(this.$store.state.data?.user?.userId);
     },
     selectedUser() {
-      return this.users.find(user => user.id === this.selected) || {};
+      return (
+        this.users.find(user => user.id === this.selected) ||
+        this.visiting ||
+        {}
+      );
+    },
+    isSavedUser() {
+      return this.users.some(user => user.id === this.selected);
     },
   },
   watch: {
@@ -313,6 +351,54 @@ export default {
     this.scopeGeneration++;
   },
   methods: {
+    async refreshCurrent() {
+      if (this.refreshing || !this.selected) return;
+      const generation = this.scopeGeneration;
+      this.refreshing = true;
+      const sections = [
+        'collection',
+        'likes',
+        'profile',
+        'events',
+        'ranking',
+        'people',
+      ]
+        .map(key => this.$refs[key])
+        .filter(Boolean);
+      try {
+        await Promise.all(sections.map(section => section.load(true)));
+      } finally {
+        if (generation === this.scopeGeneration) this.refreshing = false;
+      }
+    },
+    openUser(user) {
+      const id = normalizeTrackingId(user.userId);
+      if (!id || id === this.selected) return;
+      this.userHistory.push({
+        id: this.selected,
+        user: this.selectedUser,
+        group: this.group,
+        rank: this.rank,
+      });
+      this.visiting = {
+        id,
+        name: user.nickname || '',
+        avatar: user.avatarUrl || '',
+      };
+      this.selected = id;
+      this.group = 'activity';
+      this.rank = 'week';
+      this.notice = '';
+    },
+    backUser() {
+      const previous = this.userHistory.pop();
+      if (!previous) return;
+      this.selected = previous.id;
+      this.visiting = previous.user;
+      this.group = previous.group;
+      this.rank = previous.rank;
+      this.notice = '';
+    },
     likedPlaylist(items) {
       return items.find(
         item =>
@@ -343,6 +429,9 @@ export default {
       const epoch = ++this.scopeGeneration;
       this.users = [];
       this.selected = '';
+      this.visiting = null;
+      this.userHistory = [];
+      this.refreshing = false;
       this.ready = false;
       this.notice = '';
       this.editing = '';
@@ -366,6 +455,8 @@ export default {
     },
     selectUser(id) {
       if (!this.users.some(user => user.id === id)) return;
+      this.visiting = null;
+      this.userHistory = [];
       this.selected = id;
       this.group = 'activity';
       this.rank = 'week';
@@ -412,8 +503,10 @@ export default {
         avatar: id === oldId ? old.avatar : '',
         alias: this.editAlias.trim(),
       });
-      if (id !== oldId)
+      if (id !== oldId) {
+        removeTrackingArtwork(this.scope, oldId);
         deleteTrackingSnapshots(this.scope, oldId).catch(() => {});
+      }
       if (this.selected === oldId) this.selectUser(id);
       this.editing = '';
       this.notice = '';
@@ -422,6 +515,7 @@ export default {
     remove(id) {
       this.users = this.users.filter(user => user.id !== id);
       this.persist();
+      removeTrackingArtwork(this.scope, id);
       deleteTrackingSnapshots(this.scope, id).catch(() => {});
       if (this.selected === id) {
         this.selected = '';
@@ -438,7 +532,15 @@ export default {
     },
     updateProfile({ uid, profile }) {
       const user = this.users.find(user => user.id === uid);
-      if (!user) return;
+      if (!user) {
+        if (uid === this.selected)
+          this.visiting = {
+            id: uid,
+            name: profile.nickname || '',
+            avatar: profile.avatarUrl || '',
+          };
+        return;
+      }
       user.name = profile.nickname || '';
       user.avatar = profile.avatarUrl || '';
       this.persist();
@@ -596,5 +698,14 @@ select {
   .person-actions {
     flex-wrap: wrap;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 </style>

@@ -68,7 +68,10 @@
         :track-prop="track"
         :track-no="index + 1"
         :highlight-playing-track="highlightPlayingTrack"
-        @dblclick.native="playThisList(track.id || track.songId)"
+        @dblclick.native="
+          !singleClickPlay && playThisList(track.id || track.songId)
+        "
+        @click.native="clickTrack($event, track)"
         @click.right.native="openMenu($event, track, index)"
       />
     </div>
@@ -92,6 +95,7 @@ export default {
     ContextMenu,
   },
   props: {
+    singleClickPlay: { type: Boolean, default: false },
     tracks: {
       type: Array,
       default: () => {
@@ -196,6 +200,12 @@ export default {
         al: { picUrl: '' },
       };
       this.rightClickedTrackIndex = -1;
+    },
+    clickTrack(event, track) {
+      if (!this.singleClickPlay || event.target.closest('a, button, img'))
+        return;
+      if (track.playable || track.privilege?.pl > 0)
+        this.playThisList(track.id || track.songId);
     },
     playThisList(trackID) {
       if (this.dbclickTrackFunc === 'default') {

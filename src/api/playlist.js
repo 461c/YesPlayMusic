@@ -1,3 +1,4 @@
+import { observeTrackedPlaylistArtwork } from '@/utils/trackingArtwork';
 import { cachedResource } from '@/utils/cachedResource';
 import {
   getCachedPlaylist,
@@ -53,7 +54,10 @@ export function getPlaylistDetail(id, noCache = false) {
   const scope = libraryScope();
   const read = async () => {
     const cached = await getCachedPlaylist(id, scope);
-    if (cached?.playlist) observePlaylistArtwork(cached.playlist);
+    if (cached?.playlist) {
+      observePlaylistArtwork(cached.playlist);
+      observeTrackedPlaylistArtwork(cached.playlist);
+    }
     return cached;
   };
   const load = () =>
@@ -64,6 +68,7 @@ export function getPlaylistDetail(id, noCache = false) {
     }).then(async data => {
       if (!data?.playlist) throw new Error('无法获取歌单信息');
       observePlaylistArtwork(data.playlist);
+      observeTrackedPlaylistArtwork(data.playlist);
       data.playlist.tracks = mapTrackPlayableStatus(
         data.playlist.tracks,
         data.privileges || []
