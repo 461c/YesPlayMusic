@@ -510,3 +510,27 @@ body[data-platform='android'] {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
+
+body[data-platform='android'] .player.docked {
+  bottom: 0;
+  width: 100%;
+  height: calc(64px + var(--android-inset-bottom, 0px));
+  padding-bottom: var(--android-inset-bottom, 0px);
+  box-sizing: border-box;
+  padding-left: var(--android-inset-left, 0px);
+  padding-right: var(--android-inset-right, 0px);
+}
+
+@media (max-width: 600px) {
+  body[data-platform='android'] .home .mv-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 12px;
+    padding: 0;
+  }
+  body[data-platform='android'] .home .mv-row .mv {
+    width: 100%;
+    margin: 0;
+    min-width: 0;
+  }
+}

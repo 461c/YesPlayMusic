@@ -45,3 +45,9 @@
 
 - Keep Android phone adjustments inside max-width:600px; preserve tablet layouts, custom bottom, and lyrics translateY travel. Phone cover grids use 2 columns (3 from 480px), compact player retains play/next/queue/lyrics, and playlist headers stack with bounded covers.
 - Paint the local WebView/navigation immediately on startup, never replace it with an API loading screen. Native startup events/getter gate adapter requests asynchronously; startup waiting must not consume the normal HTTP timeout and must support cancellation/failure without freezing offline navigation.
+
+- Navbar order is Home, Explore, optional Tracking, Library. Tracking title uses the selected person's name + 的跟踪; reuse library CoverRow/TrackList and tab styling.
+- Home sections are configured by an ordered list of catalog keys; preserve empty selections and migrate the prior Apple Music flag. Only request enabled sections, at most three workers; ignore old account/API responses and never crawl playlist details to populate home.
+- Settings keeps exactly four groups. Expose floatingPlayer, showPlayCounts and showCoverPlayButton under Appearance; home-section choices also belong there. Advanced integrations, custom CSS, reverse-play and novelty controls belong in Other with clear titles.
+- Use short content transitions. On browsers supporting View Transitions, capture only main and wait for incoming visible content (with a bounded timeout) before fading; fixed navbar/player are not part of the snapshot. Unsupported browsers use short route transitions.
+- Startup theme must honor the persisted manual/automatic preference in native window, WebView and early HTML, including pure black dark backgrounds. Huawei control-center admission remains unverified/failed on the user's tablet; preserve the standard session and provide user-triggered diagnostics without claiming package identity guarantees vendor acceptance.

@@ -10,18 +10,14 @@
     <div v-if="payload" v-page-reveal>
       <template v-if="tab === 'profile'">
         <div class="profile-card"
-          ><img
-            v-if="profile.avatarUrl"
-            v-image-fade
-            :src="profile.avatarUrl | resizeImage(224)"
-            alt="用户头像"
-          /><div
-            ><h2>{{ profile.nickname }}</h2
-            ><p class="signature">{{ profile.signature || '暂无公开签名' }}</p
-            ><p v-if="profile.description">{{ profile.description }}</p
-            ><p v-if="profile.detailDescription">{{
-              profile.detailDescription
-            }}</p></div
+          ><p v-if="profile.signature">{{ profile.signature }}</p
+          ><p v-if="profile.description">{{ profile.description }}</p
+          ><p
+            v-if="
+              profile.detailDescription &&
+              profile.detailDescription !== profile.description
+            "
+            >{{ profile.detailDescription }}</p
           ></div
         >
         <dl class="stats"
@@ -40,52 +36,14 @@
         >
       </template>
       <template v-else-if="tab === 'playlists'">
-        <div class="playlist-grid"
-          ><router-link
-            v-for="item in items"
-            :key="item.id"
-            class="playlist-card"
-            :to="'/playlist/' + item.id"
-            ><img
-              v-if="item.coverImgUrl"
-              v-image-fade
-              :src="item.coverImgUrl | resizeImage(224)"
-              loading="lazy"
-              alt=""
-            /><strong>{{ item.name }}</strong
-            ><small
-              >{{
-                String((item.creator || {}).userId) === selected
-                  ? '创建'
-                  : '收藏'
-              }}
-              · {{ item.trackCount || 0 }} 首 · 播放
-              {{ item.playCount || 0 }}</small
-            ><small v-if="item.updateTime"
-              >更新于 {{ date(item.updateTime) }}</small
-            ><p v-if="item.description">{{ item.description }}</p></router-link
-          ></div
-        >
+        <CoverRow type="playlist" :items="items" :show-play-count="true" />
       </template>
       <template v-else-if="tab === 'week' || tab === 'all'">
-        <div v-for="(item, index) in items" :key="item.song.id" class="record"
-          ><span>{{ index + 1 }}</span
-          ><button @click="play(item.song.id)"
-            ><img
-              v-if="(item.song.al || {}).picUrl"
-              v-image-fade
-              :src="item.song.al.picUrl | resizeImage(96)"
-              loading="lazy"
-              alt=""
-            /><span
-              ><strong>{{ item.song.name }}</strong
-              ><small
-                >{{ artists(item.song) }} ·
-                {{ (item.song.al || {}).name }}</small
-              ></span
-            ></button
-          ></div
-        >
+        <TrackList
+          :tracks="tracks"
+          type="playlist"
+          dbclick-track-func="playAList"
+        />
       </template>
       <template v-else-if="tab === 'events'">
         <article v-for="item in items" :key="item.id" class="event"
@@ -130,6 +88,8 @@
   </section>
 </template>
 <script>
+import CoverRow from '@/components/CoverRow.vue';
+import TrackList from '@/components/TrackList.vue';
 import { readTrackingSection } from '@/api/tracking';
 import {
   readTrackingSnapshot,
@@ -137,6 +97,7 @@ import {
 } from '@/utils/trackingStore';
 export default {
   name: 'TrackingSection',
+  components: { CoverRow, TrackList },
   props: {
     uid: { type: String, required: true },
     scope: { type: String, required: true },
@@ -153,6 +114,18 @@ export default {
     };
   },
   computed: {
+    tracks() {
+      return this.items.map(item => {
+        const song = { ...item.song };
+        delete song.playCount;
+        return {
+          ...song,
+          al: song.al || song.album || {},
+          ar: song.ar || song.artists || [],
+          dt: song.dt || song.duration || 0,
+        };
+      });
+    },
     tab() {
       return this.section;
     },
@@ -470,5 +443,36 @@ small {
 .load-more {
   display: block;
   margin: 24px auto;
+}
+</style>
+
+<style lang="scss" scoped>
+.profile-card {
+  display: block;
+  margin: 12px 0 20px;
+  padding: 20px 24px;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border-radius: 16px;
+  p {
+    margin: 0 0 8px;
+  }
+  p:last-child {
+    margin-bottom: 0;
+  }
+  &:empty {
+    display: none;
+  }
+}
+.stats {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  div {
+    background: transparent;
+    padding: 10px 0;
+  }
+  dd {
+    font-size: 24px;
+  }
 }
 </style>

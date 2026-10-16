@@ -578,6 +578,7 @@ export default {
 }
 
 .playlist {
+  position: relative;
   margin-top: 32px;
 }
 .playlist-info {
@@ -905,14 +906,14 @@ export default {
 
 .search-box-likepage {
   display: flex;
-  position: absolute;
-  right: 12vw;
-  top: 95px;
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
   justify-content: flex-end;
   -webkit-app-region: no-drag;
 
   .input {
-    transition: all 0.5s;
+    transition: width 0.14s ease;
   }
 
   .container {
@@ -965,9 +966,18 @@ export default {
   }
 }
 
-@media (max-width: 1336px) {
-  .search-box-likepage {
-    right: 8vw;
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.user-info h1 {
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .search-box-likepage .input {
+    max-width: 45vw;
   }
 }
 

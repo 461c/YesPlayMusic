@@ -28,7 +28,11 @@ export function initializeAndroidEnvironment() {
   });
 }
 
-export function updateAndroidAppearance(appearance) {
+export function updateAndroidAppearance(appearance, preference = 'auto') {
+  if (native?.setAppearancePreference) {
+    native.setAppearancePreference(appearance === 'dark', preference);
+    return;
+  }
   if (native && native.setAppearance) {
     native.setAppearance(appearance === 'dark');
   }

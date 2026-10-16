@@ -200,11 +200,12 @@ export function dailyTask() {
 }
 
 export function changeAppearance(appearance) {
+  const preference = appearance || 'auto';
   if (appearance === 'auto' || appearance === undefined) {
     appearance = systemAppearance();
   }
   document.body.setAttribute('data-theme', appearance);
-  updateAndroidAppearance(appearance);
+  updateAndroidAppearance(appearance, preference);
   document
     .querySelector('meta[name="theme-color"]')
     .setAttribute('content', appearance === 'dark' ? '#222' : '#fff');

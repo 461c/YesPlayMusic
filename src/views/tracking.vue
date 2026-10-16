@@ -1,7 +1,21 @@
 <template>
   <div v-page-reveal class="tracking-page">
     <header>
-      <h1>{{ managing ? '管理跟踪' : '跟踪' }}</h1>
+      <h1
+        ><img
+          v-if="!managing && selectedUser.avatar"
+          v-image-fade
+          class="tracking-avatar"
+          :src="selectedUser.avatar | resizeImage(96)"
+          alt=""
+        />{{
+          managing
+            ? '管理跟踪'
+            : selected
+            ? (selectedUser.alias || selectedUser.name || selected) + '的跟踪'
+            : '跟踪'
+        }}</h1
+      >
       <div class="header-actions">
         <template v-if="!managing">
           <select
@@ -71,16 +85,7 @@
     </div>
     <template v-else>
       <div v-if="selected" :key="selected" v-page-reveal>
-        <div class="person-heading"
-          ><h2>{{ selectedUser.alias || selectedUser.name || selected }}</h2
-          ><a
-            :href="'https://music.163.com/#/user/home?id=' + selected"
-            target="_blank"
-            rel="noopener noreferrer"
-            >主页</a
-          ></div
-        >
-        <div class="groups" role="tablist" aria-label="内容分组"
+        <div class="groups tabs" role="tablist" aria-label="内容分组"
           ><button
             v-for="item in groups"
             :key="item.key"
@@ -427,6 +432,55 @@ select {
   }
   h1 {
     font-size: 26px;
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+header h1 {
+  font-size: 42px;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tracking-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+.groups {
+  margin-top: 32px;
+  margin-bottom: 24px;
+  gap: 14px;
+}
+.groups button {
+  opacity: 0.68;
+  font-weight: 600;
+  font-size: 18px;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--color-text);
+}
+.groups button.active {
+  opacity: 1;
+  background: var(--color-secondary-bg);
+}
+@media (max-width: 600px) {
+  header {
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 26px;
+  }
+  .groups {
+    gap: 6px;
+  }
+  .groups button {
+    font-size: 15px;
   }
 }
 </style>

@@ -7,6 +7,14 @@
   <meta name="referrer" content="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
+  <style>html { background: #fff; } @media (prefers-color-scheme: dark) { html { background: #000; } }</style>
+  <script>
+    try {
+      var appearance = JSON.parse(localStorage.getItem('settings') || '{}').appearance || 'auto';
+      var systemDark = window.YesPlayMusicAndroid ? window.YesPlayMusicAndroid.isSystemDark() : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.style.backgroundColor = appearance === 'dark' || (appearance === 'auto' && systemDark) ? '#000' : '#fff';
+    } catch (_) {}
+  </script>
   <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
   <title>
     <%= htmlWebpackPlugin.options.title %>

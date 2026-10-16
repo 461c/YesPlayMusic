@@ -1,7 +1,10 @@
 <template>
   <div
     class="player"
-    :class="{ 'lyrics-open': showLyrics }"
+    :class="{
+      'lyrics-open': showLyrics,
+      docked: settings.floatingPlayer === false,
+    }"
     :role="showLyrics && !isAndroid ? 'button' : null"
     :tabindex="showLyrics && !isAndroid ? 0 : null"
     :aria-label="showLyrics && !isAndroid ? '收起歌词' : null"
@@ -569,5 +572,16 @@ export default {
   &:active {
     transform: unset;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.player.docked {
+  max-width: none;
+  width: 100%;
+  bottom: 0;
+  border-radius: 0;
+  box-shadow: none;
+  border-top: 1px solid rgba(128, 128, 128, 0.16);
 }
 </style>

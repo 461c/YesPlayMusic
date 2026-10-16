@@ -7,7 +7,10 @@
     @click="clickCoverToPlay ? play() : goTo()"
   >
     <div class="cover-container">
-      <div class="shade">
+      <div
+        v-if="$store.state.settings.showCoverPlayButton !== false"
+        class="shade"
+      >
         <transition name="cover-button">
           <button
             v-show="focus"

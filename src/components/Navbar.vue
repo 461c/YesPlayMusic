@@ -21,15 +21,15 @@
           >{{ $t('nav.explore') }}</router-link
         >
         <router-link
-          to="/library"
-          :class="{ active: $route.name === 'library' }"
-          >{{ $t('nav.library') }}</router-link
-        >
-        <router-link
           v-if="settings.showTracking"
           to="/tracking"
           :class="{ active: $route.name === 'tracking' }"
           >跟踪</router-link
+        >
+        <router-link
+          to="/library"
+          :class="{ active: $route.name === 'library' }"
+          >{{ $t('nav.library') }}</router-link
         >
       </div>
       <div class="right-part">

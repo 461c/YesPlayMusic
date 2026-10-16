@@ -22,6 +22,8 @@ const sandbox = {
       requests.push({ uid, section, cursor, resolve, reject })
     ),
   TrackingSection: {},
+  CoverRow: {},
+  TrackList: {},
 };
 function component(path) {
   const source = fs

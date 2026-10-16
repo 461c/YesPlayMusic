@@ -8,13 +8,19 @@ export const pageReveal = {
   componentUpdated(el, binding) {
     if (binding.value === binding.oldValue) return;
     pageAnimations.get(el)?.cancel();
-    if (!binding.value || reducedMotion() || !el.animate) return;
+    if (
+      !binding.value ||
+      document.documentElement.hasAttribute('data-page-transition') ||
+      reducedMotion() ||
+      !el.animate
+    )
+      return;
     const animation = el.animate(
       [
-        { opacity: 0, transform: 'translateY(10px)' },
+        { opacity: 0, transform: 'translateY(5px)' },
         { opacity: 1, transform: 'translateY(0)' },
       ],
-      { duration: 220, easing: 'ease-out' }
+      { duration: 140, easing: 'ease-out' }
     );
     pageAnimations.set(el, animation);
   },
@@ -69,7 +75,7 @@ export const imageFade = {
       if (!reducedMotion() && el.animate) {
         state.animation = el.animate(
           [{ opacity: 0 }, { opacity: getComputedStyle(el).opacity }],
-          { duration: 280, easing: 'ease-out' }
+          { duration: 180, easing: 'ease-out' }
         );
       }
     };

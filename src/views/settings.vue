@@ -102,22 +102,6 @@
           </select>
         </div>
       </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">{{ $t('settings.enableReversedMode') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-reversed-mode"
-              v-model="enableReversedMode"
-              type="checkbox"
-              name="enable-reversed-mode"
-            />
-            <label for="enable-reversed-mode"></label>
-          </div>
-        </div>
-      </div>
       <h3>缓存</h3>
       <div v-if="isElectron || isAndroid" class="item">
         <div class="left">
@@ -125,7 +109,7 @@
             {{ $t('settings.automaticallyCacheSongs') }}
           </div>
           <div v-if="isAndroid" class="description">
-            边播边缓存；关闭后保留已有缓存，下次加载音源时生效。
+            播放时自动保存歌曲片段。关闭后保留已有缓存。
           </div>
         </div>
         <div class="right">
@@ -187,19 +171,14 @@
             >歌单图片缓存：{{ artworkCache.count }} 张 ·
             {{ artworkCache.size }}</div
           >
-          <div class="description">
-            音乐库及已打开的歌单信息自动保存，无网时可浏览。歌单封面缓存一次；歌单内歌曲封面仅随正常图片请求缓存，不主动遍历歌曲。随机歌曲不单独保存。
-            列表封面按 224px 缓存，大图按需保存并复用；剩余空间不足 128MB
-            时暂停新增。
-            <span
-              >本次运行：本地命中 {{ artworkCache.hits || 0 }} 次，图片下载
+          <div class="description"
+            >保存音乐库及已打开歌单的图片，按需缓存，不遍历下载歌曲封面。<details
+              ><summary>本次缓存统计</summary>本地命中
+              {{ artworkCache.hits || 0 }} 次，下载
               {{ artworkCache.downloads || 0 }} 次，失败
-              {{ artworkCache.failures || 0 }} 次。</span
-            >
-            <span v-if="artworkCache.pending"
-              >正在缓存 {{ artworkCache.pending }} 张图片。</span
-            >
-          </div>
+              {{ artworkCache.failures || 0 }} 次。</details
+            ></div
+          >
         </div>
         <div class="right">
           <button :disabled="artworkClearing" @click="clearArtworkCache">
@@ -208,6 +187,37 @@
         </div>
       </div>
       <h3>外观</h3>
+      <div class="item"
+        ><div class="left"
+          ><div class="title">悬浮播放栏</div
+          ><div class="description">关闭后播放栏贴合屏幕底部。</div></div
+        ><div class="right"
+          ><div class="toggle"
+            ><input
+              id="floatingPlayer"
+              v-model="floatingPlayer"
+              type="checkbox" /><label for="floatingPlayer"></label></div></div
+      ></div>
+      <div class="item"
+        ><div class="left"><div class="title">显示播放量</div></div
+        ><div class="right"
+          ><div class="toggle"
+            ><input
+              id="showPlayCounts"
+              v-model="showPlayCounts"
+              type="checkbox" /><label for="showPlayCounts"></label></div></div
+      ></div>
+      <div class="item"
+        ><div class="left"><div class="title">显示封面播放按钮</div></div
+        ><div class="right"
+          ><div class="toggle"
+            ><input
+              id="showCoverPlayButton"
+              v-model="showCoverPlayButton"
+              type="checkbox" /><label
+              for="showCoverPlayButton"
+            ></label></div></div
+      ></div>
       <div class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.language') }} </div>
@@ -256,6 +266,96 @@
               {{ $t('settings.themeColor.forest') }}
             </option>
           </select>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title">显示歌曲副标题</div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="sub-title-default"
+              v-model="subTitleDefault"
+              type="checkbox"
+              name="sub-title-default"
+            />
+            <label for="sub-title-default"></label>
+          </div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.lyricFontSize.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="lyricFontSize">
+            <option value="16">
+              {{ $t('settings.lyricFontSize.small') }} - 16px
+            </option>
+            <option value="22">
+              {{ $t('settings.lyricFontSize.medium') }} - 22px
+            </option>
+            <option value="28">
+              {{ $t('settings.lyricFontSize.large') }} - 28px
+            </option>
+            <option value="36">
+              {{ $t('settings.lyricFontSize.xlarge') }} - 36px
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title">{{ $t('settings.showLyricsTranslation') }}</div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="show-lyrics-translation"
+              v-model="showLyricsTranslation"
+              type="checkbox"
+              name="show-lyrics-translation"
+            />
+            <label for="show-lyrics-translation"></label>
+          </div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title">{{ $t('settings.lyricsBackground.text') }}</div>
+        </div>
+        <div class="right">
+          <select v-model="lyricsBackground">
+            <option :value="false">
+              {{ $t('settings.lyricsBackground.off') }}
+            </option>
+            <option :value="true">
+              {{ $t('settings.lyricsBackground.on') }}
+            </option>
+            <option value="blur"> 模糊封面 </option>
+            <option value="dynamic">
+              {{ $t('settings.lyricsBackground.dynamic') }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <HomeSectionSettings />
+      <h3>其它</h3>
+      <div class="item">
+        <div class="left">
+          <div class="title">倒序播放按钮</div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="enable-reversed-mode"
+              v-model="enableReversedMode"
+              type="checkbox"
+              name="enable-reversed-mode"
+            />
+            <label for="enable-reversed-mode"></label>
+          </div>
         </div>
       </div>
       <div class="item custom-css-item">
@@ -322,23 +422,7 @@
       </div>
       <div class="item">
         <div class="left">
-          <div class="title">{{ $t('settings.subTitleDefault') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="sub-title-default"
-              v-model="subTitleDefault"
-              type="checkbox"
-              name="sub-title-default"
-            />
-            <label for="sub-title-default"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title" style="transform: scaleX(-1)">🐈️ 🏳️‍🌈</div>
+          <div class="title">彩虹猫进度条</div>
         </div>
         <div class="right">
           <div class="toggle">
@@ -350,62 +434,6 @@
             />
             <label for="nyancat-style"></label>
           </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.lyricFontSize.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="lyricFontSize">
-            <option value="16">
-              {{ $t('settings.lyricFontSize.small') }} - 16px
-            </option>
-            <option value="22">
-              {{ $t('settings.lyricFontSize.medium') }} - 22px
-            </option>
-            <option value="28">
-              {{ $t('settings.lyricFontSize.large') }} - 28px
-            </option>
-            <option value="36">
-              {{ $t('settings.lyricFontSize.xlarge') }} - 36px
-            </option>
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">{{ $t('settings.showLyricsTranslation') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-lyrics-translation"
-              v-model="showLyricsTranslation"
-              type="checkbox"
-              name="show-lyrics-translation"
-            />
-            <label for="show-lyrics-translation"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">{{ $t('settings.lyricsBackground.text') }}</div>
-        </div>
-        <div class="right">
-          <select v-model="lyricsBackground">
-            <option :value="false">
-              {{ $t('settings.lyricsBackground.off') }}
-            </option>
-            <option :value="true">
-              {{ $t('settings.lyricsBackground.on') }}
-            </option>
-            <option value="blur"> 模糊封面 </option>
-            <option value="dynamic">
-              {{ $t('settings.lyricsBackground.dynamic') }}
-            </option>
-          </select>
         </div>
       </div>
       <div v-if="isElectron && isLinux" class="item">
@@ -435,13 +463,10 @@
           </div>
         </div>
       </div>
-      <h3>其它</h3>
       <div class="item">
         <div class="left">
           <div class="title">显示跟踪页面</div>
-          <div class="description"
-            >开启后在顶部导航栏显示跟踪入口，关闭不会删除已添加的用户。</div
-          >
+          <div class="description">关闭时隐藏入口，保留已添加的用户。</div>
         </div>
         <div class="right">
           <div class="toggle">
@@ -452,50 +477,6 @@
               name="show-tracking"
             />
             <label for="show-tracking"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.MusicGenrePreference.text') }}
-          </div>
-        </div>
-        <div class="right">
-          <select v-model="musicLanguage">
-            <option value="all">{{
-              $t('settings.MusicGenrePreference.none')
-            }}</option>
-            <option value="zh">{{
-              $t('settings.MusicGenrePreference.mandarin')
-            }}</option>
-            <option value="ea">{{
-              $t('settings.MusicGenrePreference.western')
-            }}</option>
-            <option value="jp">{{
-              $t('settings.MusicGenrePreference.japanese')
-            }}</option>
-            <option value="kr">{{
-              $t('settings.MusicGenrePreference.korean')
-            }}</option>
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.showPlaylistsByAppleMusic') }}</div
-          >
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-playlists-by-apple-music"
-              v-model="showPlaylistsByAppleMusic"
-              type="checkbox"
-              name="show-playlists-by-apple-music"
-            />
-            <label for="show-playlists-by-apple-music"></label>
           </div>
         </div>
       </div>
@@ -665,7 +646,7 @@
       </div>
       <div v-if="isAndroid" class="item android-api-address">
         <div class="left">
-          <div class="title">{{ $t('settings.androidApi.text') }}</div>
+          <div class="title">音乐接口地址</div>
         </div>
         <form class="right" @submit.prevent="saveAndroidApi">
           <input
@@ -879,10 +860,10 @@
         </div>
       </div>
       <div v-if="isElectron">
-        <h4>Real IP</h4>
+        <h4>请求出口 IP</h4>
         <div class="item">
           <div class="left">
-            <div class="title"> Real IP </div>
+            <div class="title">自定义请求出口 IP</div>
           </div>
           <div class="right">
             <div class="toggle">
@@ -904,6 +885,20 @@
             :disabled="!enableRealIP"
           />
         </div>
+      </div>
+      <div v-if="isAndroid" class="item media-diagnostic"
+        ><div class="left"
+          ><div class="title">系统播控诊断</div
+          ><div class="description">播控异常时复制此信息排查。</div></div
+        ><div class="right"
+          ><button @click="copyMediaDiagnostic">复制诊断</button></div
+        ><textarea
+          v-if="mediaDiagnostic"
+          ref="mediaDiagnostic"
+          :value="mediaDiagnostic"
+          readonly
+          aria-label="系统播控诊断"
+        ></textarea>
       </div>
       <div class="footer">
         <p class="author"
@@ -959,6 +954,7 @@ import { countDBSize, clearDB } from '@/utils/db';
 import { applyCustomCss } from '@/utils/customCss';
 import { isAndroid } from '@/utils/androidAudio';
 import pkg from '../../package.json';
+import HomeSectionSettings from '@/components/HomeSectionSettings.vue';
 
 const electron =
   process.env.IS_ELECTRON === true ? window.require('electron') : null;
@@ -969,8 +965,10 @@ const validShortcutCodes = ['=', '-', '~', '[', ']', ';', "'", ',', '.', '/'];
 
 export default {
   name: 'Settings',
+  components: { HomeSectionSettings },
   data() {
     return {
+      mediaDiagnostic: '',
       androidApiInput: isAndroid ? window.YesPlayMusicAndroid.getApiUrl() : '',
       customCssInput: this.$store.state.settings.customCssUrl || '',
       customCssLoading: false,
@@ -998,6 +996,33 @@ export default {
     };
   },
   computed: {
+    floatingPlayer: {
+      get() {
+        return this.settings.floatingPlayer !== false;
+      },
+      set(value) {
+        this.$store.commit('updateSettings', { key: 'floatingPlayer', value });
+      },
+    },
+    showPlayCounts: {
+      get() {
+        return this.settings.showPlayCounts !== false;
+      },
+      set(value) {
+        this.$store.commit('updateSettings', { key: 'showPlayCounts', value });
+      },
+    },
+    showCoverPlayButton: {
+      get() {
+        return this.settings.showCoverPlayButton !== false;
+      },
+      set(value) {
+        this.$store.commit('updateSettings', {
+          key: 'showCoverPlayButton',
+          value,
+        });
+      },
+    },
     ...mapState(['player', 'settings', 'data', 'lastfm', 'androidAudioInfo']),
     androidQualityInfo() {
       const info = this.androidAudioInfo;
@@ -1559,6 +1584,14 @@ export default {
       this.cacheStatsTimer = setInterval(() => this.countDBSize(), 3000);
     }
   },
+  mounted() {
+    if (this.$route.hash === '#home-sections')
+      this.$nextTick(() =>
+        document
+          .getElementById('home-sections')
+          ?.scrollIntoView({ block: 'start' })
+      );
+  },
   beforeDestroy() {
     clearInterval(this.cacheStatsTimer);
   },
@@ -1567,6 +1600,20 @@ export default {
     if (process.env.IS_ELECTRON) this.getAllOutputDevices();
   },
   methods: {
+    async copyMediaDiagnostic() {
+      this.mediaDiagnostic =
+        window.YesPlayMusicAndroid.getMediaDiagnostics?.() || '播放器尚未连接';
+      await this.$nextTick();
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(this.mediaDiagnostic);
+        copied = true;
+      } catch (_) {
+        this.$refs.mediaDiagnostic.select();
+        copied = document.execCommand('copy');
+      }
+      this.showToast(copied ? '诊断信息已复制' : '已显示诊断信息，可长按复制');
+    },
     ...mapActions(['showToast']),
     saveAndroidApi() {
       try {
@@ -2202,5 +2249,22 @@ input[type='number'] {
 }
 .toggle input:checked + label:after {
   left: 26px;
+}
+</style>
+
+<style lang="scss" scoped>
+.media-diagnostic {
+  flex-wrap: wrap;
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    margin-top: 12px;
+    background: var(--color-secondary-bg);
+    color: var(--color-text);
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    box-sizing: border-box;
+  }
 }
 </style>

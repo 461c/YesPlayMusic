@@ -13,7 +13,10 @@
         :play-button-size="type === 'artist' ? 26 : playButtonSize"
       />
       <div class="text">
-        <div v-if="showPlayCount" class="info">
+        <div
+          v-if="showPlayCount && $store.state.settings.showPlayCounts !== false"
+          class="info"
+        >
           <span class="play-count"
             ><svg-icon icon-class="play" />{{
               item.playCount | formatPlayCount

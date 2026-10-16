@@ -70,6 +70,7 @@ public final class MainActivity extends Activity {
     };
 
     @Override public void onCreate(Bundle state) {
+        setTheme(startupDark() ? R.style.AppTheme_StartupDark : R.style.AppTheme_StartupLight);
         super.onCreate(state);
         ApiClient.preferences(this).registerOnSharedPreferenceChangeListener(audioInfoListener);
         configureSystemBars();
@@ -188,6 +189,18 @@ public final class MainActivity extends Activity {
     }
 
     private void loadPage() { pageReady = false; web.loadUrl("https://appassets.androidplatform.net/"); }
+    private boolean startupDark() {
+        String preference = ApiClient.preferences(this).getString("appearanceMode", "auto");
+        return "dark".equals(preference) || (!"light".equals(preference) && systemDark());
+    }
+    private void applyAppearance(boolean dark) {
+        appearanceDark = dark;
+        int color = dark ? android.graphics.Color.BLACK : android.graphics.Color.WHITE;
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(color));
+        if (content != null) content.setBackgroundColor(color);
+        if (web != null) web.setBackgroundColor(color);
+        updateSystemBarIcons();
+    }
     private boolean systemDark() {
         return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
     }
@@ -206,7 +219,7 @@ public final class MainActivity extends Activity {
             attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
             getWindow().setAttributes(attributes);
         }
-        appearanceDark = systemDark();
+        appearanceDark = startupDark();
         updateSystemBarIcons();
     }
     private void updateSystemBarIcons() {
@@ -331,8 +344,13 @@ public final class MainActivity extends Activity {
     public final class Bridge {
         @JavascriptInterface public String getEnvironment() { return environment; }
         @JavascriptInterface public boolean isSystemDark() { return systemDark(); }
+        @JavascriptInterface public String getMediaDiagnostics() { return PlaybackService.systemMediaReport(); }
+        @JavascriptInterface public void setAppearancePreference(boolean dark, String preference) {
+            ApiClient.preferences(MainActivity.this).edit().putString("appearanceMode", preference).apply();
+            handler.post(() -> applyAppearance(dark));
+        }
         @JavascriptInterface public void setAppearance(boolean dark) {
-            handler.post(() -> { appearanceDark = dark; updateSystemBarIcons(); });
+            handler.post(() -> applyAppearance(dark));
         }
         @JavascriptInterface public void setLyricsOpen(boolean open) {
             handler.post(() -> { lyricsOpen = open; updateSystemBarIcons(); });

@@ -39,6 +39,8 @@ import org.json.JSONObject;
 public final class PlaybackService extends MediaLibraryService {
     private MediaLibrarySession session;
     private ExoPlayer player;
+    private static volatile String mediaReport = "播放器尚未连接";
+    static String systemMediaReport() { return mediaReport; }
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final AtomicBoolean loadingFm = new AtomicBoolean(false);
@@ -52,6 +54,7 @@ public final class PlaybackService extends MediaLibraryService {
     private final Runnable savePosition = new Runnable() {
         @Override public void run() {
             if (player != null && player.isPlaying()) {
+                publishSystemMediaReport();
                 PlaybackResumeStore.save(PlaybackService.this, player, false);
                 main.postDelayed(this, 5000);
             }
@@ -104,6 +107,7 @@ public final class PlaybackService extends MediaLibraryService {
                 if (playing) main.post(savePosition);
             }
             @Override public void onEvents(Player source, Player.Events events) {
+                main.post(PlaybackService.this::publishSystemMediaReport);
                 if (player.getPlaybackState() == Player.STATE_READY
                     && (events.contains(Player.EVENT_TRACKS_CHANGED)
                         || events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)
@@ -131,6 +135,35 @@ public final class PlaybackService extends MediaLibraryService {
         });
     }
 
+
+    private void publishSystemMediaReport() {
+        if (session == null || player == null) return;
+        try {
+            android.media.session.MediaController platform = new android.media.session.MediaController(this, session.getPlatformToken());
+            android.media.session.PlaybackState playback = platform.getPlaybackState();
+            android.media.MediaMetadata metadata = platform.getMetadata();
+            JSONArray clients = new JSONArray();
+            for (MediaSession.ControllerInfo controller : session.getConnectedControllers()) clients.put(controller.getPackageName());
+            JSONObject report = new JSONObject();
+            report.put("device", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL);
+            report.put("system", android.os.Build.DISPLAY);
+            report.put("androidApi", android.os.Build.VERSION.SDK_INT);
+            report.put("package", getPackageName());
+            report.put("platformSessionPackage", platform.getPackageName());
+            report.put("sessionId", session.getId());
+            report.put("platformState", playback == null ? -1 : playback.getState());
+            report.put("platformActions", playback == null ? 0 : playback.getActions());
+            report.put("platformTitle", metadata == null ? "" : metadata.getString(android.media.MediaMetadata.METADATA_KEY_TITLE));
+            report.put("platformDuration", metadata == null ? 0 : metadata.getLong(android.media.MediaMetadata.METADATA_KEY_DURATION));
+            report.put("isPlaying", player.isPlaying());
+            report.put("queueSize", player.getMediaItemCount());
+            report.put("audioSessionId", player.getAudioSessionId());
+            report.put("concurrentPlayback", ApiClient.preferences(this).getBoolean("allowConcurrentPlayback", false));
+            report.put("connectedControllers", clients);
+            report.put("capturedAt", System.currentTimeMillis());
+            mediaReport = report.toString(2);
+        } catch (Exception error) { mediaReport = "无法读取系统会话：" + error.getClass().getSimpleName(); }
+    }
     private void applyAudioFocusPolicy() {
         boolean concurrent = ApiClient.preferences(this).getBoolean("allowConcurrentPlayback", false);
         player.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
@@ -292,9 +325,13 @@ public final class PlaybackService extends MediaLibraryService {
         }
     }
 
-    @Override public MediaLibrarySession onGetSession(MediaSession.ControllerInfo info) { return session; }
+    @Override public MediaLibrarySession onGetSession(MediaSession.ControllerInfo info) {
+        main.post(this::publishSystemMediaReport);
+        return session;
+    }
 
     @Override public void onDestroy() {
+        mediaReport = "播放器服务已停止";
         ApiClient.preferences(this).unregisterOnSharedPreferenceChangeListener(preferenceListener);
         if (player != null) PlaybackResumeStore.save(this, player, true);
         worker.shutdownNow();
