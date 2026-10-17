@@ -35,11 +35,18 @@
     </header>
     <div v-if="offline" class="offline-note">
       {{
-        hasLocalData
+        $store.state.settings.archiveMode
+          ? '纪念模式：正在显示本地保存的音乐库。'
+          : hasLocalData
           ? '当前离线，正在显示本地保存的音乐库。'
           : '暂无本地音乐库数据，请联网打开一次。'
       }}
-      <button :disabled="refreshing" @click="loadData">重试</button>
+      <button
+        v-if="!$store.state.settings.archiveMode"
+        :disabled="refreshing"
+        @click="loadData"
+        >重试</button
+      >
     </div>
     <LibrarySearch
       v-if="searchQuery"

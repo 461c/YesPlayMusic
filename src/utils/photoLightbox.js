@@ -1,5 +1,5 @@
-import PhotoSwipeLightbox from 'photoswipe/lightbox';
-import 'photoswipe/style.css';
+import PhotoSwipeLightbox from 'photoswipe/dist/photoswipe-lightbox.esm.js';
+import 'photoswipe/dist/photoswipe.css';
 
 let active;
 export function photoSource(pic) {
@@ -33,7 +33,7 @@ export function openPhotos(pictures, index = 0) {
   active?.destroy();
   const lightbox = new PhotoSwipeLightbox({
     dataSource,
-    pswpModule: () => import('photoswipe'),
+    pswpModule: () => import('photoswipe/dist/photoswipe.esm.js'),
     bgOpacity: 0.95,
     showHideAnimationType: 'fade',
     showAnimationDuration: 160,
