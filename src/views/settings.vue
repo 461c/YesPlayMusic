@@ -32,6 +32,9 @@
           </button>
         </div>
       </div>
+      <div v-else class="user login-entry"
+        ><button @click="toLogin">{{ $t('login.login') }}</button></div
+      >
       <h3>播放</h3>
       <div class="item">
         <div class="left">
@@ -55,14 +58,21 @@
           </select>
         </div>
       </div>
-      <div v-if="isAndroid" class="item android-current-quality">
+      <div v-if="isElectron" class="item">
         <div class="left">
-          <div class="title">当前播放音质</div>
-          <div class="description">所选音质在下次加载音源时生效。</div>
+          <div class="title"> {{ $t('settings.deviceSelector') }} </div>
         </div>
         <div class="right">
-          <div>{{ androidQualityInfo }}</div>
-          <div class="description">{{ androidQualityNote }}</div>
+          <select v-model="outputDevice">
+            <option
+              v-for="device in allOutputDevices"
+              :key="device.deviceId"
+              :value="device.deviceId"
+              :selected="device.deviceId == outputDevice"
+            >
+              {{ $t(device.label) }}
+            </option>
+          </select>
         </div>
       </div>
       <div v-if="isAndroid" class="item">
@@ -85,78 +95,18 @@
           </div>
         </div>
       </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.deviceSelector') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="outputDevice">
-            <option
-              v-for="device in allOutputDevices"
-              :key="device.deviceId"
-              :value="device.deviceId"
-              :selected="device.deviceId == outputDevice"
-            >
-              {{ $t(device.label) }}
-            </option>
-          </select>
-        </div>
-      </div>
       <PlayerButtonSettings />
+      <div v-if="isAndroid" class="item android-current-quality">
+        <div class="left">
+          <div class="title">当前播放音质</div>
+          <div class="description">所选音质在下次加载音源时生效。</div>
+        </div>
+        <div class="right">
+          <div>{{ androidQualityInfo }}</div>
+          <div class="description">{{ androidQualityNote }}</div>
+        </div>
+      </div>
       <h3>缓存</h3>
-      <div class="item">
-        <div class="left"
-          ><div class="title">纪念模式</div>
-          <div class="description"
-            >停止接口更新，只浏览已保存的内容。保留条目、图片与歌曲缓存，暂停自动淘汰；只有已缓存的音频可以离线播放。</div
-          ></div
-        >
-        <div class="right"
-          ><div class="toggle"
-            ><input
-              id="archive-mode"
-              v-model="archiveMode"
-              type="checkbox" /><label for="archive-mode"></label></div
-        ></div>
-      </div>
-      <div v-if="isElectron || isAndroid" class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.automaticallyCacheSongs') }}
-          </div>
-          <div v-if="isAndroid" class="description">
-            播放时自动保存歌曲片段。关闭后保留已有缓存。
-          </div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="automatically-cache-songs"
-              v-model="automaticallyCacheSongs"
-              type="checkbox"
-              name="automatically-cache-songs"
-            />
-            <label for="automatically-cache-songs"></label>
-          </div>
-        </div>
-      </div>
-      <div v-if="isElectron || isAndroid" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.cacheLimit.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="cacheLimit">
-            <option :value="false">
-              {{ $t('settings.cacheLimit.none') }}
-            </option>
-            <option :value="512"> 512MB </option>
-            <option :value="1024"> 1GB </option>
-            <option :value="2048"> 2GB </option>
-            <option :value="4096"> 4GB </option>
-            <option :value="8192"> 8GB </option>
-          </select>
-        </div>
-      </div>
       <div v-if="isElectron || isAndroid" class="item">
         <div class="left">
           <div v-if="isAndroid" class="title"
@@ -202,7 +152,112 @@
           </button>
         </div>
       </div>
+      <div v-if="isElectron || isAndroid" class="item">
+        <div class="left">
+          <div class="title">
+            {{ $t('settings.automaticallyCacheSongs') }}
+          </div>
+          <div v-if="isAndroid" class="description">
+            播放时自动保存歌曲片段。关闭后保留已有缓存。
+          </div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="automatically-cache-songs"
+              v-model="automaticallyCacheSongs"
+              type="checkbox"
+              name="automatically-cache-songs"
+            />
+            <label for="automatically-cache-songs"></label>
+          </div>
+        </div>
+      </div>
+      <div v-if="isElectron || isAndroid" class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.cacheLimit.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="cacheLimit">
+            <option :value="false">
+              {{ $t('settings.cacheLimit.none') }}
+            </option>
+            <option :value="512"> 512MB </option>
+            <option :value="1024"> 1GB </option>
+            <option :value="2048"> 2GB </option>
+            <option :value="4096"> 4GB </option>
+            <option :value="8192"> 8GB </option>
+          </select>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left"
+          ><div class="title">纪念模式</div>
+          <div class="description"
+            >停止接口更新，只浏览已保存的内容。保留条目、图片与歌曲缓存，暂停自动淘汰；只有已缓存的音频可以离线播放。</div
+          ></div
+        >
+        <div class="right"
+          ><div class="toggle"
+            ><input
+              id="archive-mode"
+              v-model="archiveMode"
+              type="checkbox" /><label for="archive-mode"></label></div
+        ></div>
+      </div>
       <h3>外观</h3>
+      <h4 class="settings-subgroup">主题与语言</h4>
+      <div class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.appearance.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="appearance">
+            <option value="auto">{{ $t('settings.appearance.auto') }}</option>
+            <option value="light"
+              >🌞 {{ $t('settings.appearance.light') }}</option
+            >
+            <option value="dark"
+              >🌚 {{ $t('settings.appearance.dark') }}</option
+            >
+          </select>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.themeColor.text') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="themeColor">
+            <option value="default">
+              {{ $t('settings.themeColor.default') }}
+            </option>
+            <option value="sunset">
+              {{ $t('settings.themeColor.sunset') }}
+            </option>
+            <option value="ocean">
+              {{ $t('settings.themeColor.ocean') }}
+            </option>
+            <option value="forest">
+              {{ $t('settings.themeColor.forest') }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title"> {{ $t('settings.language') }} </div>
+        </div>
+        <div class="right">
+          <select v-model="lang">
+            <option value="en">English</option>
+            <option value="tr">Türkçe</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="zh-TW">繁體中文</option>
+          </select>
+        </div>
+      </div>
+      <h4 class="settings-subgroup">界面</h4>
       <div v-if="isAndroid" class="item"
         ><div class="left"
           ><div class="title">显示系统时间栏</div
@@ -251,56 +306,6 @@
       ></div>
       <div class="item">
         <div class="left">
-          <div class="title"> {{ $t('settings.language') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="lang">
-            <option value="en">English</option>
-            <option value="tr">Türkçe</option>
-            <option value="zh-CN">简体中文</option>
-            <option value="zh-TW">繁體中文</option>
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.appearance.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="appearance">
-            <option value="auto">{{ $t('settings.appearance.auto') }}</option>
-            <option value="light"
-              >🌞 {{ $t('settings.appearance.light') }}</option
-            >
-            <option value="dark"
-              >🌚 {{ $t('settings.appearance.dark') }}</option
-            >
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.themeColor.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="themeColor">
-            <option value="default">
-              {{ $t('settings.themeColor.default') }}
-            </option>
-            <option value="sunset">
-              {{ $t('settings.themeColor.sunset') }}
-            </option>
-            <option value="ocean">
-              {{ $t('settings.themeColor.ocean') }}
-            </option>
-            <option value="forest">
-              {{ $t('settings.themeColor.forest') }}
-            </option>
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
           <div class="title">显示歌曲副标题</div>
         </div>
         <div class="right">
@@ -315,6 +320,7 @@
           </div>
         </div>
       </div>
+      <h4 class="settings-subgroup">歌词</h4>
       <div class="item">
         <div class="left">
           <div class="title"> {{ $t('settings.lyricFontSize.text') }} </div>
@@ -373,126 +379,19 @@
       </div>
       <HomeSectionSettings />
       <h3>其它</h3>
-      <div class="item">
-        <div class="left">
-          <div class="title">倒序播放按钮</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-reversed-mode"
-              v-model="enableReversedMode"
-              type="checkbox"
-              name="enable-reversed-mode"
-            />
-            <label for="enable-reversed-mode"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item custom-css-item">
-        <div class="left">
-          <div class="title">{{ $t('settings.customCss.text') }}</div>
-          <div class="description">{{
-            $t('settings.customCss.description')
-          }}</div>
-        </div>
-        <form class="right custom-css-form" @submit.prevent="saveCustomCss">
-          <input
-            v-model="customCssInput"
-            class="text-input"
-            type="text"
-            spellcheck="false"
-            :aria-label="$t('settings.customCss.text')"
-            :placeholder="$t('settings.customCss.placeholder')"
-            :disabled="customCssLoading"
-          />
-          <div class="custom-css-actions">
-            <button
-              v-if="isElectron"
-              type="button"
-              :disabled="customCssLoading"
-              @click="chooseCustomCss"
-            >
-              {{ $t('settings.customCss.chooseFile') }}
-            </button>
-            <button type="submit" :disabled="customCssLoading">
-              {{ $t('settings.customCss.apply') }}
-            </button>
-            <button
-              type="button"
-              :disabled="customCssLoading || !settings.customCssUrl"
-              @click="reloadCustomCss"
-            >
-              {{ $t('settings.customCss.reload') }}
-            </button>
-            <button
-              type="button"
-              :disabled="customCssLoading"
-              @click="clearCustomCss"
-            >
-              {{ $t('settings.customCss.clear') }}
-            </button>
-          </div>
-        </form>
-      </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.showLibraryDefault') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-library-default"
-              v-model="showLibraryDefault"
-              type="checkbox"
-              name="show-library-default"
-            />
-            <label for="show-library-default"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">彩虹猫进度条</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="nyancat-style"
-              v-model="nyancatStyle"
-              type="checkbox"
-              name="nyancat-style"
-            />
-            <label for="nyancat-style"></label>
-          </div>
-        </div>
-      </div>
-      <div v-if="isElectron && isLinux" class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.unm.enable') }}
-            <a target="_blank" href="https://github.com/osdlyrics/osdlyrics"
-              >OSDLyrics</a
-            >
-            {{ $t('settings.enableOsdlyricsSupport.title') }}
-          </div>
-          <div class="description">
-            {{ $t('settings.enableOsdlyricsSupport.desc1') }}
-            <br />
-            {{ $t('settings.enableOsdlyricsSupport.desc2') }}
-          </div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-osdlyrics-support"
-              v-model="enableOsdlyricsSupport"
-              type="checkbox"
-              name="enable-osdlyrics-support"
-            />
-            <label for="enable-osdlyrics-support"></label>
-          </div>
-        </div>
+      <div v-if="isAndroid" class="item media-diagnostic"
+        ><div class="left"
+          ><div class="title">系统播控诊断</div
+          ><div class="description">播控异常时复制此信息排查。</div></div
+        ><div class="right"
+          ><button @click="copyMediaDiagnostic">复制诊断</button></div
+        ><textarea
+          v-if="mediaDiagnostic"
+          ref="mediaDiagnostic"
+          :value="mediaDiagnostic"
+          readonly
+          aria-label="系统播控诊断"
+        ></textarea>
       </div>
       <div class="item">
         <div class="left">
@@ -513,19 +412,49 @@
       </div>
       <div v-if="isElectron" class="item">
         <div class="left">
-          <div class="title">
-            {{ $t('settings.enableDiscordRichPresence') }}</div
-          >
+          <div class="title"> {{ $t('settings.showLibraryDefault') }}</div>
         </div>
         <div class="right">
           <div class="toggle">
             <input
-              id="enable-discord-rich-presence"
-              v-model="enableDiscordRichPresence"
+              id="show-library-default"
+              v-model="showLibraryDefault"
               type="checkbox"
-              name="enable-discord-rich-presence"
+              name="show-library-default"
             />
-            <label for="enable-discord-rich-presence"></label>
+            <label for="show-library-default"></label>
+          </div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title">倒序播放按钮</div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="enable-reversed-mode"
+              v-model="enableReversedMode"
+              type="checkbox"
+              name="enable-reversed-mode"
+            />
+            <label for="enable-reversed-mode"></label>
+          </div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="left">
+          <div class="title">彩虹猫进度条</div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="nyancat-style"
+              v-model="nyancatStyle"
+              type="checkbox"
+              name="nyancat-style"
+            />
+            <label for="nyancat-style"></label>
           </div>
         </div>
       </div>
@@ -572,6 +501,51 @@
               name="enable-custom-titlebar"
             />
             <label for="enable-custom-titlebar"></label>
+          </div>
+        </div>
+      </div>
+      <div v-if="isElectron" class="item">
+        <div class="left">
+          <div class="title">
+            {{ $t('settings.enableDiscordRichPresence') }}</div
+          >
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="enable-discord-rich-presence"
+              v-model="enableDiscordRichPresence"
+              type="checkbox"
+              name="enable-discord-rich-presence"
+            />
+            <label for="enable-discord-rich-presence"></label>
+          </div>
+        </div>
+      </div>
+      <div v-if="isElectron && isLinux" class="item">
+        <div class="left">
+          <div class="title">
+            {{ $t('settings.unm.enable') }}
+            <a target="_blank" href="https://github.com/osdlyrics/osdlyrics"
+              >OSDLyrics</a
+            >
+            {{ $t('settings.enableOsdlyricsSupport.title') }}
+          </div>
+          <div class="description">
+            {{ $t('settings.enableOsdlyricsSupport.desc1') }}
+            <br />
+            {{ $t('settings.enableOsdlyricsSupport.desc2') }}
+          </div>
+        </div>
+        <div class="right">
+          <div class="toggle">
+            <input
+              id="enable-osdlyrics-support"
+              v-model="enableOsdlyricsSupport"
+              type="checkbox"
+              name="enable-osdlyrics-support"
+            />
+            <label for="enable-osdlyrics-support"></label>
           </div>
         </div>
       </div>
@@ -657,6 +631,52 @@
             >恢复默认快捷键</button
           >
         </div>
+      </div>
+      <div class="item custom-css-item">
+        <div class="left">
+          <div class="title">{{ $t('settings.customCss.text') }}</div>
+          <div class="description">{{
+            $t('settings.customCss.description')
+          }}</div>
+        </div>
+        <form class="right custom-css-form" @submit.prevent="saveCustomCss">
+          <input
+            v-model="customCssInput"
+            class="text-input"
+            type="text"
+            spellcheck="false"
+            :aria-label="$t('settings.customCss.text')"
+            :placeholder="$t('settings.customCss.placeholder')"
+            :disabled="customCssLoading"
+          />
+          <div class="custom-css-actions">
+            <button
+              v-if="isElectron"
+              type="button"
+              :disabled="customCssLoading"
+              @click="chooseCustomCss"
+            >
+              {{ $t('settings.customCss.chooseFile') }}
+            </button>
+            <button type="submit" :disabled="customCssLoading">
+              {{ $t('settings.customCss.apply') }}
+            </button>
+            <button
+              type="button"
+              :disabled="customCssLoading || !settings.customCssUrl"
+              @click="reloadCustomCss"
+            >
+              {{ $t('settings.customCss.reload') }}
+            </button>
+            <button
+              type="button"
+              :disabled="customCssLoading"
+              @click="clearCustomCss"
+            >
+              {{ $t('settings.customCss.clear') }}
+            </button>
+          </div>
+        </form>
       </div>
       <div v-if="isAndroid" class="item android-api-address">
         <div class="left">
@@ -899,20 +919,6 @@
             :disabled="!enableRealIP"
           />
         </div>
-      </div>
-      <div v-if="isAndroid" class="item media-diagnostic"
-        ><div class="left"
-          ><div class="title">系统播控诊断</div
-          ><div class="description">播控异常时复制此信息排查。</div></div
-        ><div class="right"
-          ><button @click="copyMediaDiagnostic">复制诊断</button></div
-        ><textarea
-          v-if="mediaDiagnostic"
-          ref="mediaDiagnostic"
-          :value="mediaDiagnostic"
-          readonly
-          aria-label="系统播控诊断"
-        ></textarea>
       </div>
       <div class="footer">
         <p class="author"
@@ -1731,6 +1737,11 @@ export default {
         }
       });
     },
+    toLogin() {
+      this.$router.push({
+        name: process.env.IS_ELECTRON === true ? 'loginAccount' : 'login',
+      });
+    },
     logout() {
       doLogout();
       this.$router.push({ name: 'home' });
@@ -2292,5 +2303,15 @@ input[type='number'] {
     padding: 12px;
     box-sizing: border-box;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.settings-subgroup {
+  margin: 24px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  opacity: 0.65;
 }
 </style>

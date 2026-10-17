@@ -32,33 +32,21 @@
           class="avatar"
           :src="avatarUrl"
           loading="lazy"
-          @click="showUserProfileMenu"
+          @click="toSettings"
+          role="button"
+          tabindex="0"
+          aria-label="设置"
+          @keydown.enter="toSettings"
+          @keydown.space.prevent="toSettings"
         />
       </div>
     </nav>
-
-    <ContextMenu ref="userProfileMenu">
-      <div class="item" @click="$router.push('/library')">音乐库</div>
-      <div class="item" @click="$router.push({ name: 'libraryPeople' })"
-        >人员管理</div
-      >
-      <hr />
-      <div class="item" @click="toSettings">
-        {{ $t('library.userProfileMenu.settings') }}
-      </div>
-      <div v-if="!isLooseLoggedIn" class="item" @click="toLogin">
-        {{ $t('login.login') }}
-      </div>
-      <div v-if="isLooseLoggedIn" class="item" @click="logout">
-        {{ $t('library.userProfileMenu.logout') }}
-      </div>
-    </ContextMenu>
   </div>
 </template>
 
 <script>
 import { mapState } from 'vuex';
-import { isLooseLoggedIn, doLogout } from '@/utils/auth';
+import { isLooseLoggedIn } from '@/utils/auth';
 
 // import icons for win32 title bar
 // icons by https://github.com/microsoft/vscode-codicons
@@ -66,7 +54,6 @@ import 'vscode-codicons/dist/codicon.css';
 
 import Win32Titlebar from '@/components/Win32Titlebar.vue';
 import LinuxTitlebar from '@/components/LinuxTitlebar.vue';
-import ContextMenu from '@/components/ContextMenu.vue';
 import ButtonIcon from '@/components/ButtonIcon.vue';
 
 export default {
@@ -75,7 +62,6 @@ export default {
     Win32Titlebar,
     LinuxTitlebar,
     ButtonIcon,
-    ContextMenu,
   },
   props: {
     scrolled: { type: Boolean, default: false },
@@ -116,23 +102,8 @@ export default {
       if (where === 'back') this.$router.go(-1);
       else this.$router.go(1);
     },
-    showUserProfileMenu(e) {
-      this.$refs.userProfileMenu.openMenu(e);
-    },
-    logout() {
-      if (!confirm('确定要退出登录吗？')) return;
-      doLogout();
-      this.$router.push({ name: 'home' });
-    },
     toSettings() {
       this.$router.push({ name: 'settings' });
-    },
-    toLogin() {
-      if (process.env.IS_ELECTRON === true) {
-        this.$router.push({ name: 'loginAccount' });
-      } else {
-        this.$router.push({ name: 'login' });
-      }
     },
   },
 };

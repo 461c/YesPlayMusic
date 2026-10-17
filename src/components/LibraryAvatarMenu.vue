@@ -9,7 +9,9 @@
       /><span v-else>{{ label.slice(0, 1) }}</span></button
     >
     <ContextMenu ref="menu" class="library-person-menu">
-      <div class="item" @click="$router.push('/library')">我的音乐库</div>
+      <div class="item" @click="$router.push('/library')"
+        >我({{ $store.state.data.user.nickname || '未登录' }})</div
+      >
       <div
         v-for="user in users"
         :key="user.id"
@@ -20,7 +22,7 @@
         >{{ user.alias || user.name || user.id }}</div
       >
       <hr /><div class="item" @click="$router.push({ name: 'libraryPeople' })"
-        >人员管理</div
+        >管理</div
       >
     </ContextMenu>
   </span>

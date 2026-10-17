@@ -65,14 +65,26 @@
           /></div>
           <div class="bottom">
             <div class="titles">
-              <div class="title">{{ $t('library.likedSongs') }}</div>
+              <div class="title">我喜欢</div>
               <div class="sub-title">
                 {{ liked.songs.length }} {{ $t('common.songs') }}
               </div>
             </div>
-            <button @click.stop="openPlayModeTabMenu">
-              <svg-icon icon-class="play" />
-            </button>
+            <div class="liked-actions">
+              <button
+                class="intelligence-button"
+                aria-label="心动模式"
+                title="心动模式"
+                @click.stop="playIntelligenceList"
+                ><svg-icon icon-class="heart-solid"
+              /></button>
+              <button
+                aria-label="播放我喜欢"
+                title="播放我喜欢"
+                @click.stop="playLikedSongs"
+                ><svg-icon icon-class="play"
+              /></button>
+            </div>
           </div>
         </div>
         <div class="songs">
@@ -110,10 +122,16 @@
             </div>
             <div
               class="tab"
-              :class="{ active: currentTab === 'artists' }"
-              @click="updateCurrentTab('artists')"
+              :class="{ active: currentTab === 'activity' }"
+              @click="updateCurrentTab('activity')"
+              >动态</div
             >
-              歌手
+            <div
+              class="tab"
+              :class="{ active: currentTab === 'follows' }"
+              @click="updateCurrentTab('follows')"
+            >
+              关注
             </div>
             <div
               class="tab"
@@ -175,13 +193,49 @@
           />
         </div>
 
-        <div v-show="currentTab === 'artists'">
-          <CoverRow
-            :items="liked.artists"
-            type="artist"
-            :show-play-button="true"
+        <div
+          v-if="ownUid && currentTab === 'activity'"
+          :key="profileScope"
+          class="activity-columns"
+        >
+          <div class="profile-column">
+            <TrackingSection
+              ref="ownProfile"
+              :uid="ownUid"
+              :scope="profileScope"
+              :cache-enabled="true"
+              section="profile"
+              title="资料"
+              @notice="showToast($event)"
+            />
+            <button
+              class="person-refresh"
+              :disabled="activityRefreshing"
+              @click="refreshActivity"
+              >{{ activityRefreshing ? '刷新中…' : '刷新' }}</button
+            >
+          </div>
+          <TrackingSection
+            ref="ownEvents"
+            :uid="ownUid"
+            :scope="profileScope"
+            :cache-enabled="true"
+            section="events"
+            title="动态"
+            @notice="showToast($event)"
           />
         </div>
+        <TrackingSection
+          v-if="ownUid && currentTab === 'follows'"
+          :key="profileScope + ':follows'"
+          :uid="ownUid"
+          :scope="profileScope"
+          :cache-enabled="true"
+          section="follows"
+          title="关注"
+          @open-user="openUser"
+          @notice="showToast($event)"
+        />
 
         <div v-show="currentTab === 'mvs'">
           <MvRow :mvs="liked.mvs" />
@@ -231,16 +285,6 @@
       style="display: none"
       @change="uploadSongToCloudDisk"
     />
-
-    <ContextMenu ref="playModeTabMenu">
-      <div class="item" @click="playLikedSongs">{{
-        $t('library.likedSongs')
-      }}</div>
-      <hr />
-      <div class="item" @click="playIntelligenceList">{{
-        $t('contextMenu.cardiacMode')
-      }}</div>
-    </ContextMenu>
   </div>
 </template>
 
@@ -255,7 +299,8 @@ import { uploadSong } from '@/api/user';
 import NProgress from 'nprogress';
 import locale from '@/locale';
 
-import ContextMenu from '@/components/ContextMenu.vue';
+import TrackingSection from '@/components/TrackingSection.vue';
+import { trackingScope } from '@/utils/trackingStore';
 import LibraryAvatarMenu from '@/components/LibraryAvatarMenu.vue';
 import TrackList from '@/components/TrackList.vue';
 import CoverRow from '@/components/CoverRow.vue';
@@ -271,7 +316,7 @@ export default {
     CoverRow,
     TrackList,
     MvRow,
-    ContextMenu,
+    TrackingSection,
   },
   data() {
     return {
@@ -282,6 +327,7 @@ export default {
       show: false,
       offline: navigator.onLine === false,
       refreshing: false,
+      activityRefreshing: false,
       likedSongs: [],
       currentTab:
         this.$store.state.data.libraryPlaylistFilter === 'liked'
@@ -291,6 +337,12 @@ export default {
     };
   },
   computed: {
+    ownUid() {
+      return String(this.data.user?.userId || '');
+    },
+    profileScope() {
+      return trackingScope(this.data.user?.userId);
+    },
     ...mapState(['data', 'liked']),
     accountScope() {
       return libraryScope(this.data);
@@ -378,7 +430,6 @@ export default {
         const actions = [
           'fetchLikedSongs',
           'fetchLikedAlbums',
-          'fetchLikedArtists',
           'fetchLikedMVs',
           'fetchCloudDisk',
           'fetchPlayHistory',
@@ -442,8 +493,26 @@ export default {
         value: true,
       });
     },
-    openPlayModeTabMenu(e) {
-      this.$refs.playModeTabMenu.openMenu(e);
+    async refreshActivity() {
+      if (this.activityRefreshing) return;
+      this.activityRefreshing = true;
+      try {
+        await Promise.allSettled(
+          [this.$refs.ownProfile, this.$refs.ownEvents]
+            .filter(Boolean)
+            .map(section => section.load(true))
+        );
+      } finally {
+        this.activityRefreshing = false;
+      }
+    },
+    openUser(user) {
+      if (String(user.userId) === this.ownUid) return;
+      this.$router.push({
+        name: 'libraryPerson',
+        params: { uid: String(user.userId) },
+        query: { name: user.nickname || '', avatar: user.avatarUrl || '' },
+      });
     },
     selectUploadFiles() {
       this.$refs.cloudDiskUploadInput.click();
@@ -555,6 +624,40 @@ export default {
       object-fit: cover;
       border-radius: 10px;
     }
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+.liked-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+.liked-songs .bottom .intelligence-button .svg-icon {
+  margin-left: 0;
+}
+.activity-columns {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.65fr);
+  gap: 28px;
+  align-items: start;
+}
+.profile-column {
+  min-width: 0;
+}
+.person-refresh {
+  margin: 20px 0 0;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--color-secondary-bg);
+  color: var(--color-text);
+}
+@media (max-width: 850px) {
+  .activity-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
 }
 </style>

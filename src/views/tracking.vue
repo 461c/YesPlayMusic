@@ -11,11 +11,13 @@
           "
         />{{
           managing
-            ? '人员管理'
+            ? '管理'
             : selectedUser.alias || selectedUser.name || selected
         }}</h1
       >
-      <div class="header-actions"><button @click="backUser">返回</button></div>
+      <div v-if="visiting && !managing" class="header-actions"
+        ><button @click="backUser">返回</button></div
+      >
     </header>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
     <div v-if="managing" key="management" v-page-reveal>
@@ -382,6 +384,10 @@ export default {
     openUser(user) {
       if (this.$router) {
         const uid = normalizeTrackingId(user.userId);
+        if (uid === String(this.ownUser.userId)) {
+          this.$router.push('/library');
+          return;
+        }
         if (uid && uid !== this.selected)
           this.$router.push({
             name: 'libraryPerson',
