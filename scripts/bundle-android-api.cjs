@@ -51,6 +51,9 @@ function copyPackage(source) {
   }
 }
 copyPackage(locate('@neteaseapireborn/api', root));
+// The shared scrobble override lives at the bundle root. Its axios must be
+// resolved from there, independently of the API package's nested axios version.
+copyPackage(locate('axios', root));
 // The upstream module hardcodes 100000 tracks. Keep metadata/trackIds intact,
 // but only ask for the first screen's 50 details; the UI pages song/detail on scroll.
 const playlistModule = path.join(

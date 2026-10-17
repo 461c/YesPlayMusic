@@ -100,3 +100,5 @@
 
 - Avatar picker hides its collapsed trigger while expanded, has symmetric 8px padding and exact 72px columns, at most eight columns on tablets with responsive fewer columns and vertical wrapping. Keep management long-press and account-scoped local list reads.
 - Android NetEase listen reporting belongs exclusively to the native playback service, including background queue transitions, repeats and stop/end. Measure actual monotonic isPlaying time, never seek position or full duration; suppress duplicate metadata/queue transitions. Preserve bounded failed reports under their original credentials/API scope, honor archive mode, and share the Electron clientlog/eapi scrobble implementation in the bundled API. Never claim server-side counters are verified from an HTTP success alone.
+
+- Bundle root-level override dependencies from the app's locked root installation as well as the API dependency closure. In particular scrobble.js requires root axios, not only the API's nested axios. Verify with the isolated bundle fixture and retain the full real-API startup check; never rely on repository node_modules fallback.

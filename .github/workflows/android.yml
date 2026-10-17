@@ -61,6 +61,7 @@ jobs:
           node scripts/test-home-sections.cjs
           node scripts/test-discovery-cache.cjs
           node scripts/test-playlist-recommendations.cjs
+          node scripts/test-android-api-bundle.cjs
           node scripts/test-netease-history.cjs
           node scripts/test-tracking.cjs
           node scripts/test-library-archive.cjs
