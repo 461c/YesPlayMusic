@@ -2,13 +2,23 @@
   <div v-page-reveal class="tracking-page library-page">
     <header>
       <h1
-        ><img
-          v-if="!managing && selectedUser.avatar"
-          v-image-fade
-          class="tracking-avatar"
-          :src="selectedUser.avatar | resizeImage(96)"
-          alt=""
-        />{{
+        ><button
+          v-if="!managing && selected"
+          class="tracking-avatar-trigger"
+          aria-label="切换跟踪用户"
+          @click="openTrackedUsers"
+        >
+          <img
+            v-if="selectedUser.avatar"
+            v-image-fade
+            class="tracking-avatar"
+            :src="selectedUser.avatar | resizeImage(96)"
+            alt=""
+          />
+          <span v-else>{{
+            (selectedUser.alias || selectedUser.name || selected).slice(0, 1)
+          }}</span> </button
+        >{{
           managing
             ? '管理跟踪'
             : selected
@@ -21,18 +31,6 @@
           >返回</button
         >
         <template v-if="!managing">
-          <select
-            v-if="users.length"
-            :value="selected"
-            aria-label="切换用户"
-            @change="selectUser($event.target.value)"
-            ><option v-if="!isSavedUser && selected" :value="selected">{{
-              selectedUser.name || selected
-            }}</option
-            ><option v-for="user in users" :key="user.id" :value="user.id">{{
-              user.alias || user.name || user.id
-            }}</option></select
-          >
           <button @click="managing = true">管理</button>
           <button :disabled="!selected || refreshing" @click="refreshCurrent">{{
             refreshing ? '刷新中…' : '刷新'
@@ -41,6 +39,20 @@
         <button v-else @click="managing = false">返回</button>
       </div>
     </header>
+    <ContextMenu
+      v-if="users.length"
+      ref="trackingUserMenu"
+      class="tracking-switch-menu"
+    >
+      <div
+        v-for="user in users"
+        :key="user.id"
+        class="item"
+        :class="{ selected: user.id === selected }"
+        @click="selectUser(user.id)"
+        >{{ user.alias || user.name || user.id }}</div
+      >
+    </ContextMenu>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
     <div v-if="managing" key="management" v-page-reveal>
       <form class="add-user" @submit.prevent="addUser()"
@@ -274,6 +286,7 @@
   </div>
 </template>
 <script>
+import ContextMenu from '@/components/ContextMenu.vue';
 import { removeTrackingArtwork } from '@/utils/trackingArtwork';
 import CoverRow from '@/components/CoverRow.vue';
 import TrackList from '@/components/TrackList.vue';
@@ -287,7 +300,7 @@ import {
 } from '@/utils/trackingStore';
 export default {
   name: 'Tracking',
-  components: { TrackingSection, CoverRow, TrackList },
+  components: { TrackingSection, CoverRow, TrackList, ContextMenu },
   data() {
     return {
       users: [],
@@ -343,6 +356,15 @@ export default {
     this.scopeGeneration++;
   },
   methods: {
+    openTrackedUsers(event) {
+      if (!this.$refs.trackingUserMenu) return;
+      const bounds = event.currentTarget.getBoundingClientRect();
+      this.$refs.trackingUserMenu.openMenu({
+        x: bounds.left,
+        y: bounds.bottom + 6,
+        preventDefault: () => event.preventDefault(),
+      });
+    },
     async refreshCurrent() {
       if (this.refreshing || !this.selected) return;
       const generation = this.scopeGeneration;
@@ -699,5 +721,46 @@ select {
   justify-content: flex-end;
   flex-shrink: 0;
   max-width: 100%;
+}
+</style>
+
+<style lang="scss" scoped>
+.tracking-avatar-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin-right: 12px;
+  border: none;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--color-secondary-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  .tracking-avatar {
+    margin-right: 0;
+    object-fit: cover;
+  }
+  span {
+    font-size: 22px;
+  }
+}
+</style>
+<style lang="scss">
+.context-menu.tracking-switch-menu .menu {
+  width: max-content;
+  max-width: min(480px, calc(100vw - 24px));
+}
+.context-menu.tracking-switch-menu .menu .item {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.context-menu.tracking-switch-menu .menu .item.selected {
+  color: var(--color-primary);
+  background: var(--color-primary-bg-for-transparent);
 }
 </style>

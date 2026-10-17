@@ -1,8 +1,6 @@
 import request from '@/utils/request';
-import { byAppleMusic } from '@/utils/staticData';
 import { getRecommendPlayList } from '@/utils/playList';
 export async function fetchHomeSection(section) {
-  if (section.type === 'apple') return byAppleMusic;
   if (section.type === 'forYou') return [];
   if (section.type === 'recommend') return getRecommendPlayList(10, false);
   const result = await request({

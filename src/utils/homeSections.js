@@ -17,7 +17,6 @@ const songs = (key, title, type) => ({
   params: { type },
 });
 export const homeSectionCatalog = [
-  { key: 'apple', title: 'Apple Music 精选', type: 'apple', default: true },
   {
     key: 'recommend',
     title: '推荐歌单',

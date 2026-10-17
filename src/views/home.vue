@@ -295,9 +295,10 @@ footer {
 
 <style lang="scss" scoped>
 .home-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 24px;
+  position: absolute;
+  right: 0;
+  top: 32px;
+  z-index: 1;
   button {
     color: var(--color-text);
     font: inherit;
@@ -310,7 +311,16 @@ footer {
     opacity: 0.35;
   }
 }
-.home-actions + .index-row {
-  margin-top: 20px;
+.home {
+  position: relative;
+  padding-top: 32px;
+}
+.index-row:first-of-type {
+  margin-top: 0;
+}
+.index-row:first-of-type .title {
+  padding-right: 96px;
+  min-height: 40px;
+  box-sizing: border-box;
 }
 </style>
