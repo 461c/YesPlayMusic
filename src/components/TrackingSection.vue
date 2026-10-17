@@ -128,6 +128,27 @@
                   ><small>{{ resource.subtitle || '歌曲' }}</small></span
                 ><span class="resource-action">播放</span>
               </button>
+              <a
+                v-else-if="resource.kind === 'video'"
+                :key="resource.key"
+                class="event-resource"
+                :href="
+                  'https://music.163.com/#/video?id=' +
+                  encodeURIComponent(resource.id)
+                "
+                target="_blank"
+                rel="noopener noreferrer"
+                ><img
+                  v-if="resource.cover"
+                  v-image-fade
+                  :src="resource.cover | resizeImage(224)"
+                  loading="lazy"
+                  alt=""
+                /><span
+                  ><strong>{{ resource.name }}</strong
+                  ><small>视频 · 在网易云打开</small></span
+                ></a
+              >
               <router-link
                 v-else
                 :key="resource.key"

@@ -4,6 +4,7 @@ const vm = require('vm');
 const requests = [],
   writes = [];
 let saved = null;
+let archived = false;
 let snapshotReads = 0;
 const artwork = [];
 const playableContext = {
@@ -31,7 +32,7 @@ vm.runInNewContext(
 );
 const sandbox = {
   ...eventContext.module.exports,
-  archiveMode: () => false,
+  archiveMode: () => archived,
   archiveError: () => new Error('archive'),
   cacheTrackDetail() {},
   openPhotos() {},
@@ -374,6 +375,67 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     .resolve({ followeds: [{ userId: 12 }, { userId: 13 }], more: false });
   await nextFans;
   assert.equal(page.items.length, 2);
+  page.section = 'events';
+  saved = {
+    data: {
+      events: [
+        { id: 1, eventTime: 100 },
+        { id: 2, eventTime: 200 },
+        { id: 3, eventTime: 300 },
+      ],
+      more: true,
+      lasttime: 100,
+    },
+    updatedAt: 42,
+  };
+  const eventRefresh = page.load(true);
+  await tick();
+  requests.at(-1).resolve({
+    events: [
+      { id: 4, eventTime: 400 },
+      { id: 2, eventTime: 200 },
+    ],
+    more: true,
+    lasttime: 200,
+  });
+  await eventRefresh;
+  assert.equal(
+    page.items.length,
+    4,
+    'A real section refresh retains saved events'
+  );
+  assert.equal(
+    page.items.find(item => item.id === 3).archiveStatus,
+    'unavailable'
+  );
+  assert.equal(page.items.find(item => item.id === 1).archiveStatus, undefined);
+  const eventMore = page.load(false, true);
+  await tick();
+  assert.equal(
+    requests.at(-1).cursor.lasttime,
+    200,
+    'Use the server cursor, not the retained item count'
+  );
+  requests
+    .at(-1)
+    .resolve({
+      events: [{ id: 1, eventTime: 100 }],
+      more: false,
+      lasttime: 100,
+    });
+  await eventMore;
+  assert.equal(page.items.length, 4);
+  saved = { data: page.payload, updatedAt: 43 };
+  archived = true;
+  const frozenCount = requests.length;
+  await page.load(true);
+  assert.equal(
+    requests.length,
+    frozenCount,
+    'Refreshing a frozen section must use local data only'
+  );
+  assert.equal(page.items.length, 4);
+  archived = false;
   const temp = instance(sectionComponent, {
     uid: '999',
     section: 'profile',
