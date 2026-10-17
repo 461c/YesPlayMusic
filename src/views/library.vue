@@ -636,6 +636,8 @@ export default {
   flex-shrink: 0;
 }
 .liked-songs .bottom .intelligence-button .svg-icon {
+  width: 21px;
+  height: 21px;
   margin-left: 0;
 }
 .activity-columns {

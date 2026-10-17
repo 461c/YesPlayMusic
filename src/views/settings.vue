@@ -1,7 +1,8 @@
 <template>
-  <div class="settings-page" @click="clickOutside">
-    <div class="container">
-      <div v-if="showUserInfo" class="user">
+  <div class="settings-page" @click="clickOutside"
+    ><div class="container"
+      ><header class="settings-heading"><h1>设置</h1></header
+      ><div v-if="showUserInfo" class="user">
         <div class="left">
           <img
             v-image-fade
@@ -34,893 +35,1024 @@
       </div>
       <div v-else class="user login-entry"
         ><button @click="toLogin">{{ $t('login.login') }}</button></div
-      >
-      <h3>播放</h3>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.musicQuality.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="musicQuality">
-            <option value="128000">
-              {{ $t('settings.musicQuality.low') }} - 128Kbps
-            </option>
-            <option value="192000">
-              {{ $t('settings.musicQuality.medium') }} - 192Kbps
-            </option>
-            <option value="320000">
-              {{ $t('settings.musicQuality.high') }} - 320Kbps
-            </option>
-            <option value="flac">
-              {{ $t('settings.musicQuality.lossless') }} - FLAC
-            </option>
-            <option value="999000">Hi-Res</option>
-          </select>
-        </div>
-      </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.deviceSelector') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="outputDevice">
-            <option
-              v-for="device in allOutputDevices"
-              :key="device.deviceId"
-              :value="device.deviceId"
-              :selected="device.deviceId == outputDevice"
-            >
-              {{ $t(device.label) }}
-            </option>
-          </select>
-        </div>
-      </div>
-      <div v-if="isAndroid" class="item">
-        <div class="left">
-          <div class="title">允许与其他应用同时播放</div>
-          <div class="description">
-            开启后允许同时发声，关闭则恢复常规播放行为。
-          </div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="allow-concurrent-playback"
-              v-model="allowConcurrentPlayback"
-              type="checkbox"
-              name="allow-concurrent-playback"
-              aria-label="允许与其他应用同时播放"
-            />
-            <label for="allow-concurrent-playback"></label>
-          </div>
-        </div>
-      </div>
-      <PlayerButtonSettings />
-      <div v-if="isAndroid" class="item android-current-quality">
-        <div class="left">
-          <div class="title">当前播放音质</div>
-          <div class="description">所选音质在下次加载音源时生效。</div>
-        </div>
-        <div class="right">
-          <div>{{ androidQualityInfo }}</div>
-          <div class="description">{{ androidQualityNote }}</div>
-        </div>
-      </div>
-      <h3>缓存</h3>
-      <div v-if="isElectron || isAndroid" class="item">
-        <div class="left">
-          <div v-if="isAndroid" class="title"
-            >已使用 {{ tracksCache.size }}</div
-          >
-          <div v-else class="title">
-            {{
-              $t('settings.cacheCount', {
-                song: tracksCache.length,
-                size: tracksCache.size,
-              })
-            }}</div
-          >
-          <div v-if="isAndroid" class="description">
-            完整音源 {{ tracksCache.length }} 项，部分缓存
-            {{ tracksCache.partial }} 项。
-          </div>
-        </div>
-        <div class="right">
-          <button :disabled="cacheClearing" @click="clearCache()">
-            {{ cacheClearing ? '正在清除…' : $t('settings.clearSongsCache') }}
-          </button>
-        </div>
-      </div>
-      <div v-if="isAndroid" class="item">
-        <div class="left">
-          <div class="title"
-            >歌单图片缓存：{{ artworkCache.count }} 张 ·
-            {{ artworkCache.size }}</div
-          >
-          <div class="description"
-            >保存音乐库及已打开歌单的图片，按需缓存，不遍历下载歌曲封面。<details
-              ><summary>本次缓存统计</summary>本地命中
-              {{ artworkCache.hits || 0 }} 次，下载
-              {{ artworkCache.downloads || 0 }} 次，失败
-              {{ artworkCache.failures || 0 }} 次。</details
-            ></div
-          >
-        </div>
-        <div class="right">
-          <button :disabled="artworkClearing" @click="clearArtworkCache">
-            {{ artworkClearing ? '正在清除…' : '清除图片缓存' }}
-          </button>
-        </div>
-      </div>
-      <div v-if="isElectron || isAndroid" class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.automaticallyCacheSongs') }}
-          </div>
-          <div v-if="isAndroid" class="description">
-            播放时自动保存歌曲片段。关闭后保留已有缓存。
-          </div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="automatically-cache-songs"
-              v-model="automaticallyCacheSongs"
-              type="checkbox"
-              name="automatically-cache-songs"
-            />
-            <label for="automatically-cache-songs"></label>
-          </div>
-        </div>
-      </div>
-      <div v-if="isElectron || isAndroid" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.cacheLimit.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="cacheLimit">
-            <option :value="false">
-              {{ $t('settings.cacheLimit.none') }}
-            </option>
-            <option :value="512"> 512MB </option>
-            <option :value="1024"> 1GB </option>
-            <option :value="2048"> 2GB </option>
-            <option :value="4096"> 4GB </option>
-            <option :value="8192"> 8GB </option>
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left"
-          ><div class="title">纪念模式</div>
-          <div class="description"
-            >停止接口更新，只浏览已保存的内容。保留条目、图片与歌曲缓存，暂停自动淘汰；只有已缓存的音频可以离线播放。</div
-          ></div
-        >
-        <div class="right"
-          ><div class="toggle"
-            ><input
-              id="archive-mode"
-              v-model="archiveMode"
-              type="checkbox" /><label for="archive-mode"></label></div
-        ></div>
-      </div>
-      <h3>外观</h3>
-      <h4 class="settings-subgroup">主题与语言</h4>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.appearance.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="appearance">
-            <option value="auto">{{ $t('settings.appearance.auto') }}</option>
-            <option value="light"
-              >🌞 {{ $t('settings.appearance.light') }}</option
-            >
-            <option value="dark"
-              >🌚 {{ $t('settings.appearance.dark') }}</option
-            >
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.themeColor.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="themeColor">
-            <option value="default">
-              {{ $t('settings.themeColor.default') }}
-            </option>
-            <option value="sunset">
-              {{ $t('settings.themeColor.sunset') }}
-            </option>
-            <option value="ocean">
-              {{ $t('settings.themeColor.ocean') }}
-            </option>
-            <option value="forest">
-              {{ $t('settings.themeColor.forest') }}
-            </option>
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.language') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="lang">
-            <option value="en">English</option>
-            <option value="tr">Türkçe</option>
-            <option value="zh-CN">简体中文</option>
-            <option value="zh-TW">繁體中文</option>
-          </select>
-        </div>
-      </div>
-      <h4 class="settings-subgroup">界面</h4>
-      <div v-if="isAndroid" class="item"
-        ><div class="left"
-          ><div class="title">显示系统时间栏</div
-          ><div class="description"
-            >控制顶部系统时间、电量等状态信息。</div
-          ></div
-        ><div class="right"
-          ><div class="toggle"
-            ><input
-              id="system-status-bar"
-              v-model="showSystemStatusBar"
-              type="checkbox" /><label
-              for="system-status-bar"
-            ></label></div></div
-      ></div>
-      <div class="item"
-        ><div class="left"
-          ><div class="title">悬浮播放栏</div
-          ><div class="description">关闭后播放栏贴合屏幕底部。</div></div
-        ><div class="right"
-          ><div class="toggle"
-            ><input
-              id="floatingPlayer"
-              v-model="floatingPlayer"
-              type="checkbox" /><label for="floatingPlayer"></label></div></div
-      ></div>
-      <div class="item"
-        ><div class="left"><div class="title">显示播放量</div></div
-        ><div class="right"
-          ><div class="toggle"
-            ><input
-              id="showPlayCounts"
-              v-model="showPlayCounts"
-              type="checkbox" /><label for="showPlayCounts"></label></div></div
-      ></div>
-      <div class="item"
-        ><div class="left"><div class="title">显示封面播放按钮</div></div
-        ><div class="right"
-          ><div class="toggle"
-            ><input
-              id="showCoverPlayButton"
-              v-model="showCoverPlayButton"
-              type="checkbox" /><label
-              for="showCoverPlayButton"
-            ></label></div></div
-      ></div>
-      <div class="item">
-        <div class="left">
-          <div class="title">显示歌曲副标题</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="sub-title-default"
-              v-model="subTitleDefault"
-              type="checkbox"
-              name="sub-title-default"
-            />
-            <label for="sub-title-default"></label>
-          </div>
-        </div>
-      </div>
-      <h4 class="settings-subgroup">歌词</h4>
-      <div class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.lyricFontSize.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="lyricFontSize">
-            <option value="16">
-              {{ $t('settings.lyricFontSize.small') }} - 16px
-            </option>
-            <option value="22">
-              {{ $t('settings.lyricFontSize.medium') }} - 22px
-            </option>
-            <option value="28">
-              {{ $t('settings.lyricFontSize.large') }} - 28px
-            </option>
-            <option value="36">
-              {{ $t('settings.lyricFontSize.xlarge') }} - 36px
-            </option>
-          </select>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">{{ $t('settings.showLyricsTranslation') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-lyrics-translation"
-              v-model="showLyricsTranslation"
-              type="checkbox"
-              name="show-lyrics-translation"
-            />
-            <label for="show-lyrics-translation"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">{{ $t('settings.lyricsBackground.text') }}</div>
-        </div>
-        <div class="right">
-          <select v-model="lyricsBackground">
-            <option :value="false">
-              {{ $t('settings.lyricsBackground.off') }}
-            </option>
-            <option :value="true">
-              {{ $t('settings.lyricsBackground.on') }}
-            </option>
-            <option value="blur"> 模糊封面 </option>
-            <option value="dynamic">
-              {{ $t('settings.lyricsBackground.dynamic') }}
-            </option>
-          </select>
-        </div>
-      </div>
-      <HomeSectionSettings />
-      <h3>其它</h3>
-      <div v-if="isAndroid" class="item media-diagnostic"
-        ><div class="left"
-          ><div class="title">系统播控诊断</div
-          ><div class="description">播控异常时复制此信息排查。</div></div
-        ><div class="right"
-          ><button @click="copyMediaDiagnostic">复制诊断</button></div
-        ><textarea
-          v-if="mediaDiagnostic"
-          ref="mediaDiagnostic"
-          :value="mediaDiagnostic"
-          readonly
-          aria-label="系统播控诊断"
-        ></textarea>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">
-            {{
-              isLastfmConnected
-                ? `已连接到 Last.fm (${lastfm.name})`
-                : '连接 Last.fm '
-            }}</div
-          >
-        </div>
-        <div class="right">
-          <button v-if="isLastfmConnected" @click="lastfmDisconnect()"
-            >断开连接
-          </button>
-          <button v-else @click="lastfmConnect()"> 授权连接 </button>
-        </div>
-      </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.showLibraryDefault') }}</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-library-default"
-              v-model="showLibraryDefault"
-              type="checkbox"
-              name="show-library-default"
-            />
-            <label for="show-library-default"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">倒序播放按钮</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-reversed-mode"
-              v-model="enableReversedMode"
-              type="checkbox"
-              name="enable-reversed-mode"
-            />
-            <label for="enable-reversed-mode"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">彩虹猫进度条</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="nyancat-style"
-              v-model="nyancatStyle"
-              type="checkbox"
-              name="nyancat-style"
-            />
-            <label for="nyancat-style"></label>
-          </div>
-        </div>
-      </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="trayIconTheme">
-            <option value="auto">{{ $t('settings.trayIcon.auto') }}</option>
-            <option value="light">{{ $t('settings.trayIcon.light') }}</option>
-            <option value="dark">{{ $t('settings.trayIcon.dark') }}</option>
-          </select>
-        </div>
-      </div>
-      <div v-if="isElectron && !isMac" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.closeAppOption.text') }} </div>
-        </div>
-        <div class="right">
-          <select v-model="closeAppOption">
-            <option value="ask">
-              {{ $t('settings.closeAppOption.ask') }}
-            </option>
-            <option value="exit">
-              {{ $t('settings.closeAppOption.exit') }}
-            </option>
-            <option value="minimizeToTray">
-              {{ $t('settings.closeAppOption.minimizeToTray') }}
-            </option>
-          </select>
-        </div>
-      </div>
-      <div v-if="isElectron && isLinux" class="item">
-        <div class="left">
-          <div class="title"> {{ $t('settings.enableCustomTitlebar') }} </div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-custom-titlebar"
-              v-model="enableCustomTitlebar"
-              type="checkbox"
-              name="enable-custom-titlebar"
-            />
-            <label for="enable-custom-titlebar"></label>
-          </div>
-        </div>
-      </div>
-      <div v-if="isElectron" class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.enableDiscordRichPresence') }}</div
-          >
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-discord-rich-presence"
-              v-model="enableDiscordRichPresence"
-              type="checkbox"
-              name="enable-discord-rich-presence"
-            />
-            <label for="enable-discord-rich-presence"></label>
-          </div>
-        </div>
-      </div>
-      <div v-if="isElectron && isLinux" class="item">
-        <div class="left">
-          <div class="title">
-            {{ $t('settings.unm.enable') }}
-            <a target="_blank" href="https://github.com/osdlyrics/osdlyrics"
-              >OSDLyrics</a
-            >
-            {{ $t('settings.enableOsdlyricsSupport.title') }}
-          </div>
-          <div class="description">
-            {{ $t('settings.enableOsdlyricsSupport.desc1') }}
-            <br />
-            {{ $t('settings.enableOsdlyricsSupport.desc2') }}
-          </div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="enable-osdlyrics-support"
-              v-model="enableOsdlyricsSupport"
-              type="checkbox"
-              name="enable-osdlyrics-support"
-            />
-            <label for="enable-osdlyrics-support"></label>
-          </div>
-        </div>
-      </div>
-      <div v-if="isElectron">
-        <h4>快捷键</h4>
-        <div class="item">
-          <div class="left">
-            <div class="title"> {{ $t('settings.enableGlobalShortcut') }}</div>
-          </div>
-          <div class="right">
-            <div class="toggle">
-              <input
-                id="enable-enable-global-shortcut"
-                v-model="enableGlobalShortcut"
-                type="checkbox"
-                name="enable-enable-global-shortcut"
-              />
-              <label for="enable-enable-global-shortcut"></label>
-            </div>
-          </div>
-        </div>
-        <div
-          id="shortcut-table"
-          :class="{ 'global-disabled': !enableGlobalShortcut }"
-          tabindex="0"
-          @keydown="handleShortcutKeydown"
-        >
-          <div class="row row-head">
-            <div class="col">功能</div>
-            <div class="col">快捷键</div>
-            <div class="col">全局快捷键</div>
-          </div>
-          <div
-            v-for="shortcut in settings.shortcuts"
-            :key="shortcut.id"
-            class="row"
-          >
-            <div class="col">{{ shortcut.name }}</div>
-            <div class="col">
-              <div
-                class="keyboard-input"
-                :class="{
-                  active:
-                    shortcutInput.id === shortcut.id &&
-                    shortcutInput.type === 'shortcut',
-                }"
-                @click.stop="readyToRecordShortcut(shortcut.id, 'shortcut')"
-              >
-                {{
-                  shortcutInput.id === shortcut.id &&
-                  shortcutInput.type === 'shortcut' &&
-                  recordedShortcutComputed !== ''
-                    ? formatShortcut(recordedShortcutComputed)
-                    : formatShortcut(shortcut.shortcut)
-                }}
+      ><nav class="settings-tabs" role="tablist" aria-label="设置分类"
+        ><button
+          v-for="category in categories"
+          :id="'settings-tab-' + category.key"
+          :key="category.key"
+          type="button"
+          role="tab"
+          :aria-selected="activeCategory === category.key"
+          :aria-controls="'settings-panel-' + category.key"
+          :tabindex="activeCategory === category.key ? 0 : -1"
+          :class="{ active: activeCategory === category.key }"
+          @click="activeCategory = category.key"
+          @keydown="categoryKey($event, category.key)"
+          ><strong>{{ category.title }}</strong
+          ><span>{{ category.caption }}</span></button
+        ></nav
+      ><section
+        v-show="activeCategory === 'playback'"
+        v-page-reveal="activeCategory === 'playback'"
+        id="settings-panel-playback"
+        role="tabpanel"
+        aria-labelledby="settings-tab-playback"
+        tabindex="0"
+        class="settings-panel"
+        ><h3 class="panel-title">播放</h3
+        ><div class="settings-cards"
+          ><section class="settings-card"
+            ><h4 class="card-heading">音源与输出</h4
+            ><div class="item">
+              <div class="left">
+                <div class="title">
+                  {{ $t('settings.musicQuality.text') }}
+                </div>
+              </div>
+              <div class="right">
+                <select v-model="musicQuality">
+                  <option value="128000">
+                    {{ $t('settings.musicQuality.low') }} - 128Kbps
+                  </option>
+                  <option value="192000">
+                    {{ $t('settings.musicQuality.medium') }} - 192Kbps
+                  </option>
+                  <option value="320000">
+                    {{ $t('settings.musicQuality.high') }} - 320Kbps
+                  </option>
+                  <option value="flac">
+                    {{ $t('settings.musicQuality.lossless') }} - FLAC
+                  </option>
+                  <option value="999000">Hi-Res</option>
+                </select>
               </div>
             </div>
-            <div class="col">
-              <div
-                class="keyboard-input"
-                :class="{
-                  active:
-                    shortcutInput.id === shortcut.id &&
-                    shortcutInput.type === 'globalShortcut' &&
-                    enableGlobalShortcut,
-                }"
-                @click.stop="
-                  readyToRecordShortcut(shortcut.id, 'globalShortcut')
-                "
-                >{{
-                  shortcutInput.id === shortcut.id &&
-                  shortcutInput.type === 'globalShortcut' &&
-                  recordedShortcutComputed !== ''
-                    ? formatShortcut(recordedShortcutComputed)
-                    : formatShortcut(shortcut.globalShortcut)
-                }}</div
-              >
+            <div v-if="isElectron" class="item">
+              <div class="left">
+                <div class="title"> {{ $t('settings.deviceSelector') }} </div>
+              </div>
+              <div class="right">
+                <select v-model="outputDevice">
+                  <option
+                    v-for="device in allOutputDevices"
+                    :key="device.deviceId"
+                    :value="device.deviceId"
+                    :selected="device.deviceId == outputDevice"
+                  >
+                    {{ $t(device.label) }}
+                  </option>
+                </select>
+              </div>
             </div>
-          </div>
-          <button
-            class="restore-default-shortcut"
-            @click="restoreDefaultShortcuts"
-            >恢复默认快捷键</button
+            <div v-if="isAndroid" class="item">
+              <div class="left">
+                <div class="title">允许与其他应用同时播放</div>
+                <div class="description">
+                  开启后允许同时发声，关闭则恢复常规播放行为。
+                </div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="allow-concurrent-playback"
+                    v-model="allowConcurrentPlayback"
+                    type="checkbox"
+                    name="allow-concurrent-playback"
+                    aria-label="允许与其他应用同时播放"
+                  />
+                  <label for="allow-concurrent-playback"></label>
+                </div>
+              </div> </div></section
+          ><section class="settings-card"
+            ><h4 class="card-heading">播放控制</h4
+            ><PlayerButtonSettings /></section
+          ><section class="settings-card" v-if="isAndroid"
+            ><h4 class="card-heading">播放信息</h4
+            ><div v-if="isAndroid" class="item android-current-quality">
+              <div class="left">
+                <div class="title">当前播放音质</div>
+                <div class="description">所选音质在下次加载音源时生效。</div>
+              </div>
+              <div class="right">
+                <div>{{ androidQualityInfo }}</div>
+                <div class="description">{{ androidQualityNote }}</div>
+              </div>
+            </div></section
+          ></div
+        ></section
+      >
+      <section
+        v-show="activeCategory === 'cache'"
+        v-page-reveal="activeCategory === 'cache'"
+        id="settings-panel-cache"
+        role="tabpanel"
+        aria-labelledby="settings-tab-cache"
+        tabindex="0"
+        class="settings-panel"
+        ><h3 class="panel-title">缓存</h3
+        ><div class="settings-cards"
+          ><section v-if="isAndroid || isElectron" class="settings-card"
+            ><h4 class="card-heading">存储管理</h4
+            ><div v-if="isElectron || isAndroid" class="item">
+              <div class="left">
+                <div v-if="isAndroid" class="title"
+                  >已使用 {{ tracksCache.size }}</div
+                >
+                <div v-else class="title">
+                  {{
+                    $t('settings.cacheCount', {
+                      song: tracksCache.length,
+                      size: tracksCache.size,
+                    })
+                  }}</div
+                >
+                <div v-if="isAndroid" class="description">
+                  完整音源 {{ tracksCache.length }} 项，部分缓存
+                  {{ tracksCache.partial }} 项。
+                </div>
+              </div>
+              <div class="right">
+                <button :disabled="cacheClearing" @click="clearCache()">
+                  {{
+                    cacheClearing ? '正在清除…' : $t('settings.clearSongsCache')
+                  }}
+                </button>
+              </div>
+            </div>
+            <div v-if="isAndroid" class="item">
+              <div class="left">
+                <div class="title"
+                  >歌单图片缓存：{{ artworkCache.count }} 张 ·
+                  {{ artworkCache.size }}</div
+                >
+                <div class="description"
+                  >保存音乐库及已打开歌单的图片，按需缓存，不遍历下载歌曲封面。<details
+                    ><summary>本次缓存统计</summary>本地命中
+                    {{ artworkCache.hits || 0 }} 次，下载
+                    {{ artworkCache.downloads || 0 }} 次，失败
+                    {{ artworkCache.failures || 0 }} 次。</details
+                  ></div
+                >
+              </div>
+              <div class="right">
+                <button :disabled="artworkClearing" @click="clearArtworkCache">
+                  {{ artworkClearing ? '正在清除…' : '清除图片缓存' }}
+                </button>
+              </div>
+            </div></section
+          ><section class="settings-card" v-if="isAndroid || isElectron"
+            ><h4 class="card-heading">自动缓存</h4
+            ><div v-if="isElectron || isAndroid" class="item">
+              <div class="left">
+                <div class="title">
+                  {{ $t('settings.automaticallyCacheSongs') }}
+                </div>
+                <div v-if="isAndroid" class="description">
+                  播放时自动保存歌曲片段。关闭后保留已有缓存。
+                </div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="automatically-cache-songs"
+                    v-model="automaticallyCacheSongs"
+                    type="checkbox"
+                    name="automatically-cache-songs"
+                  />
+                  <label for="automatically-cache-songs"></label>
+                </div>
+              </div>
+            </div>
+            <div v-if="isElectron || isAndroid" class="item">
+              <div class="left">
+                <div class="title"> {{ $t('settings.cacheLimit.text') }} </div>
+              </div>
+              <div class="right">
+                <select v-model="cacheLimit">
+                  <option :value="false">
+                    {{ $t('settings.cacheLimit.none') }}
+                  </option>
+                  <option :value="512"> 512MB </option>
+                  <option :value="1024"> 1GB </option>
+                  <option :value="2048"> 2GB </option>
+                  <option :value="4096"> 4GB </option>
+                  <option :value="8192"> 8GB </option>
+                </select>
+              </div>
+            </div></section
+          ><section class="settings-card"
+            ><h4 class="card-heading">保留与纪念</h4
+            ><div class="item">
+              <div class="left"
+                ><div class="title">纪念模式</div>
+                <div class="description"
+                  >停止接口更新，只浏览已保存的内容。保留条目、图片与歌曲缓存，暂停自动淘汰；只有已缓存的音频可以离线播放。</div
+                ></div
+              >
+              <div class="right"
+                ><div class="toggle"
+                  ><input
+                    id="archive-mode"
+                    v-model="archiveMode"
+                    type="checkbox" /><label for="archive-mode"></label></div
+              ></div> </div></section></div
+      ></section>
+      <section
+        v-show="activeCategory === 'appearance'"
+        v-page-reveal="activeCategory === 'appearance'"
+        id="settings-panel-appearance"
+        role="tabpanel"
+        aria-labelledby="settings-tab-appearance"
+        tabindex="0"
+        class="settings-panel"
+        ><h3 class="panel-title">外观</h3
+        ><div class="settings-cards"
+          ><section class="settings-card"
+            ><h4 class="card-heading">主题与语言</h4
+            ><div class="item">
+              <div class="left">
+                <div class="title"> {{ $t('settings.appearance.text') }} </div>
+              </div>
+              <div class="right">
+                <select v-model="appearance">
+                  <option value="auto">{{
+                    $t('settings.appearance.auto')
+                  }}</option>
+                  <option value="light"
+                    >🌞 {{ $t('settings.appearance.light') }}</option
+                  >
+                  <option value="dark"
+                    >🌚 {{ $t('settings.appearance.dark') }}</option
+                  >
+                </select>
+              </div>
+            </div>
+            <div class="item">
+              <div class="left">
+                <div class="title"> {{ $t('settings.themeColor.text') }} </div>
+              </div>
+              <div class="right">
+                <select v-model="themeColor">
+                  <option value="default">
+                    {{ $t('settings.themeColor.default') }}
+                  </option>
+                  <option value="sunset">
+                    {{ $t('settings.themeColor.sunset') }}
+                  </option>
+                  <option value="ocean">
+                    {{ $t('settings.themeColor.ocean') }}
+                  </option>
+                  <option value="forest">
+                    {{ $t('settings.themeColor.forest') }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="item">
+              <div class="left">
+                <div class="title"> {{ $t('settings.language') }} </div>
+              </div>
+              <div class="right">
+                <select v-model="lang">
+                  <option value="en">English</option>
+                  <option value="tr">Türkçe</option>
+                  <option value="zh-CN">简体中文</option>
+                  <option value="zh-TW">繁體中文</option>
+                </select>
+              </div>
+            </div></section
           >
-        </div>
-      </div>
-      <div class="item custom-css-item">
-        <div class="left">
-          <div class="title">{{ $t('settings.customCss.text') }}</div>
-          <div class="description">{{
-            $t('settings.customCss.description')
-          }}</div>
-        </div>
-        <form class="right custom-css-form" @submit.prevent="saveCustomCss">
-          <input
-            v-model="customCssInput"
-            class="text-input"
-            type="text"
-            spellcheck="false"
-            :aria-label="$t('settings.customCss.text')"
-            :placeholder="$t('settings.customCss.placeholder')"
-            :disabled="customCssLoading"
-          />
-          <div class="custom-css-actions">
-            <button
-              v-if="isElectron"
-              type="button"
-              :disabled="customCssLoading"
-              @click="chooseCustomCss"
-            >
-              {{ $t('settings.customCss.chooseFile') }}
-            </button>
-            <button type="submit" :disabled="customCssLoading">
-              {{ $t('settings.customCss.apply') }}
-            </button>
-            <button
-              type="button"
-              :disabled="customCssLoading || !settings.customCssUrl"
-              @click="reloadCustomCss"
-            >
-              {{ $t('settings.customCss.reload') }}
-            </button>
-            <button
-              type="button"
-              :disabled="customCssLoading"
-              @click="clearCustomCss"
-            >
-              {{ $t('settings.customCss.clear') }}
-            </button>
-          </div>
-        </form>
-      </div>
-      <div v-if="isAndroid" class="item android-api-address">
-        <div class="left">
-          <div class="title">音乐接口地址</div>
-        </div>
-        <form class="right" @submit.prevent="saveAndroidApi">
-          <input
-            v-model="androidApiInput"
-            class="text-input"
-            type="url"
-            :aria-label="$t('settings.androidApi.text')"
-            :placeholder="$t('settings.androidApi.placeholder')"
-          />
-          <button type="submit">{{ $t('settings.androidApi.save') }}</button>
-        </form>
-      </div>
-      <section v-if="isElectron" class="unm-configuration">
-        <h4>UnblockNeteaseMusic</h4>
-        <div class="item">
-          <div class="left">
-            <div class="title"
-              >{{ $t('settings.unm.enable') }}
-              <a
-                href="https://github.com/UnblockNeteaseMusic/server"
-                target="blank"
-                >UnblockNeteaseMusic</a
-              ></div
-            >
-          </div>
-          <div class="right">
-            <div class="toggle">
-              <input
-                id="enable-unblock-netease-music"
-                v-model="enableUnblockNeteaseMusic"
-                type="checkbox"
-                name="enable-unblock-netease-music"
-              />
-              <label for="enable-unblock-netease-music"></label>
+          <section class="settings-card"
+            ><h4 class="card-heading">界面</h4
+            ><div v-if="isAndroid" class="item"
+              ><div class="left"
+                ><div class="title">显示系统时间栏</div
+                ><div class="description"
+                  >控制顶部系统时间、电量等状态信息。</div
+                ></div
+              ><div class="right"
+                ><div class="toggle"
+                  ><input
+                    id="system-status-bar"
+                    v-model="showSystemStatusBar"
+                    type="checkbox" /><label
+                    for="system-status-bar"
+                  ></label></div></div
+            ></div>
+            <div class="item"
+              ><div class="left"
+                ><div class="title">悬浮播放栏</div
+                ><div class="description">关闭后播放栏贴合屏幕底部。</div></div
+              ><div class="right"
+                ><div class="toggle"
+                  ><input
+                    id="floatingPlayer"
+                    v-model="floatingPlayer"
+                    type="checkbox" /><label
+                    for="floatingPlayer"
+                  ></label></div></div
+            ></div>
+            <div class="item"
+              ><div class="left"><div class="title">显示播放量</div></div
+              ><div class="right"
+                ><div class="toggle"
+                  ><input
+                    id="showPlayCounts"
+                    v-model="showPlayCounts"
+                    type="checkbox" /><label
+                    for="showPlayCounts"
+                  ></label></div></div
+            ></div>
+            <div class="item"
+              ><div class="left"><div class="title">显示封面播放按钮</div></div
+              ><div class="right"
+                ><div class="toggle"
+                  ><input
+                    id="showCoverPlayButton"
+                    v-model="showCoverPlayButton"
+                    type="checkbox" /><label
+                    for="showCoverPlayButton"
+                  ></label></div></div
+            ></div>
+            <div class="item">
+              <div class="left">
+                <div class="title">显示歌曲副标题</div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="sub-title-default"
+                    v-model="subTitleDefault"
+                    type="checkbox"
+                    name="sub-title-default"
+                  />
+                  <label for="sub-title-default"></label>
+                </div>
+              </div> </div
+          ></section>
+          <section class="settings-card"
+            ><h4 class="card-heading">歌词</h4
+            ><div class="item">
+              <div class="left">
+                <div class="title">
+                  {{ $t('settings.lyricFontSize.text') }}
+                </div>
+              </div>
+              <div class="right">
+                <select v-model="lyricFontSize">
+                  <option value="16">
+                    {{ $t('settings.lyricFontSize.small') }} - 16px
+                  </option>
+                  <option value="22">
+                    {{ $t('settings.lyricFontSize.medium') }} - 22px
+                  </option>
+                  <option value="28">
+                    {{ $t('settings.lyricFontSize.large') }} - 28px
+                  </option>
+                  <option value="36">
+                    {{ $t('settings.lyricFontSize.xlarge') }} - 36px
+                  </option>
+                </select>
+              </div>
             </div>
-          </div>
-        </div>
-
-        <div class="item">
-          <div class="left">
-            <div class="title">
-              {{ $t('settings.unm.audioSource.title') }}
+            <div class="item">
+              <div class="left">
+                <div class="title">{{
+                  $t('settings.showLyricsTranslation')
+                }}</div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="show-lyrics-translation"
+                    v-model="showLyricsTranslation"
+                    type="checkbox"
+                    name="show-lyrics-translation"
+                  />
+                  <label for="show-lyrics-translation"></label>
+                </div>
+              </div>
             </div>
-            <div class="description">
-              音源的具体代号
-              <a
-                href="https://github.com/UnblockNeteaseMusic/server-rust/blob/main/README.md#支援的所有引擎"
-                target="_blank"
+            <div class="item">
+              <div class="left">
+                <div class="title">{{
+                  $t('settings.lyricsBackground.text')
+                }}</div>
+              </div>
+              <div class="right">
+                <select v-model="lyricsBackground">
+                  <option :value="false">
+                    {{ $t('settings.lyricsBackground.off') }}
+                  </option>
+                  <option :value="true">
+                    {{ $t('settings.lyricsBackground.on') }}
+                  </option>
+                  <option value="blur"> 模糊封面 </option>
+                  <option value="dynamic">
+                    {{ $t('settings.lyricsBackground.dynamic') }}
+                  </option>
+                </select>
+              </div>
+            </div></section
+          >
+          <section class="settings-card"
+            ><h4 class="card-heading">首页内容</h4
+            ><HomeSectionSettings /></section></div
+      ></section>
+      <section
+        v-show="activeCategory === 'other'"
+        v-page-reveal="activeCategory === 'other'"
+        id="settings-panel-other"
+        role="tabpanel"
+        aria-labelledby="settings-tab-other"
+        tabindex="0"
+        class="settings-panel"
+        ><h3 class="panel-title">其它</h3
+        ><div class="settings-cards"
+          ><section class="settings-card" v-if="isAndroid"
+            ><h4 class="card-heading">系统播控</h4
+            ><div v-if="isAndroid" class="item media-diagnostic"
+              ><div class="left"
+                ><div class="title">系统播控诊断</div
+                ><div class="description">播控异常时复制此信息排查。</div></div
+              ><div class="right"
+                ><button @click="copyMediaDiagnostic">复制诊断</button></div
+              ><textarea
+                v-if="mediaDiagnostic"
+                ref="mediaDiagnostic"
+                :value="mediaDiagnostic"
+                readonly
+                aria-label="系统播控诊断"
+              ></textarea></div></section
+          ><section class="settings-card"
+            ><h4 class="card-heading">应用连接</h4
+            ><div class="item">
+              <div class="left">
+                <div class="title">
+                  {{
+                    isLastfmConnected
+                      ? `已连接到 Last.fm (${lastfm.name})`
+                      : '连接 Last.fm '
+                  }}</div
+                >
+              </div>
+              <div class="right">
+                <button v-if="isLastfmConnected" @click="lastfmDisconnect()"
+                  >断开连接
+                </button>
+                <button v-else @click="lastfmConnect()"> 授权连接 </button>
+              </div>
+            </div>
+            <div v-if="isElectron" class="item">
+              <div class="left">
+                <div class="title">
+                  {{ $t('settings.enableDiscordRichPresence') }}</div
+                >
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="enable-discord-rich-presence"
+                    v-model="enableDiscordRichPresence"
+                    type="checkbox"
+                    name="enable-discord-rich-presence"
+                  />
+                  <label for="enable-discord-rich-presence"></label>
+                </div>
+              </div>
+            </div>
+            <div v-if="isElectron && isLinux" class="item">
+              <div class="left">
+                <div class="title">
+                  {{ $t('settings.unm.enable') }}
+                  <a
+                    target="_blank"
+                    href="https://github.com/osdlyrics/osdlyrics"
+                    >OSDLyrics</a
+                  >
+                  {{ $t('settings.enableOsdlyricsSupport.title') }}
+                </div>
+                <div class="description">
+                  {{ $t('settings.enableOsdlyricsSupport.desc1') }}
+                  <br />
+                  {{ $t('settings.enableOsdlyricsSupport.desc2') }}
+                </div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="enable-osdlyrics-support"
+                    v-model="enableOsdlyricsSupport"
+                    type="checkbox"
+                    name="enable-osdlyrics-support"
+                  />
+                  <label for="enable-osdlyrics-support"></label>
+                </div>
+              </div> </div></section
+          ><section class="settings-card"
+            ><h4 class="card-heading">使用偏好</h4
+            ><div v-if="isElectron" class="item">
+              <div class="left">
+                <div class="title">
+                  {{ $t('settings.showLibraryDefault') }}</div
+                >
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="show-library-default"
+                    v-model="showLibraryDefault"
+                    type="checkbox"
+                    name="show-library-default"
+                  />
+                  <label for="show-library-default"></label>
+                </div>
+              </div>
+            </div>
+            <div class="item">
+              <div class="left">
+                <div class="title">倒序播放按钮</div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="enable-reversed-mode"
+                    v-model="enableReversedMode"
+                    type="checkbox"
+                    name="enable-reversed-mode"
+                  />
+                  <label for="enable-reversed-mode"></label>
+                </div>
+              </div>
+            </div>
+            <div class="item">
+              <div class="left">
+                <div class="title">彩虹猫进度条</div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="nyancat-style"
+                    v-model="nyancatStyle"
+                    type="checkbox"
+                    name="nyancat-style"
+                  />
+                  <label for="nyancat-style"></label>
+                </div>
+              </div> </div></section
+          ><section class="settings-card" v-if="isElectron"
+            ><h4 class="card-heading">桌面与快捷键</h4
+            ><div v-if="isElectron" class="item">
+              <div class="left">
+                <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
+              </div>
+              <div class="right">
+                <select v-model="trayIconTheme">
+                  <option value="auto">{{
+                    $t('settings.trayIcon.auto')
+                  }}</option>
+                  <option value="light">{{
+                    $t('settings.trayIcon.light')
+                  }}</option>
+                  <option value="dark">{{
+                    $t('settings.trayIcon.dark')
+                  }}</option>
+                </select>
+              </div>
+            </div>
+            <div v-if="isElectron && !isMac" class="item">
+              <div class="left">
+                <div class="title">
+                  {{ $t('settings.closeAppOption.text') }}
+                </div>
+              </div>
+              <div class="right">
+                <select v-model="closeAppOption">
+                  <option value="ask">
+                    {{ $t('settings.closeAppOption.ask') }}
+                  </option>
+                  <option value="exit">
+                    {{ $t('settings.closeAppOption.exit') }}
+                  </option>
+                  <option value="minimizeToTray">
+                    {{ $t('settings.closeAppOption.minimizeToTray') }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div v-if="isElectron && isLinux" class="item">
+              <div class="left">
+                <div class="title">
+                  {{ $t('settings.enableCustomTitlebar') }}
+                </div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="enable-custom-titlebar"
+                    v-model="enableCustomTitlebar"
+                    type="checkbox"
+                    name="enable-custom-titlebar"
+                  />
+                  <label for="enable-custom-titlebar"></label>
+                </div>
+              </div>
+            </div>
+            <div v-if="isElectron">
+              <h4>快捷键</h4>
+              <div class="item">
+                <div class="left">
+                  <div class="title">
+                    {{ $t('settings.enableGlobalShortcut') }}</div
+                  >
+                </div>
+                <div class="right">
+                  <div class="toggle">
+                    <input
+                      id="enable-enable-global-shortcut"
+                      v-model="enableGlobalShortcut"
+                      type="checkbox"
+                      name="enable-enable-global-shortcut"
+                    />
+                    <label for="enable-enable-global-shortcut"></label>
+                  </div>
+                </div>
+              </div>
+              <div
+                id="shortcut-table"
+                :class="{ 'global-disabled': !enableGlobalShortcut }"
+                tabindex="0"
+                @keydown="handleShortcutKeydown"
               >
-                可以点此到 UNM 的说明页面查询。 </a
-              ><br />
-              多个音源请用 <code>,</code> 逗号分隔。<br />
-              留空则使用 UNM 内置的默认值。
-            </div>
-          </div>
-          <div class="right">
-            <input
-              v-model="unmSource"
-              class="text-input margin-right-0"
-              placeholder="例 bilibili, kuwo"
-            />
-          </div>
-        </div>
+                <div class="row row-head">
+                  <div class="col">功能</div>
+                  <div class="col">快捷键</div>
+                  <div class="col">全局快捷键</div>
+                </div>
+                <div
+                  v-for="shortcut in settings.shortcuts"
+                  :key="shortcut.id"
+                  class="row"
+                >
+                  <div class="col">{{ shortcut.name }}</div>
+                  <div class="col">
+                    <div
+                      class="keyboard-input"
+                      :class="{
+                        active:
+                          shortcutInput.id === shortcut.id &&
+                          shortcutInput.type === 'shortcut',
+                      }"
+                      @click.stop="
+                        readyToRecordShortcut(shortcut.id, 'shortcut')
+                      "
+                    >
+                      {{
+                        shortcutInput.id === shortcut.id &&
+                        shortcutInput.type === 'shortcut' &&
+                        recordedShortcutComputed !== ''
+                          ? formatShortcut(recordedShortcutComputed)
+                          : formatShortcut(shortcut.shortcut)
+                      }}
+                    </div>
+                  </div>
+                  <div class="col">
+                    <div
+                      class="keyboard-input"
+                      :class="{
+                        active:
+                          shortcutInput.id === shortcut.id &&
+                          shortcutInput.type === 'globalShortcut' &&
+                          enableGlobalShortcut,
+                      }"
+                      @click.stop="
+                        readyToRecordShortcut(shortcut.id, 'globalShortcut')
+                      "
+                      >{{
+                        shortcutInput.id === shortcut.id &&
+                        shortcutInput.type === 'globalShortcut' &&
+                        recordedShortcutComputed !== ''
+                          ? formatShortcut(recordedShortcutComputed)
+                          : formatShortcut(shortcut.globalShortcut)
+                      }}</div
+                    >
+                  </div>
+                </div>
+                <button
+                  class="restore-default-shortcut"
+                  @click="restoreDefaultShortcuts"
+                  >恢复默认快捷键</button
+                >
+              </div>
+            </div></section
+          ><section class="settings-card"
+            ><h4 class="card-heading">自定义样式</h4
+            ><div class="item custom-css-item">
+              <div class="left">
+                <div class="title">{{ $t('settings.customCss.text') }}</div>
+                <div class="description">{{
+                  $t('settings.customCss.description')
+                }}</div>
+              </div>
+              <form
+                class="right custom-css-form"
+                @submit.prevent="saveCustomCss"
+              >
+                <input
+                  v-model="customCssInput"
+                  class="text-input"
+                  type="text"
+                  spellcheck="false"
+                  :aria-label="$t('settings.customCss.text')"
+                  :placeholder="$t('settings.customCss.placeholder')"
+                  :disabled="customCssLoading"
+                />
+                <div class="custom-css-actions">
+                  <button
+                    v-if="isElectron"
+                    type="button"
+                    :disabled="customCssLoading"
+                    @click="chooseCustomCss"
+                  >
+                    {{ $t('settings.customCss.chooseFile') }}
+                  </button>
+                  <button type="submit" :disabled="customCssLoading">
+                    {{ $t('settings.customCss.apply') }}
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="customCssLoading || !settings.customCssUrl"
+                    @click="reloadCustomCss"
+                  >
+                    {{ $t('settings.customCss.reload') }}
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="customCssLoading"
+                    @click="clearCustomCss"
+                  >
+                    {{ $t('settings.customCss.clear') }}
+                  </button>
+                </div>
+              </form>
+            </div></section
+          ><section class="settings-card" v-if="isAndroid"
+            ><h4 class="card-heading">音乐接口</h4
+            ><div v-if="isAndroid" class="item android-api-address">
+              <div class="left">
+                <div class="title">音乐接口地址</div>
+              </div>
+              <form class="right" @submit.prevent="saveAndroidApi">
+                <input
+                  v-model="androidApiInput"
+                  class="text-input"
+                  type="url"
+                  :aria-label="$t('settings.androidApi.text')"
+                  :placeholder="$t('settings.androidApi.placeholder')"
+                />
+                <button type="submit">{{
+                  $t('settings.androidApi.save')
+                }}</button>
+              </form>
+            </div></section
+          ><section class="settings-card" v-if="isElectron"
+            ><h4 class="card-heading">高级网络配置</h4
+            ><section v-if="isElectron" class="unm-configuration">
+              <h4>UnblockNeteaseMusic</h4>
+              <div class="item">
+                <div class="left">
+                  <div class="title"
+                    >{{ $t('settings.unm.enable') }}
+                    <a
+                      href="https://github.com/UnblockNeteaseMusic/server"
+                      target="blank"
+                      >UnblockNeteaseMusic</a
+                    ></div
+                  >
+                </div>
+                <div class="right">
+                  <div class="toggle">
+                    <input
+                      id="enable-unblock-netease-music"
+                      v-model="enableUnblockNeteaseMusic"
+                      type="checkbox"
+                      name="enable-unblock-netease-music"
+                    />
+                    <label for="enable-unblock-netease-music"></label>
+                  </div>
+                </div>
+              </div>
 
-        <div class="item">
-          <div class="left">
-            <div class="title"> {{ $t('settings.unm.enableFlac.title') }} </div>
-            <div class="description">
-              {{ $t('settings.unm.enableFlac.desc') }}
-            </div>
-          </div>
-          <div class="right">
-            <div class="toggle">
-              <input
-                id="unm-enable-flac"
-                v-model="unmEnableFlac"
-                type="checkbox"
-              />
-              <label for="unm-enable-flac" />
-            </div>
-          </div>
-        </div>
+              <div class="item">
+                <div class="left">
+                  <div class="title">
+                    {{ $t('settings.unm.audioSource.title') }}
+                  </div>
+                  <div class="description">
+                    音源的具体代号
+                    <a
+                      href="https://github.com/UnblockNeteaseMusic/server-rust/blob/main/README.md#支援的所有引擎"
+                      target="_blank"
+                    >
+                      可以点此到 UNM 的说明页面查询。 </a
+                    ><br />
+                    多个音源请用 <code>,</code> 逗号分隔。<br />
+                    留空则使用 UNM 内置的默认值。
+                  </div>
+                </div>
+                <div class="right">
+                  <input
+                    v-model="unmSource"
+                    class="text-input margin-right-0"
+                    placeholder="例 bilibili, kuwo"
+                  />
+                </div>
+              </div>
 
-        <div class="item">
-          <div class="left">
-            <div class="title"> {{ $t('settings.unm.searchMode.title') }} </div>
-          </div>
-          <div class="right">
-            <select v-model="unmSearchMode">
-              <option value="fast-first">
-                {{ $t('settings.unm.searchMode.fast') }}
-              </option>
-              <option value="order-first">
-                {{ $t('settings.unm.searchMode.order') }}
-              </option>
-            </select>
-          </div>
-        </div>
+              <div class="item">
+                <div class="left">
+                  <div class="title">
+                    {{ $t('settings.unm.enableFlac.title') }}
+                  </div>
+                  <div class="description">
+                    {{ $t('settings.unm.enableFlac.desc') }}
+                  </div>
+                </div>
+                <div class="right">
+                  <div class="toggle">
+                    <input
+                      id="unm-enable-flac"
+                      v-model="unmEnableFlac"
+                      type="checkbox"
+                    />
+                    <label for="unm-enable-flac" />
+                  </div>
+                </div>
+              </div>
 
-        <div class="item">
-          <div class="left">
-            <div class="title">{{ $t('settings.unm.cookie.joox') }}</div>
-            <div class="description">
-              <a
-                href="https://github.com/UnblockNeteaseMusic/server-rust/tree/main/engines#joox-cookie-設定說明"
-                target="_blank"
-                >{{ $t('settings.unm.cookie.desc1') }}
-              </a>
-              {{ $t('settings.unm.cookie.desc2') }}
-            </div>
-          </div>
-          <div class="right">
-            <input
-              v-model="unmJooxCookie"
-              class="text-input margin-right-0"
-              placeholder="wmid=..; session_key=.."
-            />
-          </div>
-        </div>
+              <div class="item">
+                <div class="left">
+                  <div class="title">
+                    {{ $t('settings.unm.searchMode.title') }}
+                  </div>
+                </div>
+                <div class="right">
+                  <select v-model="unmSearchMode">
+                    <option value="fast-first">
+                      {{ $t('settings.unm.searchMode.fast') }}
+                    </option>
+                    <option value="order-first">
+                      {{ $t('settings.unm.searchMode.order') }}
+                    </option>
+                  </select>
+                </div>
+              </div>
 
-        <div class="item">
-          <div class="left">
-            <div class="title"> {{ $t('settings.unm.cookie.qq') }} </div>
-            <div class="description">
-              <a
-                href="https://github.com/UnblockNeteaseMusic/server-rust/tree/main/engines#qq-cookie-設定說明"
-                target="_blank"
-                >{{ $t('settings.unm.cookie.desc1') }}
-              </a>
-              {{ $t('settings.unm.cookie.desc2') }}
-            </div>
-          </div>
-          <div class="right">
-            <input
-              v-model="unmQQCookie"
-              class="text-input margin-right-0"
-              placeholder="uin=..; qm_keyst=..;"
-            />
-          </div>
-        </div>
+              <div class="item">
+                <div class="left">
+                  <div class="title">{{ $t('settings.unm.cookie.joox') }}</div>
+                  <div class="description">
+                    <a
+                      href="https://github.com/UnblockNeteaseMusic/server-rust/tree/main/engines#joox-cookie-設定說明"
+                      target="_blank"
+                      >{{ $t('settings.unm.cookie.desc1') }}
+                    </a>
+                    {{ $t('settings.unm.cookie.desc2') }}
+                  </div>
+                </div>
+                <div class="right">
+                  <input
+                    v-model="unmJooxCookie"
+                    class="text-input margin-right-0"
+                    placeholder="wmid=..; session_key=.."
+                  />
+                </div>
+              </div>
 
-        <div class="item">
-          <div class="left">
-            <div class="title"> {{ $t('settings.unm.ytdl') }} </div>
-            <div class="description">
-              <a
-                href="https://github.com/UnblockNeteaseMusic/server-rust/tree/main/engines#ytdlexe-設定說明"
-                target="_blank"
-                >{{ $t('settings.unm.cookie.desc1') }}
-              </a>
-              {{ $t('settings.unm.cookie.desc2') }}
-            </div>
-          </div>
-          <div class="right">
-            <input
-              v-model="unmYtDlExe"
-              class="text-input margin-right-0"
-              placeholder="ex. youtube-dl"
-            />
-          </div>
-        </div>
+              <div class="item">
+                <div class="left">
+                  <div class="title"> {{ $t('settings.unm.cookie.qq') }} </div>
+                  <div class="description">
+                    <a
+                      href="https://github.com/UnblockNeteaseMusic/server-rust/tree/main/engines#qq-cookie-設定說明"
+                      target="_blank"
+                      >{{ $t('settings.unm.cookie.desc1') }}
+                    </a>
+                    {{ $t('settings.unm.cookie.desc2') }}
+                  </div>
+                </div>
+                <div class="right">
+                  <input
+                    v-model="unmQQCookie"
+                    class="text-input margin-right-0"
+                    placeholder="uin=..; qm_keyst=..;"
+                  />
+                </div>
+              </div>
 
-        <div class="item">
-          <div class="left">
-            <div class="title"> {{ $t('settings.unm.proxy.title') }} </div>
-            <div class="description">
-              {{ $t('settings.unm.proxy.desc1') }}<br />
-              {{ $t('settings.unm.proxy.desc2') }}
+              <div class="item">
+                <div class="left">
+                  <div class="title"> {{ $t('settings.unm.ytdl') }} </div>
+                  <div class="description">
+                    <a
+                      href="https://github.com/UnblockNeteaseMusic/server-rust/tree/main/engines#ytdlexe-設定說明"
+                      target="_blank"
+                      >{{ $t('settings.unm.cookie.desc1') }}
+                    </a>
+                    {{ $t('settings.unm.cookie.desc2') }}
+                  </div>
+                </div>
+                <div class="right">
+                  <input
+                    v-model="unmYtDlExe"
+                    class="text-input margin-right-0"
+                    placeholder="ex. youtube-dl"
+                  />
+                </div>
+              </div>
+
+              <div class="item">
+                <div class="left">
+                  <div class="title">
+                    {{ $t('settings.unm.proxy.title') }}
+                  </div>
+                  <div class="description">
+                    {{ $t('settings.unm.proxy.desc1') }}<br />
+                    {{ $t('settings.unm.proxy.desc2') }}
+                  </div>
+                </div>
+                <div class="right">
+                  <input
+                    v-model="unmProxyUri"
+                    class="text-input margin-right-0"
+                    placeholder="ex. https://192.168.11.45"
+                  />
+                </div>
+              </div>
+            </section>
+            <div v-if="isElectron">
+              <h4>代理</h4>
+              <div class="item">
+                <div class="left">
+                  <div class="title"> 代理协议 </div>
+                </div>
+                <div class="right">
+                  <select v-model="proxyProtocol">
+                    <option value="noProxy"> 关闭代理 </option>
+                    <option value="HTTP"> HTTP 代理 </option>
+                    <option value="HTTPS"> HTTPS 代理 </option>
+                    <!-- <option value="SOCKS"> SOCKS 代理 </option> -->
+                  </select>
+                </div>
+              </div>
+              <div
+                id="proxy-form"
+                :class="{ disabled: proxyProtocol === 'noProxy' }"
+              >
+                <input
+                  v-model="proxyServer"
+                  class="text-input"
+                  placeholder="服务器地址"
+                  :disabled="proxyProtocol === 'noProxy'"
+                /><input
+                  v-model="proxyPort"
+                  class="text-input"
+                  placeholder="端口"
+                  type="number"
+                  min="1"
+                  max="65535"
+                  :disabled="proxyProtocol === 'noProxy'"
+                />
+                <button @click="sendProxyConfig">更新代理</button>
+              </div>
             </div>
-          </div>
-          <div class="right">
-            <input
-              v-model="unmProxyUri"
-              class="text-input margin-right-0"
-              placeholder="ex. https://192.168.11.45"
-            />
-          </div>
-        </div>
-      </section>
-      <div v-if="isElectron">
-        <h4>代理</h4>
-        <div class="item">
-          <div class="left">
-            <div class="title"> 代理协议 </div>
-          </div>
-          <div class="right">
-            <select v-model="proxyProtocol">
-              <option value="noProxy"> 关闭代理 </option>
-              <option value="HTTP"> HTTP 代理 </option>
-              <option value="HTTPS"> HTTPS 代理 </option>
-              <!-- <option value="SOCKS"> SOCKS 代理 </option> -->
-            </select>
-          </div>
-        </div>
-        <div id="proxy-form" :class="{ disabled: proxyProtocol === 'noProxy' }">
-          <input
-            v-model="proxyServer"
-            class="text-input"
-            placeholder="服务器地址"
-            :disabled="proxyProtocol === 'noProxy'"
-          /><input
-            v-model="proxyPort"
-            class="text-input"
-            placeholder="端口"
-            type="number"
-            min="1"
-            max="65535"
-            :disabled="proxyProtocol === 'noProxy'"
-          />
-          <button @click="sendProxyConfig">更新代理</button>
-        </div>
-      </div>
-      <div v-if="isElectron">
-        <h4>请求出口 IP</h4>
-        <div class="item">
-          <div class="left">
-            <div class="title">自定义请求出口 IP</div>
-          </div>
-          <div class="right">
-            <div class="toggle">
-              <input
-                id="enable-real-ip"
-                v-model="enableRealIP"
-                type="checkbox"
-                name="enable-real-ip"
-              />
-              <label for="enable-real-ip"></label>
-            </div>
-          </div>
-        </div>
-        <div id="real-ip" :class="{ disabled: !enableRealIP }">
-          <input
-            v-model="realIP"
-            class="text-input"
-            placeholder="IP地址"
-            :disabled="!enableRealIP"
-          />
-        </div>
-      </div>
-      <div class="footer">
+            <div v-if="isElectron">
+              <h4>请求出口 IP</h4>
+              <div class="item">
+                <div class="left">
+                  <div class="title">自定义请求出口 IP</div>
+                </div>
+                <div class="right">
+                  <div class="toggle">
+                    <input
+                      id="enable-real-ip"
+                      v-model="enableRealIP"
+                      type="checkbox"
+                      name="enable-real-ip"
+                    />
+                    <label for="enable-real-ip"></label>
+                  </div>
+                </div>
+              </div>
+              <div id="real-ip" :class="{ disabled: !enableRealIP }">
+                <input
+                  v-model="realIP"
+                  class="text-input"
+                  placeholder="IP地址"
+                  :disabled="!enableRealIP"
+                />
+              </div> </div></section></div></section
+      ><div class="footer">
         <p class="author"
           >MADE BY
           <a
@@ -956,9 +1088,9 @@
           >
         </p>
         <p class="version">v{{ version }}</p>
-      </div>
-    </div>
-  </div>
+      </div></div
+    ></div
+  >
 </template>
 
 <script>
@@ -989,6 +1121,14 @@ export default {
   components: { HomeSectionSettings, PlayerButtonSettings },
   data() {
     return {
+      activeCategory:
+        this.$route.hash === '#home-sections' ? 'appearance' : 'playback',
+      categories: [
+        { key: 'playback', title: '播放', caption: '音质与控制' },
+        { key: 'cache', title: '缓存', caption: '歌曲与图片' },
+        { key: 'appearance', title: '外观', caption: '主题与界面' },
+        { key: 'other', title: '其它', caption: '连接与高级' },
+      ],
       mediaDiagnostic: '',
       androidApiInput: isAndroid ? window.YesPlayMusicAndroid.getApiUrl() : '',
       customCssInput: this.$store.state.settings.customCssUrl || '',
@@ -1616,6 +1756,18 @@ export default {
       this.cacheStatsTimer = setInterval(() => this.countDBSize(), 3000);
     }
   },
+  watch: {
+    '$route.hash'(hash) {
+      if (hash === '#home-sections') {
+        this.activeCategory = 'appearance';
+        this.$nextTick(() =>
+          document
+            .getElementById('home-sections')
+            ?.scrollIntoView({ block: 'start' })
+        );
+      }
+    },
+  },
   mounted() {
     if (this.$route.hash === '#home-sections')
       this.$nextTick(() =>
@@ -1632,6 +1784,22 @@ export default {
     if (process.env.IS_ELECTRON) this.getAllOutputDevices();
   },
   methods: {
+    categoryKey(event, key) {
+      const index = this.categories.findIndex(item => item.key === key);
+      let next = index;
+      if (event.key === 'ArrowRight')
+        next = (index + 1) % this.categories.length;
+      else if (event.key === 'ArrowLeft')
+        next = (index + this.categories.length - 1) % this.categories.length;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = this.categories.length - 1;
+      else return;
+      event.preventDefault();
+      this.activeCategory = this.categories[next].key;
+      this.$nextTick(() =>
+        document.getElementById('settings-tab-' + this.activeCategory)?.focus()
+      );
+    },
     async copyMediaDiagnostic() {
       this.mediaDiagnostic =
         window.YesPlayMusicAndroid.getMediaDiagnostics?.() || '播放器尚未连接';
@@ -2313,5 +2481,408 @@ input[type='number'] {
   font-weight: 600;
   color: var(--color-text);
   opacity: 0.65;
+}
+</style>
+
+<style lang="scss" scoped>
+.settings-page {
+  display: block;
+  margin: 0 auto;
+  padding: 24px 0 56px;
+  width: 100%;
+  max-width: 900px;
+  color: var(--color-text);
+}
+.container {
+  width: 100%;
+  margin: 0;
+  min-width: 0;
+}
+.settings-heading h1 {
+  margin: 0 0 24px;
+  font-size: 34px;
+  font-weight: 750;
+  letter-spacing: -0.8px;
+}
+.user {
+  margin: 0 0 24px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(128, 128, 128, 0.12);
+  background: var(--color-secondary-bg);
+  gap: 16px;
+  img.avatar {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+  }
+  .left {
+    min-width: 0;
+    .info {
+      min-width: 0;
+      margin-left: 16px;
+    }
+    .nickname {
+      font-size: 19px;
+      overflow-wrap: anywhere;
+    }
+    .extra-info {
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+  }
+  .right {
+    flex-shrink: 0;
+    button {
+      margin: 0;
+      font-size: 14px;
+      opacity: 1;
+      .svg-icon {
+        width: 15px;
+        height: 15px;
+      }
+    }
+  }
+}
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgba(128, 128, 128, 0.14);
+  border-radius: 18px;
+  background: var(--color-secondary-bg-for-transparent);
+  button {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 15px 18px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    text-align: left;
+    background: transparent;
+    transform: none;
+    strong {
+      font-size: 17px;
+      font-weight: 650;
+    }
+    span {
+      font-size: 12px;
+      font-weight: 400;
+      opacity: 0.56;
+    }
+    &:hover {
+      background: var(--color-secondary-bg);
+    }
+    &.active {
+      background: var(--color-body-bg);
+      border-color: rgba(128, 128, 128, 0.18);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      color: var(--color-primary);
+      span {
+        color: var(--color-text);
+        opacity: 0.7;
+      }
+    }
+  }
+}
+.settings-panel {
+  outline: none;
+}
+.panel-title {
+  margin: 28px 0 16px;
+  padding: 0;
+  font-size: 22px;
+  font-weight: 650;
+  border: none;
+}
+.settings-cards {
+  display: grid;
+  gap: 16px;
+}
+.settings-card {
+  min-width: 0;
+  padding: 22px 24px 8px;
+  border: 1px solid rgba(128, 128, 128, 0.14);
+  border-radius: 18px;
+  background: var(--color-body-bg);
+}
+.card-heading {
+  margin: 0 0 4px;
+  padding-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  opacity: 0.56;
+}
+.settings-card > .item {
+  margin: 0;
+  padding: 18px 0;
+  gap: 28px;
+  border-top: 1px solid rgba(128, 128, 128, 0.1);
+  > .left {
+    flex: 1;
+    min-width: 0;
+  }
+  > .right {
+    flex: 0 0 auto;
+    max-width: 54%;
+    min-width: 0;
+  }
+  .title {
+    font-size: 15px;
+    font-weight: 550;
+    opacity: 1;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .description {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.65;
+    opacity: 0.55;
+    max-width: 52ch;
+    overflow-wrap: anywhere;
+  }
+}
+.settings-card .item {
+  color: inherit;
+}
+.settings-card select {
+  width: 180px;
+  min-width: 140px;
+  max-width: 100%;
+  padding: 11px 34px 11px 13px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid rgba(128, 128, 128, 0.1);
+  border-radius: 10px;
+  background-color: var(--color-secondary-bg);
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m1 1 4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+}
+.settings-card button,
+.login-entry button {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 550;
+  border: 1px solid rgba(128, 128, 128, 0.1);
+  border-radius: 10px;
+  transform: none;
+  &:hover {
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+.settings-card .custom-css-item,
+.settings-card .android-api-address {
+  display: block;
+  > .left {
+    max-width: none;
+    margin-bottom: 14px;
+  }
+  > .right {
+    max-width: none;
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .custom-css-form {
+    flex-direction: column;
+  }
+}
+.settings-card input.text-input {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-right: 0;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 400;
+  border: 1px solid rgba(128, 128, 128, 0.14);
+  border-radius: 10px;
+}
+.android-api-address input {
+  flex: 1;
+}
+.settings-card .custom-css-actions {
+  margin-top: 2px;
+  gap: 8px;
+}
+.settings-card .media-diagnostic {
+  > .right {
+    max-width: 100%;
+  }
+  textarea {
+    font: 12px/1.6 monospace;
+    resize: vertical;
+  }
+}
+.settings-card #proxy-form,
+.settings-card #real-ip {
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+}
+.settings-card #shortcut-table {
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+.settings-card .unm-configuration > h4,
+.settings-card > div > h4 {
+  margin: 16px 0;
+  font-size: 15px;
+}
+.settings-card .toggle {
+  margin: 0;
+  height: 28px;
+}
+.settings-card .toggle input + label,
+.settings-card .toggle input + label:before {
+  width: 46px;
+  height: 28px;
+  border-radius: 18px;
+}
+.settings-card .toggle input + label {
+  background: rgba(128, 128, 128, 0.2);
+}
+.settings-card .toggle input + label:after {
+  width: 20px;
+  height: 20px;
+  top: 4px;
+  left: 4px;
+  border-radius: 50%;
+}
+.settings-card .toggle input:checked + label:after {
+  left: 22px;
+}
+.settings-card .toggle input:focus-visible + label {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.settings-card ::v-deep .player-button-settings,
+.settings-card ::v-deep .home-section-settings {
+  margin: 0 0 14px;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  summary {
+    padding: 12px 0;
+    font-size: 15px;
+  }
+}
+.footer {
+  margin: 36px 0 0;
+  padding: 24px 0 0;
+  border-top: 1px solid rgba(128, 128, 128, 0.12);
+  line-height: 1.7;
+  font-weight: 400;
+  .version {
+    margin-top: 8px;
+  }
+  a {
+    color: inherit;
+  }
+}
+@media (max-width: 600px) {
+  .settings-page {
+    padding-top: 12px;
+  }
+  .settings-heading h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+  .user {
+    padding: 16px;
+    border-radius: 16px;
+    .left .info {
+      margin-left: 12px;
+    }
+    .left .nickname {
+      font-size: 17px;
+    }
+    .right button {
+      font-size: 12px;
+      padding: 8px;
+    }
+  }
+  .settings-tabs {
+    gap: 3px;
+    padding: 4px;
+    border-radius: 14px;
+    button {
+      padding: 12px 8px;
+      align-items: center;
+      strong {
+        font-size: 15px;
+      }
+      span {
+        font-size: 10px;
+      }
+    }
+  }
+  .panel-title {
+    font-size: 20px;
+    margin-top: 24px;
+  }
+  .settings-card {
+    padding: 18px 16px 4px;
+    border-radius: 16px;
+  }
+  .settings-card > .item {
+    gap: 16px;
+    padding: 16px 0;
+    > .right {
+      max-width: 52%;
+    }
+    .title {
+      font-size: 14px;
+    }
+    .description {
+      font-size: 12px;
+    }
+  }
+  .settings-card select {
+    width: 142px;
+    min-width: 0;
+    font-size: 13px;
+    padding-left: 10px;
+  }
+  .settings-card .custom-css-item > .right,
+  .settings-card .android-api-address > .right {
+    max-width: none;
+  }
+  .settings-card .custom-css-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .settings-card .media-diagnostic > .right {
+    max-width: 100%;
+  }
+}
+@media (max-width: 360px) {
+  .settings-tabs button span {
+    display: none;
+  }
+  .settings-card > .item {
+    gap: 10px;
+  }
+  .settings-card select {
+    width: 122px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-tabs button {
+    transition: none;
+  }
 }
 </style>
