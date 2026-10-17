@@ -37,6 +37,21 @@ assert(
   !normalizeHomeSections(null, false).includes('apple'),
   'Preserve the previous Apple Music preference during migration'
 );
+let now = 10000000;
+class Clock extends Date {
+  static now() {
+    return now;
+  }
+}
+const fresh = { module: { exports: {} }, Date: Clock };
+vm.runInNewContext(
+  fs
+    .readFileSync('src/utils/homeFreshness.js', 'utf8')
+    .replace(/export /g, '') +
+    '\nmodule.exports={homeContentFresh, HOME_CONTENT_TTL};',
+  fresh
+);
+const { homeContentFresh, HOME_CONTENT_TTL } = fresh.module.exports;
 const requests = [];
 const source = fs
   .readFileSync('src/views/home.vue', 'utf8')
@@ -47,6 +62,9 @@ const source = fs
 const context = {
   module: { exports: {} },
   homeSections,
+  homeContentFresh,
+  ensureDailyTracks: async () => [],
+  Date: Clock,
   trackingScope: () => 'account-A',
   CoverRow: {},
   TrackList: {},
@@ -120,8 +138,55 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     'current-account',
     'Account changes must invalidate earlier responses'
   );
+  const ttlPage = instance(['charts']);
+  let refresh = ttlPage.loadData();
+  await tick();
+  requests.at(-1).resolve([{ id: 'cached' }]);
+  await refresh;
+  const cachedCount = requests.length;
+  now += HOME_CONTENT_TTL - 1;
+  await ttlPage.loadData();
+  assert.equal(
+    requests.length,
+    cachedCount,
+    'Reuse content for less than 30 minutes'
+  );
+  now++;
+  refresh = ttlPage.loadData();
+  await tick();
+  assert.equal(
+    requests.length,
+    cachedCount + 1,
+    'Exactly 30 minutes expires the row'
+  );
+  assert.equal(
+    ttlPage.rows.charts[0].id,
+    'cached',
+    'Keep old content visible while refreshing'
+  );
+  requests.at(-1).reject(new Error('offline'));
+  await refresh;
+  assert.equal(ttlPage.rows.charts[0].id, 'cached');
+  ttlPage.errors = {};
+  refresh = ttlPage.loadData();
+  await tick();
+  requests.at(-1).resolve([{ id: 'fresh' }]);
+  await refresh;
+  assert.equal(ttlPage.rows.charts[0].id, 'fresh');
+  const forced = ttlPage.refreshHome();
+  const coalesced = ttlPage.refreshHome();
+  await tick();
+  const forcedCount = requests.length;
+  requests.at(-1).resolve([{ id: 'manual' }]);
+  await Promise.all([forced, coalesced]);
+  assert.equal(
+    requests.length,
+    forcedCount,
+    'Manual refresh coalesces overlapping calls'
+  );
+  assert.equal(ttlPage.rows.charts[0].id, 'manual');
   console.log(
-    'Home sections: catalog, migration, empty selection, order, bounded requests, disabled rows and account races passed'
+    'Home sections: catalog, migration, empty selection, order, bounded requests, disabled rows, 30-minute expiry, stale fallback, manual refresh and account races passed'
   );
 })().catch(error => {
   console.error(error);

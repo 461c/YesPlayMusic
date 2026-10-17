@@ -24,9 +24,9 @@
 </template>
 
 <script>
-import { mapMutations, mapState } from 'vuex';
+import { mapState } from 'vuex';
 import NProgress from 'nprogress';
-import { dailyRecommendTracks } from '@/api/playlist';
+import { ensureDailyTracks } from '@/utils/dailyTracks';
 
 import ButtonTwoTone from '@/components/ButtonTwoTone.vue';
 import TrackList from '@/components/TrackList.vue';
@@ -46,26 +46,27 @@ export default {
     ...mapState(['player', 'data', 'dailyTracks']),
   },
   created() {
-    if (this.dailyTracks.length === 0) {
-      setTimeout(() => {
-        if (!this.show) NProgress.start();
-      }, 1000);
-      this.loadDailyTracks();
-    } else {
-      this.show = true;
-    }
+    this.show = this.dailyTracks.length > 0;
+    setTimeout(() => {
+      if (!this.show) NProgress.start();
+    }, 1000);
+    this.loadDailyTracks();
     this.$parent.$refs.main.scrollTo(0, 0);
   },
   methods: {
-    ...mapMutations(['updateDailyTracks']),
-    loadDailyTracks() {
-      dailyRecommendTracks().then(result => {
-        this.updateDailyTracks(result.data.dailySongs);
+    async loadDailyTracks() {
+      try {
+        await ensureDailyTracks(this.$store);
+      } catch (_) {
+        this.$store.dispatch('showToast', '每日推荐加载失败，请稍后重试');
+      } finally {
         NProgress.done();
         this.show = true;
-      });
+      }
     },
-    playDailyTracks() {
+    async playDailyTracks() {
+      await this.loadDailyTracks();
+      if (!this.dailyTracks.length) return;
       let trackIDs = this.dailyTracks.map(t => t.id);
       this.$store.state.player.replacePlaylist(
         trackIDs,

@@ -1,5 +1,10 @@
 <template>
   <div class="home" :data-page-ready="homeReady ? 'true' : 'false'">
+    <div class="home-actions"
+      ><button :disabled="Boolean(loadingPromise)" @click="refreshHome">{{
+        loadingPromise ? '刷新中…' : '刷新'
+      }}</button></div
+    >
     <p v-if="!sections.length" class="empty-home">尚未启用栏目</p>
     <section
       v-for="section in sections"
@@ -49,6 +54,8 @@
   </div>
 </template>
 <script>
+import { homeContentFresh } from '@/utils/homeFreshness';
+import { ensureDailyTracks } from '@/utils/dailyTracks';
 import { trackingScope } from '@/utils/trackingStore';
 import { homeSections } from '@/utils/homeSections';
 import { fetchHomeSection } from '@/api/home';
@@ -62,6 +69,7 @@ export default {
   data() {
     return {
       rows: {},
+      updatedAt: {},
       errors: {},
       inFlight: new Set(),
       active: false,
@@ -96,6 +104,7 @@ export default {
     accountScope() {
       this.generation++;
       this.rows = {};
+      this.updatedAt = {};
       this.errors = {};
       this.inFlight = new Set();
       if (this.active) this.loadData();
@@ -106,14 +115,32 @@ export default {
   },
   activated() {
     this.active = true;
+    this.errors = {};
     this.loadData();
     this.$parent.$refs.scrollbar.restorePosition();
   },
   deactivated() {
     this.active = false;
   },
+  mounted() {
+    document.addEventListener('visibilitychange', this.resumeHome);
+    window.addEventListener('pageshow', this.resumeHome);
+  },
+  beforeDestroy() {
+    document.removeEventListener('visibilitychange', this.resumeHome);
+    window.removeEventListener('pageshow', this.resumeHome);
+  },
   methods: {
-    async loadData() {
+    resumeHome() {
+      if (!this.active || document.hidden) return;
+      this.errors = {};
+      this.loadData();
+    },
+    refreshHome() {
+      this.errors = {};
+      return this.loadData(true);
+    },
+    async loadData(force = false) {
       // Only enabled rows; limit concurrency and never crawl playlist contents for discovery.
       const generation = this.generation;
       if (this.loadingPromise && this.loadingGeneration === generation)
@@ -121,7 +148,10 @@ export default {
       this.loadingGeneration = generation;
       const queue = this.sections.filter(
         section =>
-          !this.rows[section.key] &&
+          (force ||
+            section.type === 'forYou' ||
+            !this.rows[section.key] ||
+            !homeContentFresh(this.updatedAt[section.key])) &&
           !this.inFlight.has(section.key) &&
           !this.errors[section.key]
       );
@@ -129,7 +159,7 @@ export default {
         while (queue.length && this.active && generation === this.generation) {
           const section = queue.shift();
           if (this.sections.some(item => item.key === section.key))
-            await this.retry(section);
+            await this.retry(section, force);
         }
       };
       const work = Promise.all([worker(), worker(), worker()]);
@@ -149,16 +179,22 @@ export default {
           this.loadData();
       }
     },
-    async retry(section) {
+    async retry(section, force = false) {
       if (this.inFlight.has(section.key)) return;
       const generation = this.generation,
         inFlight = this.inFlight;
       inFlight.add(section.key);
       this.$delete(this.errors, section.key);
       try {
-        const items = await fetchHomeSection(section);
-        if (generation === this.generation)
+        let items;
+        if (section.type === 'forYou') {
+          await ensureDailyTracks(this.$store, force);
+          items = [];
+        } else items = await fetchHomeSection(section);
+        if (generation === this.generation) {
           this.$set(this.rows, section.key, items);
+          this.$set(this.updatedAt, section.key, Date.now());
+        }
       } catch (_) {
         if (generation === this.generation)
           this.$set(this.errors, section.key, true);
@@ -254,5 +290,27 @@ footer {
 <style lang="scss" scoped>
 .index-row:first-of-type {
   margin-top: 32px;
+}
+</style>
+
+<style lang="scss" scoped>
+.home-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  button {
+    color: var(--color-text);
+    font: inherit;
+    border: none;
+    border-radius: 8px;
+    background: var(--color-secondary-bg);
+    padding: 10px 14px;
+  }
+  button:disabled {
+    opacity: 0.35;
+  }
+}
+.home-actions + .index-row {
+  margin-top: 20px;
 }
 </style>

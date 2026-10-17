@@ -21,7 +21,7 @@ export function recommendPlaylist(params) {
   return request({
     url: '/personalized',
     method: 'get',
-    params,
+    params: { ...params, timestamp: Date.now() },
   });
 }
 /**
@@ -138,10 +138,11 @@ export function playlistCatlist() {
  * 所有榜单
  * 说明 : 调用此接口,可获取所有榜单 接口地址 : /toplist
  */
-export function toplists() {
+export function toplists(params = {}) {
   return request({
     url: '/toplist',
     method: 'get',
+    params,
   });
 }
 

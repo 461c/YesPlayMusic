@@ -9,6 +9,7 @@ on:
       - 'scripts/check-android-packages.py'
       - 'scripts/test-tracking.cjs'
       - 'scripts/test-home-sections.cjs'
+      - 'scripts/test-discovery-cache.cjs'
       - 'scripts/test-player-options.cjs'
       - 'scripts/test-appearance.cjs'
       - 'scripts/test-android-startup.cjs'
@@ -54,6 +55,7 @@ jobs:
           node scripts/test-appearance.cjs
           node scripts/test-player-options.cjs
           node scripts/test-home-sections.cjs
+          node scripts/test-discovery-cache.cjs
           node scripts/test-tracking.cjs
           node scripts/test-android-startup.cjs
       - name: Build tablet interface

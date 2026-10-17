@@ -16,7 +16,7 @@ for filename, package, label in [
     badging = run('aapt', 'dump', 'badging', filename)
     assert f"package: name='{package}'" in badging, badging
     assert f"application-label:'{label}'" in badging, badging
-    assert "versionCode='41128'" in badging, badging
+    assert "versionCode='41129'" in badging, badging
     assert "sdkVersion:'24'" in badging, badging
     manifest = run('aapt', 'dump', 'xmltree', filename, 'AndroidManifest.xml')
     for entry in [

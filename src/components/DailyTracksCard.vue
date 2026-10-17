@@ -19,8 +19,8 @@
 
 <script>
 import locale from '@/locale';
-import { mapMutations, mapState, mapActions } from 'vuex';
-import { dailyRecommendTracks } from '@/api/playlist';
+import { mapState, mapActions } from 'vuex';
+import { ensureDailyTracks } from '@/utils/dailyTracks';
 import { isAccountLoggedIn } from '@/utils/auth';
 import sample from 'lodash/sample';
 
@@ -44,27 +44,24 @@ export default {
     },
   },
   created() {
-    if (this.dailyTracks.length === 0) this.loadDailyTracks();
+    this.loadDailyTracks();
   },
   methods: {
     ...mapActions(['showToast']),
-    ...mapMutations(['updateDailyTracks']),
     loadDailyTracks() {
-      if (!isAccountLoggedIn()) return;
-      dailyRecommendTracks()
-        .then(result => {
-          this.updateDailyTracks(result.data.dailySongs);
-        })
-        .catch(() => {});
+      return ensureDailyTracks(this.$store).catch(() => []);
     },
     goToDailyTracks() {
       this.$router.push({ name: 'dailySongs' });
     },
-    playDailyTracks() {
+    async playDailyTracks() {
       if (!isAccountLoggedIn()) {
         this.showToast(locale.t('toast.needToLogin'));
         return;
       }
+      await this.loadDailyTracks();
+      if (!this.dailyTracks.length)
+        return this.showToast('每日推荐暂时无法加载');
       let trackIDs = this.dailyTracks.map(t => t.id);
       this.$store.state.player.replacePlaylist(
         trackIDs,

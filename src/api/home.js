@@ -8,7 +8,7 @@ export async function fetchHomeSection(section) {
   const result = await request({
     url: section.url || '/toplist',
     method: 'get',
-    params: { ...section.params },
+    params: { ...section.params, timestamp: Date.now() },
     skipAuthRedirect: true,
   });
   if (!result || (result.code !== undefined && result.code !== 200))

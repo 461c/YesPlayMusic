@@ -41,6 +41,9 @@
       </div>
     </div>
 
+    <p v-if="error" class="explore-error" role="status"
+      >{{ error }} <button @click="loadData(true)">重试</button></p
+    >
     <div class="playlists">
       <CoverRow
         type="playlist"
@@ -59,7 +62,7 @@
         v-show="showLoadMoreButton && hasMore"
         color="grey"
         :loading="loadingMore"
-        @click.native="getPlaylist"
+        @click.native="getPlaylist()"
         >{{ $t('explore.loadMore') }}</ButtonTwoTone
       >
     </div>
@@ -67,6 +70,8 @@
 </template>
 
 <script>
+import { homeContentFresh } from '@/utils/homeFreshness';
+import { trackingScope } from '@/utils/trackingStore';
 import { mapState, mapMutations } from 'vuex';
 import NProgress from 'nprogress';
 import { topPlaylist, highQualityPlaylist, toplists } from '@/api/playlist';
@@ -86,18 +91,14 @@ export default {
     ButtonTwoTone,
     SvgIcon,
   },
-  beforeRouteUpdate(to, from, next) {
-    this.showLoadMoreButton = false;
-    this.hasMore = true;
-    this.playlists = [];
-    this.offset = 1;
-    this.activeCategory = to.query.category;
-    this.getPlaylist();
-    next();
-  },
   data() {
     return {
       show: false,
+      active: false,
+      updatedAt: 0,
+      generation: 0,
+      loadingPromise: null,
+      error: '',
       playlists: [],
       activeCategory: '全部',
       loadingMore: false,
@@ -109,84 +110,135 @@ export default {
   },
   computed: {
     ...mapState(['settings']),
+    accountScope() {
+      return trackingScope(this.$store.state.data?.user?.userId);
+    },
     subText() {
       if (this.activeCategory === '排行榜') return 'updateFrequency';
       if (this.activeCategory === '推荐歌单') return 'copywriter';
       return 'none';
     },
   },
+  watch: {
+    accountScope() {
+      this.generation++;
+      this.playlists = [];
+      this.updatedAt = 0;
+      this.loadingPromise = null;
+      this.loadingMore = false;
+      if (this.active) this.loadData();
+    },
+  },
   activated() {
+    this.active = true;
     this.loadData();
     this.$parent.$refs.scrollbar.restorePosition();
   },
+  deactivated() {
+    this.active = false;
+  },
+  mounted() {
+    document.addEventListener('visibilitychange', this.resumeExplore);
+    window.addEventListener('pageshow', this.resumeExplore);
+  },
+  beforeDestroy() {
+    this.generation++;
+    document.removeEventListener('visibilitychange', this.resumeExplore);
+    window.removeEventListener('pageshow', this.resumeExplore);
+  },
   methods: {
     ...mapMutations(['togglePlaylistCategory']),
-    loadData() {
-      setTimeout(() => {
-        if (!this.show) NProgress.start();
-      }, 1000);
-      const queryCategory = this.$route.query.category;
-      if (queryCategory === undefined) {
-        this.playlists = [];
-        this.activeCategory = '全部';
-      } else {
-        this.activeCategory = queryCategory;
-      }
-      this.getPlaylist();
+    resumeExplore() {
+      if (this.active && !document.hidden) this.loadData();
     },
-    goToCategory(Category) {
+    loadData(force = false) {
+      const category = this.$route.query.category || '全部';
+      if (category !== this.activeCategory) {
+        this.generation++;
+        this.activeCategory = category;
+        this.playlists = [];
+        this.updatedAt = 0;
+        this.loadingPromise = null;
+      }
+      if (this.loadingPromise) return this.loadingPromise;
+      if (!force && homeContentFresh(this.updatedAt)) return Promise.resolve();
+      return this.getPlaylist(true);
+    },
+    goToCategory(category) {
       this.showCatOptions = false;
-      this.$router.push({ name: 'explore', query: { category: Category } });
+      this.$router.push({ name: 'explore', query: { category } });
     },
-    updatePlaylist(playlists) {
-      this.playlists.push(...playlists);
-      this.loadingMore = false;
-      this.showLoadMoreButton = true;
-      NProgress.done();
-      this.show = true;
-    },
-    getPlaylist() {
+    getPlaylist(refresh = false) {
+      if (!refresh && !homeContentFresh(this.updatedAt)) refresh = true;
+      if (this.loadingPromise) return this.loadingPromise;
+      const generation = this.generation,
+        scope = this.accountScope,
+        category = this.activeCategory;
+      const current = () =>
+        generation === this.generation && scope === this.accountScope;
       this.loadingMore = true;
-      if (this.activeCategory === '推荐歌单') {
-        return this.getRecommendPlayList();
-      }
-      if (this.activeCategory === '精品歌单') {
-        return this.getHighQualityPlaylist();
-      }
-      if (this.activeCategory === '排行榜') {
-        return this.getTopLists();
-      }
-      return this.getTopPlayList();
-    },
-    getRecommendPlayList() {
-      getRecommendPlayList(100, true).then(list => {
-        this.playlists = [];
-        this.updatePlaylist(list);
-      });
-    },
-    getHighQualityPlaylist() {
-      let playlists = this.playlists;
-      let before =
-        playlists.length !== 0 ? playlists[playlists.length - 1].updateTime : 0;
-      highQualityPlaylist({ limit: 50, before }).then(data => {
-        this.updatePlaylist(data.playlists);
-        this.hasMore = data.more;
-      });
-    },
-    getTopLists() {
-      toplists().then(data => {
-        this.playlists = [];
-        this.updatePlaylist(data.list);
-      });
-    },
-    getTopPlayList() {
-      topPlaylist({
-        cat: this.activeCategory,
-        offset: this.playlists.length,
-      }).then(data => {
-        this.updatePlaylist(data.playlists);
-        this.hasMore = data.more;
-      });
+      this.error = '';
+      setTimeout(() => {
+        if (current() && !this.show) NProgress.start();
+      }, 1000);
+      const params = { timestamp: Date.now() };
+      let request;
+      if (category === '推荐歌单')
+        request = getRecommendPlayList(100, true).then(playlists => ({
+          playlists,
+          more: false,
+        }));
+      else if (category === '排行榜')
+        request = toplists(params).then(data => ({
+          playlists: data.list,
+          more: false,
+        }));
+      else if (category === '精品歌单')
+        request = highQualityPlaylist({
+          ...params,
+          limit: 50,
+          before:
+            !refresh && this.playlists.length
+              ? this.playlists[this.playlists.length - 1].updateTime
+              : 0,
+        });
+      else
+        request = topPlaylist({
+          ...params,
+          cat: category,
+          offset: refresh ? 0 : this.playlists.length,
+        });
+      const work = request
+        .then(data => {
+          if (!current()) return;
+          if (!Array.isArray(data.playlists))
+            throw new Error('歌单暂时无法加载');
+          const seen = new Set();
+          this.playlists = [
+            ...(refresh ? [] : this.playlists),
+            ...data.playlists,
+          ].filter(item => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+          });
+          if (refresh) this.updatedAt = Date.now();
+          this.hasMore = Boolean(data.more);
+          this.showLoadMoreButton = true;
+        })
+        .catch(() => {
+          if (current()) this.error = '加载失败，请稍后重试';
+        })
+        .finally(() => {
+          if (this.loadingPromise === work) this.loadingPromise = null;
+          if (current()) {
+            this.loadingMore = false;
+            this.show = true;
+            NProgress.done();
+          }
+        });
+      this.loadingPromise = work;
+      return work;
     },
     getCatsByBigCat(name) {
       return playlistCategories.filter(c => c.bigCat === name);
@@ -318,6 +370,18 @@ h1 {
   .svg-icon {
     height: 24px;
     width: 24px;
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+.explore-error {
+  color: var(--color-text);
+  margin: 16px 0;
+  opacity: 0.7;
+  button {
+    color: var(--color-primary);
+    margin-left: 12px;
   }
 }
 </style>
