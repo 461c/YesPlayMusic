@@ -96,6 +96,7 @@ export default {
       show: false,
       active: false,
       updatedAt: 0,
+      offset: 0,
       generation: 0,
       loadingPromise: null,
       error: '',
@@ -124,6 +125,7 @@ export default {
       this.generation++;
       this.playlists = [];
       this.updatedAt = 0;
+      this.offset = 0;
       this.loadingPromise = null;
       this.loadingMore = false;
       if (this.active) this.loadData();
@@ -158,6 +160,7 @@ export default {
         this.activeCategory = category;
         this.playlists = [];
         this.updatedAt = 0;
+        this.offset = 0;
         this.loadingPromise = null;
       }
       if (this.loadingPromise) return this.loadingPromise;
@@ -206,7 +209,7 @@ export default {
         request = topPlaylist({
           ...params,
           cat: category,
-          offset: refresh ? 0 : this.playlists.length,
+          offset: refresh ? 0 : this.offset,
         });
       const work = request
         .then(data => {
@@ -222,6 +225,7 @@ export default {
             seen.add(item.id);
             return true;
           });
+          this.offset = (refresh ? 0 : this.offset) + data.playlists.length;
           if (refresh) this.updatedAt = Date.now();
           this.hasMore = Boolean(data.more);
           this.showLoadMoreButton = true;

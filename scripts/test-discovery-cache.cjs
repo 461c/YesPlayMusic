@@ -159,6 +159,11 @@ function explore(category) {
   await work;
   assert.equal(page.playlists.length, 2, 'Pagination deduplicates songs');
   assert.equal(
+    page.offset,
+    3,
+    'Next offset advances by raw server rows despite deduplication'
+  );
+  assert.equal(
     page.updatedAt,
     firstAge,
     'Pagination must not extend first-page freshness'
