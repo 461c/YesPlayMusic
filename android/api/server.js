@@ -39,7 +39,11 @@ server
             cookie: [],
           }),
         },
-        ...moduleDefs,
+        ...moduleDefs.map(definition =>
+          definition.route === '/scrobble'
+            ? { ...definition, module: require('./scrobble') }
+            : definition
+        ),
       ],
     })
   )

@@ -346,13 +346,15 @@ export default class {
     if (howler?._scrobbled || time < 1) return;
     if (howler) howler._scrobbled = true;
 
-    scrobble({
-      id: track.id,
-      sourceid: this.playlistSource.id,
-      time,
-    }).catch(error => {
-      console.debug('[debug][Player.js] scrobble failed', error);
-    });
+    // The native service owns NetEase history, including screen-off queue changes.
+    if (!isAndroid)
+      scrobble({
+        id: track.id,
+        sourceid: this.playlistSource.id,
+        time,
+      }).catch(error => {
+        console.debug('[debug][Player.js] scrobble failed', error);
+      });
     if (
       store.state.lastfm.key !== undefined &&
       (time >= trackDuration / 2 || time >= 240)

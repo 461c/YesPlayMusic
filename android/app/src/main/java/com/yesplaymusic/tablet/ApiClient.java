@@ -88,10 +88,13 @@ final class ApiClient {
         }
     }
     static JSONObject json(Context context, String path) throws Exception {
-        String cookie = preferences(context).getString("cookie", "");
+        return json(context, path, preferences(context).getString("cookie", ""),
+            preferences(context).getBoolean("useRemoteApi", false) ? baseUrl(context) : "local");
+    }
+    static JSONObject json(Context context, String path, String cookie, String api) throws Exception {
         String separator = path.contains("?") ? "&" : "?";
         ensureReady(context);
-        URL url = new URL(baseUrl(context) + path + separator + "cookie=" + Uri.encode(cookie));
+        URL url = new URL(("local".equals(api) ? baseUrl(context) : api) + path + separator + "cookie=" + Uri.encode(cookie));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(15000);

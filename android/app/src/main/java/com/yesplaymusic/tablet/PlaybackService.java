@@ -39,6 +39,7 @@ import org.json.JSONObject;
 public final class PlaybackService extends MediaLibraryService {
     private MediaLibrarySession session;
     private ExoPlayer player;
+    private PlaybackHistory history;
     private static volatile String mediaReport = "播放器尚未连接";
     static String systemMediaReport() { return mediaReport; }
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -70,6 +71,8 @@ public final class PlaybackService extends MediaLibraryService {
             .setAllowCrossProtocolRedirects(true);
         player = new ExoPlayer.Builder(this)
             .setMediaSourceFactory(new DefaultMediaSourceFactory(AudioCache.dataSources(this, network))).build();
+        history = new PlaybackHistory(this, player);
+        player.addListener(history);
         applyAudioFocusPolicy();
         ApiClient.preferences(this).registerOnSharedPreferenceChangeListener(preferenceListener);
         player.setHandleAudioBecomingNoisy(true);
@@ -160,6 +163,7 @@ public final class PlaybackService extends MediaLibraryService {
             report.put("audioSessionId", player.getAudioSessionId());
             report.put("concurrentPlayback", ApiClient.preferences(this).getBoolean("allowConcurrentPlayback", false));
             report.put("connectedControllers", clients);
+            report.put("neteaseHistory", PlaybackHistory.status);
             report.put("capturedAt", System.currentTimeMillis());
             mediaReport = report.toString(2);
         } catch (Exception error) { mediaReport = "无法读取系统会话：" + error.getClass().getSimpleName(); }
@@ -334,6 +338,7 @@ public final class PlaybackService extends MediaLibraryService {
         mediaReport = "播放器服务已停止";
         ApiClient.preferences(this).unregisterOnSharedPreferenceChangeListener(preferenceListener);
         if (player != null) PlaybackResumeStore.save(this, player, true);
+        if (history != null) { player.removeListener(history); history.close(); }
         worker.shutdownNow();
         main.removeCallbacksAndMessages(null);
         if (session != null) session.release();

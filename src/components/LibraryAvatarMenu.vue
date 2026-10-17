@@ -12,6 +12,7 @@
     <button
       ref="trigger"
       class="avatar-stack"
+      :class="{ expanded }"
       aria-label="切换用户，长按管理"
       :aria-expanded="expanded"
       aria-controls="library-person-picker"
@@ -38,6 +39,10 @@
         v-if="expanded"
         id="library-person-picker"
         class="people-picker"
+        :style="{
+          gridTemplateColumns:
+            'repeat(' + Math.min(stack.length, pickerColumns) + ', 72px)',
+        }"
         aria-label="选择用户"
         @keydown.esc.stop="escape"
       >
@@ -85,6 +90,7 @@ export default {
       pressTimer: null,
       suppressClickUntil: 0,
       generation: 0,
+      pickerColumns: 8,
     };
   },
   computed: {
@@ -153,6 +159,8 @@ export default {
     },
   },
   mounted() {
+    this.measurePicker();
+    window.addEventListener('resize', this.measurePicker);
     document.addEventListener('pointerdown', this.outside);
     document.addEventListener('keydown', this.escape);
   },
@@ -168,10 +176,23 @@ export default {
     this.$refs.menu?.closeMenu();
     this.close();
     this.generation++;
+    window.removeEventListener('resize', this.measurePicker);
     document.removeEventListener('pointerdown', this.outside);
     document.removeEventListener('keydown', this.escape);
   },
   methods: {
+    measurePicker() {
+      const left = this.$el.getBoundingClientRect().left - 10;
+      this.pickerColumns = Math.max(
+        1,
+        Math.min(
+          8,
+          Math.floor(
+            (window.innerWidth - Math.max(12, left) - 12 - 18 + 8) / 80
+          )
+        )
+      );
+    },
     async reload() {
       const generation = ++this.generation,
         scope = this.scope;
@@ -185,6 +206,7 @@ export default {
     },
     toggle() {
       if (Date.now() < this.suppressClickUntil) return;
+      this.measurePicker();
       this.expanded = !this.expanded;
       if (this.expanded) {
         this.reload();
@@ -275,6 +297,10 @@ export default {
   user-select: none;
   -webkit-touch-callout: none;
 }
+.avatar-stack.expanded {
+  visibility: hidden;
+  pointer-events: none;
+}
 .stack-face,
 .person-face {
   display: flex;
@@ -306,10 +332,10 @@ export default {
   top: -8px;
   left: -10px;
   width: max-content;
-  max-width: min(620px, calc(100vw - 48px));
-  overflow-x: auto;
+  max-height: min(440px, 65vh);
+  overflow-y: auto;
   overscroll-behavior: contain;
-  display: flex;
+  display: grid;
   gap: 8px;
   padding: 8px;
   box-sizing: border-box;
@@ -320,7 +346,8 @@ export default {
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
 }
 .person-option {
-  flex: 0 0 72px;
+  width: 72px;
+  box-sizing: border-box;
   min-width: 0;
   padding: 8px 4px;
   border-radius: 12px;

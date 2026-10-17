@@ -72,6 +72,11 @@ fs.copyFileSync(
   path.join(root, 'android/api/server.js'),
   path.join(output, 'server.js')
 );
+// Share the existing clientlog/eapi fix with Electron, not the obsolete upstream weblog.
+fs.copyFileSync(
+  path.join(root, 'src/electron/scrobble.js'),
+  path.join(output, 'scrobble.js')
+);
 const files = [];
 function inventory(directory) {
   for (const name of fs.readdirSync(directory).sort()) {

@@ -320,7 +320,8 @@ public final class MainActivity extends Activity {
                             i == index ? command.optJSONObject("track") : null, entry.optInt("logicalIndex", -1)));
                     }
                     ApiClient.setCookie(this, command.optString("cookie", ""));
-                    ApiClient.preferences(this).edit().putBoolean("personalFm", command.optBoolean("personalFm", false)).apply();
+                    ApiClient.preferences(this).edit().putBoolean("personalFm", command.optBoolean("personalFm", false))
+                        .putString("historySourceId", command.optString("sourceId", "0")).apply();
                     controller.setMediaItems(items, index, position);
                     controller.setRepeatMode(command.optInt("repeatMode", Player.REPEAT_MODE_OFF));
                     controller.setVolume((float) command.optDouble("volume", 1));

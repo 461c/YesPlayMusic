@@ -61,6 +61,7 @@ jobs:
           node scripts/test-home-sections.cjs
           node scripts/test-discovery-cache.cjs
           node scripts/test-playlist-recommendations.cjs
+          node scripts/test-netease-history.cjs
           node scripts/test-tracking.cjs
           node scripts/test-library-archive.cjs
           node scripts/test-retained-tracks.cjs
@@ -87,6 +88,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Test actual listening time accounting
+        run: |
+          mkdir -p "$RUNNER_TEMP/listening-test"
+          javac -d "$RUNNER_TEMP/listening-test" android/app/src/main/java/com/yesplaymusic/tablet/ListeningSession.java scripts/java/ListeningSessionTest.java
+          java -cp "$RUNNER_TEMP/listening-test" com.yesplaymusic.tablet.ListeningSessionTest
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'

@@ -85,6 +85,7 @@ export default class AndroidAudio {
       queue,
       index,
       cookie,
+      sourceId: String(owner.playlistSource?.id || 0),
       source:
         this.sourceTrackId === String(owner.currentTrackID) ? this._src : '',
       track: owner.currentTrack,
