@@ -65,7 +65,7 @@ export function getPlaylistDetail(id, noCache = false) {
     request({
       url: '/playlist/detail',
       method: 'get',
-      params: { id, ...(noCache ? { timestamp: Date.now() } : {}) },
+      params: { id, n: 50, ...(noCache ? { timestamp: Date.now() } : {}) },
     }).then(async data => {
       if (!data?.playlist) throw new Error('无法获取歌单信息');
       const previous = await getCachedPlaylist(id, scope);

@@ -162,6 +162,7 @@
           <div v-if="liked.playlists.length > 1">
             <CoverRow
               :items="filterPlaylists"
+              :compact="filterPlaylists.length > 20"
               type="playlist"
               sub-text="creator"
               :show-play-button="true"

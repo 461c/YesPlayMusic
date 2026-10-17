@@ -25,7 +25,7 @@
               ><img
                 v-image-fade
                 :src="backgroundSource | resizeImage(1024)"
-                @error="failedBackground = profile.backgroundUrl || ''"
+                @error="backgroundFailed"
                 alt=""
                 loading="lazy"
             /></button>
@@ -245,7 +245,7 @@ export default {
   },
   data() {
     return {
-      failedBackground: '',
+      failedBackgrounds: [],
       payload: null,
       updatedAt: 0,
       loading: false,
@@ -285,16 +285,19 @@ export default {
     profile() {
       return this.payload?.profile || {};
     },
-    hasBackground() {
-      return (
-        usableBackground(this.profile.backgroundUrl) &&
-        this.failedBackground !== this.profile.backgroundUrl
+    availableBackground() {
+      return [
+        ...(this.profile.backgroundCandidates || []),
+        this.profile.backgroundUrl,
+      ].find(
+        url => usableBackground(url) && !this.failedBackgrounds.includes(url)
       );
     },
+    hasBackground() {
+      return Boolean(this.availableBackground);
+    },
     backgroundSource() {
-      return this.hasBackground
-        ? this.profile.backgroundUrl
-        : this.profile.avatarUrl;
+      return this.availableBackground || this.profile.avatarUrl;
     },
     profileTags() {
       const tags = [
@@ -380,6 +383,10 @@ export default {
     this.generation++;
   },
   methods: {
+    backgroundFailed() {
+      if (this.availableBackground)
+        this.failedBackgrounds.push(this.availableBackground);
+    },
     async load(force = false, append = false) {
       if (
         !this.uid ||

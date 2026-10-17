@@ -34,6 +34,8 @@ const imageKeys = new Set([
   'originUrl',
   'squareUrl',
   'backgroundUrl',
+  'backgroundImageUrl',
+  'backgroundImgUrl',
   'rectangleUrl',
   'originalUrl',
 ]);
@@ -45,6 +47,10 @@ function allow(data) {
     if (!value || typeof value !== 'object') return;
     for (const [key, child] of Object.entries(value)) {
       if (imageKeys.has(key) && typeof child === 'string') urls.add(child);
+      else if (key === 'backgroundCandidates' && Array.isArray(child))
+        child.forEach(url => {
+          if (typeof url === 'string') urls.add(url);
+        });
       else if (key === 'json' && typeof child === 'string') {
         try {
           collect(JSON.parse(child));

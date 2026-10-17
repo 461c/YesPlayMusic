@@ -1,5 +1,5 @@
 <template>
-  <div class="cover-row" :style="rowStyles">
+  <div class="cover-row" :class="{ compact }" :style="rowStyles">
     <div
       v-for="item in items"
       :key="item.id || item.userId"
@@ -22,6 +22,8 @@
       <Cover
         v-else
         :id="item.id"
+        :fixed-size="compact ? 64 : 0"
+        :radius="compact ? 8 : 12"
         :image-url="getImageUrl(item)"
         :type="type"
         :play-button-size="type === 'artist' ? 26 : playButtonSize"
@@ -58,8 +60,16 @@
             item.name
           }}</router-link>
         </div>
+        <div v-if="compact" class="info"
+          >{{ item.trackCount != null ? item.trackCount + ' 首' : ''
+          }}<span v-if="item.creator && item.creator.nickname">
+            · {{ item.creator.nickname }}</span
+          ></div
+        >
         <div
-          v-if="!['artist', 'user'].includes(type) && subText !== 'none'"
+          v-if="
+            !compact && !['artist', 'user'].includes(type) && subText !== 'none'
+          "
           class="info"
         >
           <span v-html="getSubText(item)"></span>
@@ -81,6 +91,7 @@ export default {
   },
   props: {
     items: { type: Array, required: true },
+    compact: { type: Boolean, default: false },
     type: { type: String, required: true },
     subText: { type: String, default: 'none' },
     subTextFontSize: { type: String, default: '16px' },
@@ -91,6 +102,11 @@ export default {
   },
   computed: {
     rowStyles() {
+      if (this.compact)
+        return {
+          'grid-template-columns': 'repeat(3, minmax(0, 1fr))',
+          gap: '14px 22px',
+        };
       return {
         'grid-template-columns': `repeat(${this.columnNumber}, 1fr)`,
         gap: this.gap,
@@ -246,6 +262,50 @@ export default {
     margin-right: 3px;
     height: 8px;
     width: 8px;
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+.cover-row.compact {
+  gap: 14px 22px !important;
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 10px;
+    background: var(--color-secondary-bg);
+  }
+  .cover {
+    flex: 0 0 64px;
+    width: 64px;
+    min-width: 64px;
+  }
+  .text {
+    min-width: 0;
+    margin-top: 0;
+    flex: 1;
+  }
+  .text .title {
+    font-size: 15px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .info {
+    margin-top: 3px;
+  }
+}
+@media (max-width: 1000px) {
+  .cover-row.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 600px) {
+  .cover-row.compact {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
   }
 }
 </style>

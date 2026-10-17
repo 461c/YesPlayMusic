@@ -181,12 +181,12 @@
           : '此歌单尚无本地内容，请联网打开一次。'
       }}
     </div>
-    <div class="load-more">
+    <div ref="loadMoreTrigger" class="load-more">
       <ButtonTwoTone
         v-show="hasMore"
         color="grey"
         :loading="loadingMore"
-        @click.native="loadMore(100)"
+        @click.native="loadMore(50)"
         >{{ $t('explore.loadMore') }}</ButtonTwoTone
       >
     </div>
@@ -368,7 +368,11 @@ export default {
       },
       showFullDescription: false,
       tracks: [],
+      bufferedTracks: [],
+      loadGeneration: 0,
+      scrollFrame: null,
       loadingMore: false,
+      refreshingPlaylist: false,
       hasMore: false,
       lastLoadedTrackIndex: 9,
       displaySearchInPlaylist: false, // 是否显示搜索框
@@ -424,7 +428,38 @@ export default {
       if (!this.show) NProgress.start();
     }, 1000);
   },
+  mounted() {
+    this.$parent.$refs.main.addEventListener('scroll', this.onPlaylistScroll, {
+      passive: true,
+    });
+  },
+  beforeDestroy() {
+    this.loadGeneration++;
+    this.$parent.$refs.main.removeEventListener(
+      'scroll',
+      this.onPlaylistScroll
+    );
+    if (this.scrollFrame) cancelAnimationFrame(this.scrollFrame);
+  },
   methods: {
+    onPlaylistScroll() {
+      if (this.scrollFrame) return;
+      this.scrollFrame = requestAnimationFrame(() => {
+        this.scrollFrame = null;
+        if (
+          !this.show ||
+          this.refreshingPlaylist ||
+          !this.hasMore ||
+          this.loadingMore ||
+          !this.$refs.loadMoreTrigger
+        )
+          return;
+        const bounds = this.$refs.loadMoreTrigger.getBoundingClientRect();
+        const main = this.$parent.$refs.main.getBoundingClientRect();
+        if (bounds.top < main.bottom + 400 && bounds.bottom > main.top)
+          this.loadMore(50);
+      });
+    },
     ...mapMutations(['appendTrackToPlayerList']),
     ...mapActions(['playFirstTrackOnList', 'playTrackOnListByID', 'showToast']),
     playPlaylistByID(trackID = 'first') {
@@ -459,7 +494,8 @@ export default {
     },
     applyPlaylist(data) {
       this.playlist = data.playlist;
-      this.tracks = [...(data.playlist.tracks || [])];
+      this.bufferedTracks = data.playlist.tracks || [];
+      this.tracks = this.bufferedTracks.slice(0, 50);
       this.lastLoadedTrackIndex = this.tracks.length - 1;
       this.hasMore = this.tracks.length < (data.playlist.trackIds?.length || 0);
       observePlaylistArtwork(data.playlist);
@@ -467,27 +503,35 @@ export default {
       NProgress.done();
     },
     async loadData(id, next = undefined) {
+      const generation = ++this.loadGeneration;
       this.id = id;
+      this.refreshingPlaylist = true;
+      this.loadingMore = false;
       const cached = await getCachedPlaylist(id);
-      if (String(this.id) !== String(id)) return;
+      if (generation !== this.loadGeneration) return;
       if (cached) this.applyPlaylist(cached);
       try {
         if (!cached || navigator.onLine !== false) {
           const data = await getPlaylistDetail(id, true);
-          if (String(this.id) !== String(id)) return;
+          if (generation !== this.loadGeneration) return;
           this.applyPlaylist(data);
         }
         if (next) next();
-        if (this.hasMore) this.loadMore();
+        this.refreshingPlaylist = false;
+        if (this.hasMore && this.tracks.length < 50)
+          this.loadMore(50 - this.tracks.length);
       } catch (error) {
-        this.offline = true;
+        if (generation === this.loadGeneration) this.offline = true;
       } finally {
-        this.show = true;
-        NProgress.done();
+        if (generation === this.loadGeneration) {
+          this.refreshingPlaylist = false;
+          this.show = true;
+          NProgress.done();
+        }
       }
     },
-    async loadMore(loadNum = 100) {
-      if (this.loadingMore) return;
+    async loadMore(loadNum = 50) {
+      if (this.loadingMore || this.refreshingPlaylist) return;
       const ids = this.playlist.trackIds
         .slice(
           this.lastLoadedTrackIndex + 1,
@@ -498,17 +542,32 @@ export default {
         this.hasMore = false;
         return;
       }
+      const generation = this.loadGeneration;
       this.loadingMore = true;
       try {
-        const data = await getTrackDetail(ids.join(','));
-        this.tracks.push(...data.songs);
+        const available = new Map(
+          this.bufferedTracks.map(track => [String(track.id), track])
+        );
+        const missing = ids.filter(id => !available.has(String(id)));
+        if (missing.length) {
+          const data = await getTrackDetail(missing.join(','));
+          for (const track of data.songs)
+            available.set(String(track.id), track);
+        }
+        if (generation !== this.loadGeneration) return;
+        const visible = new Set(this.tracks.map(track => String(track.id)));
+        this.tracks.push(
+          ...ids
+            .map(id => available.get(String(id)))
+            .filter(track => track && !visible.has(String(track.id)))
+        );
         this.lastLoadedTrackIndex += ids.length;
         this.hasMore =
           this.lastLoadedTrackIndex + 1 < this.playlist.trackIds.length;
       } catch (error) {
-        this.offline = true;
+        if (generation === this.loadGeneration) this.offline = true;
       } finally {
-        this.loadingMore = false;
+        if (generation === this.loadGeneration) this.loadingMore = false;
       }
     },
     openMenu(e) {
@@ -542,7 +601,6 @@ export default {
         this.inputSearchKeyWords = '';
       } else {
         this.searchInputWidth = '172px';
-        this.loadMore(500);
       }
     },
     removeTrack(trackID) {
@@ -578,6 +636,7 @@ export default {
 }
 
 .playlist {
+  overflow-anchor: none;
   position: relative;
   margin-top: 32px;
 }

@@ -225,6 +225,7 @@
                 <p v-if="error" role="status" class="muted">{{ error }}</p>
                 <CoverRow
                   :items="groupPlaylists(items)"
+                  :compact="groupPlaylists(items).length > 20"
                   type="playlist"
                   sub-text="creator"
                   :show-play-count="true"

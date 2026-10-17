@@ -29,6 +29,7 @@ export function readTrackingSection(uid, section, cursor = {}) {
     params: {
       uid,
       limit: 30,
+      ...(section === 'likes' ? { n: 50 } : {}),
       ...cursor,
       ...(item.type === undefined ? {} : { type: item.type }),
     },
@@ -53,24 +54,45 @@ export function readTrackingSection(uid, section, cursor = {}) {
       throw new Error('当前内容不可见或接口返回不完整，保留本地副本');
     if (section === 'profile' && !data.profile)
       throw new Error('未找到该用户的公开资料');
-    if (
-      section === 'profile' &&
-      !usableBackground(data.profile.backgroundUrl)
-    ) {
+    if (section === 'profile') {
+      const backgrounds = [];
+      const collect = value => {
+        if (!value || typeof value !== 'object') return;
+        for (const key of [
+          'backgroundUrl',
+          'backgroundImageUrl',
+          'backgroundImgUrl',
+        ])
+          if (usableBackground(value[key]))
+            backgrounds.push(value[key].replace(/^http:/, 'https:'));
+        for (const key of [
+          'data',
+          'profile',
+          'userProfile',
+          'profileInfo',
+          'backgroundInfo',
+        ])
+          if (value[key] && typeof value[key] === 'object') collect(value[key]);
+      };
       try {
         const alternate = await request({
           url: '/user/detail/new',
           method: 'get',
+          timeout: 7000,
           skipAuthRedirect: true,
-          params: { uid, timestamp: Date.now() },
+          params: { uid, ypmMobile: 1, timestamp: Date.now() },
         });
-        const profile =
-          alternate?.profile || alternate?.data?.profile || alternate?.data;
-        if (usableBackground(profile?.backgroundUrl))
-          data.profile.backgroundUrl = profile.backgroundUrl;
+        if (
+          alternate &&
+          (alternate.code === undefined || alternate.code === 200)
+        )
+          collect(alternate);
       } catch (_) {
-        /* Preserve the standard profile; the view falls back to its avatar. */
+        /* Preserve the standard profile when the mobile view is unavailable. */
       }
+      collect(data.profile);
+      data.profile.backgroundCandidates = [...new Set(backgrounds)];
+      if (backgrounds.length) data.profile.backgroundUrl = backgrounds[0];
     }
     return data;
   });
