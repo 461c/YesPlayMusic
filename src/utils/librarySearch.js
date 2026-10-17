@@ -24,9 +24,17 @@ function termsFor(item) {
     .filter(value => typeof value === 'string')
     .join(' ');
 }
-export function buildLibraryIndex(liked, saved, tracks) {
+function ownedPlaylists(liked, ownerId) {
+  const owner = ownerId || liked.playlists?.[0]?.creator?.userId;
+  return (liked.playlists || []).filter(
+    item => owner != null && String(item.creator?.userId) === String(owner)
+  );
+}
+export function buildLibraryIndex(liked, saved, tracks, ownerId, albums = []) {
   const playlists = liked.playlists || [];
-  const known = new Map(playlists.map(item => [String(item.id), item]));
+  const known = new Map(
+    ownedPlaylists(liked, ownerId).map(item => [String(item.id), item])
+  );
   const snapshots = saved.filter(item => known.has(String(item.playlist.id)));
   const songs = new Map();
   const add = (song, source) => {
@@ -66,23 +74,20 @@ export function buildLibraryIndex(liked, saved, tracks) {
   };
   for (const song of liked.songsWithDetails || []) add(song, likes);
   for (const id of liked.songs || []) add(details.get(String(id)), likes);
-  for (const song of liked.cloudDisk || [])
-    add(
-      {
-        ...song,
-        id: song.songId || song.id,
-        name: song.songName || song.name,
-        ar: song.ar || [{ name: song.artist }],
-        al: song.al || { name: song.album },
-      },
-      { key: 'cloud', name: '云盘', kind: '音乐库' }
-    );
-  for (const [key, label] of [
-    ['weekData', '本周排行'],
-    ['allData', '累计排行'],
-  ])
-    for (const row of liked.playHistory?.[key] || [])
-      add(row.song || row, { key, name: label, kind: '排行' });
+  const collectedAlbums = new Map(
+    (liked.albums || []).map(item => [String(item.id), item])
+  );
+  for (const savedAlbum of albums) {
+    const album = collectedAlbums.get(String(savedAlbum.album?.id));
+    if (!album) continue;
+    const source = {
+      key: 'album:' + album.id,
+      name: album.name,
+      path: '/album/' + album.id,
+      kind: '专辑',
+    };
+    for (const song of savedAlbum.songs || []) add(song, source);
+  }
   const total = snapshots.reduce(
     (sum, item) =>
       sum +
@@ -93,11 +98,11 @@ export function buildLibraryIndex(liked, saved, tracks) {
     playlists,
     songs: [...songs.values()],
     albums: liked.albums || [],
-    artists: liked.artists || [],
-    mvs: liked.mvs || [],
+    artists: [],
+    mvs: [],
     coverage: {
       saved: snapshots.length,
-      total: playlists.length,
+      total: ownedPlaylists(liked, ownerId).length,
       songs: songs.size,
       listed: total,
     },
@@ -112,6 +117,8 @@ export function buildLibraryIndex(liked, saved, tracks) {
           ? termsFor(item.song) +
               ' ' +
               item.sources.map(source => source.name).join(' ')
+          : ['playlists', 'albums'].includes(key)
+          ? item.name
           : termsFor(item)
       ),
     }));
@@ -127,13 +134,16 @@ export function queryLibrary(index, query) {
       .map(entry => entry.item);
   return result;
 }
-export function searchLibrary(liked, saved, tracks, query) {
-  return queryLibrary(buildLibraryIndex(liked, saved, tracks), query);
+export function searchLibrary(liked, saved, tracks, query, ownerId, albums) {
+  return queryLibrary(
+    buildLibraryIndex(liked, saved, tracks, ownerId, albums),
+    query
+  );
 }
-export function libraryTrackIds(liked, saved) {
+export function libraryTrackIds(liked, saved, ownerId) {
   const ids = new Set((liked.songs || []).map(String));
   const playlists = new Set(
-    (liked.playlists || []).map(item => String(item.id))
+    ownedPlaylists(liked, ownerId).map(item => String(item.id))
   );
   for (const snapshot of saved) {
     if (!playlists.has(String(snapshot.playlist.id))) continue;

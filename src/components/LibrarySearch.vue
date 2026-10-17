@@ -8,7 +8,7 @@
         >已保存 {{ results.coverage.saved }}/{{
           results.coverage.total
         }}
-        个歌单的内容 · {{ results.coverage.songs }} 首歌曲可检索</p
+        个创建歌单的内容 · {{ results.coverage.songs }} 首歌曲可检索</p
       ></div
     >
     <p v-if="error" role="status">{{ error }}</p>
@@ -95,7 +95,7 @@
       v-if="visible('artists') && results.artists.length"
       class="result-group"
       ><h3
-        >关注 <span>{{ results.artists.length }}</span></h3
+        >歌手 <span>{{ results.artists.length }}</span></h3
       ><CoverRow :items="results.artists" type="artist"
     /></div>
     <div v-if="visible('mvs') && results.mvs.length" class="result-group"
@@ -113,7 +113,7 @@ import CoverRow from '@/components/CoverRow.vue';
 import MvRow from '@/components/MvRow.vue';
 import SvgIcon from '@/components/SvgIcon.vue';
 import { readSavedPlaylists } from '@/utils/offlineLibrary';
-import { getSavedTrackDetails } from '@/utils/db';
+import { getSavedTrackDetails, getSavedAlbums } from '@/utils/db';
 import {
   buildLibraryIndex,
   queryLibrary,
@@ -130,6 +130,7 @@ export default {
   data() {
     return {
       saved: [],
+      albums: [],
       tracks: [],
       loading: false,
       error: '',
@@ -141,14 +142,18 @@ export default {
         { key: 'playlists', name: '歌单' },
         { key: 'songs', name: '歌曲' },
         { key: 'albums', name: '专辑' },
-        { key: 'artists', name: '关注' },
-        { key: 'mvs', name: '视频' },
       ],
     };
   },
   computed: {
     index() {
-      return buildLibraryIndex(this.liked, this.saved, this.tracks);
+      return buildLibraryIndex(
+        this.liked,
+        this.saved,
+        this.tracks,
+        this.$store.state.data.user?.userId,
+        this.albums
+      );
     },
     results() {
       return queryLibrary(this.index, this.query);
@@ -170,6 +175,9 @@ export default {
     'liked.playlists'() {
       this.load();
     },
+    'liked.albums'() {
+      this.load();
+    },
     'liked.songs'() {
       this.load();
     },
@@ -182,15 +190,24 @@ export default {
       const epoch = ++this.generation;
       this.saved = [];
       this.tracks = [];
+      this.albums = [];
       this.loading = true;
       this.error = '';
       try {
-        const saved = await readSavedPlaylists(this.scope);
+        const [saved, albums] = await Promise.all([
+          readSavedPlaylists(this.scope),
+          getSavedAlbums((this.liked.albums || []).map(item => item.id)),
+        ]);
         const tracks = await getSavedTrackDetails(
-          libraryTrackIds(this.liked, saved)
+          libraryTrackIds(
+            this.liked,
+            saved,
+            this.$store.state.data.user?.userId
+          )
         );
         if (epoch !== this.generation) return;
         this.saved = saved;
+        this.albums = albums;
         this.tracks = tracks;
       } catch (_) {
         if (epoch === this.generation) this.error = '部分本地条目暂时无法读取';

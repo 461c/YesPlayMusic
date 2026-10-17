@@ -12,24 +12,16 @@
       <p v-if="error" role="status" class="muted">{{ error }}</p>
       <div v-if="payload" v-page-reveal>
         <template v-if="tab === 'profile'">
-          <div
-            v-if="profile.backgroundUrl || profile.avatarUrl"
-            class="profile-photos"
-          >
+          <div v-if="profile.avatarUrl" class="profile-photos">
             <button
-              v-if="profile.backgroundUrl"
+              v-if="profile.avatarUrl"
               class="profile-background"
-              aria-label="查看背景照片"
-              @click="
-                viewPhotos(
-                  [profile.backgroundUrl, profile.avatarUrl].filter(Boolean),
-                  0
-                )
-              "
+              aria-label="查看头像照片"
+              @click="viewPhotos([profile.avatarUrl], 0)"
               ><img
                 v-image-fade
-                :src="profile.backgroundUrl | resizeImage(1024)"
-                alt="背景照片"
+                :src="profile.avatarUrl | resizeImage(224)"
+                alt=""
                 loading="lazy"
             /></button>
             <button
@@ -307,7 +299,6 @@ export default {
         ['村龄（天）', d.createDays],
         ['歌单', p.playlistCount],
         ['收藏', p.playlistBeSubscribedCount],
-        ['积分', d.userPoint?.balance],
         [
           '听歌排行',
           d.peopleCanSeeMyPlayRecord === false ? '不公开' : undefined,
@@ -928,6 +919,17 @@ small {
 @media (max-width: 600px) {
   .event {
     padding: 16px;
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+.profile-background {
+  overflow: hidden;
+  img {
+    filter: blur(18px);
+    transform: scale(1.18);
+    opacity: 0.72;
   }
 }
 </style>

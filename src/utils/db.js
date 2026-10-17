@@ -234,3 +234,11 @@ export async function getSavedTrackDetails(ids) {
     .toArray()
     .then(rows => rows.map(row => row.detail));
 }
+
+export function getSavedAlbums(ids) {
+  const known = new Set(ids.map(String));
+  return db.album
+    .filter(row => known.has(String(row.id)))
+    .toArray()
+    .then(rows => rows.map(row => row.album));
+}

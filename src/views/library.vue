@@ -118,7 +118,7 @@
               :class="{ active: currentTab === 'artists' }"
               @click="updateCurrentTab('artists')"
             >
-              关注
+              歌手
             </div>
             <div
               class="tab"

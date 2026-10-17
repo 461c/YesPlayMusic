@@ -87,9 +87,9 @@ const { searchLibrary, libraryTrackIds } = load(
 );
 const liked = {
   playlists: [
-    { id: 10, name: '我的摇滚', creator: { nickname: 'Me' } },
-    { id: 20, name: '夜晚', creator: { nickname: 'Other' } },
-    { id: 30, name: '未打开' },
+    { id: 10, name: '我的摇滚', creator: { nickname: 'Me', userId: 1 } },
+    { id: 20, name: '夜晚', creator: { nickname: 'Other', userId: 2 } },
+    { id: 30, name: '未打开', creator: { userId: 1 } },
   ],
   songs: [1],
   songsWithDetails: [{ id: 1, name: 'Alpha', ar: [{ name: 'Band' }] }],
@@ -133,7 +133,7 @@ let results = searchLibrary(liked, saved, tracks, 'alpha band');
 assert.equal(results.songs.length, 1);
 assert.equal(
   results.songs[0].sources.length,
-  3,
+  2,
   'One song retains all playlist and liked-list memberships'
 );
 assert.equal(
@@ -148,16 +148,22 @@ assert.equal(
   2,
   'Searching a playlist name finds its saved tracks including paginated details'
 );
-assert.equal(searchLibrary(liked, saved, tracks, '乐队').artists.length, 1);
-assert.equal(searchLibrary(liked, saved, tracks, 'cloud').songs[0].song.id, 6);
+assert.equal(searchLibrary(liked, saved, tracks, '乐队').artists.length, 0);
+assert.equal(searchLibrary(liked, saved, tracks, 'cloud').songs.length, 0);
 assert.equal(
   libraryTrackIds(liked, saved).sort().join(','),
   '1,2',
   'Never include unrelated cached playlist tracks'
 );
-assert.equal(results.coverage.saved, 2);
-assert.equal(results.coverage.total, 3);
+assert.equal(results.coverage.saved, 1);
+assert.equal(results.coverage.total, 2);
 assert.equal(searchLibrary(liked, saved, tracks, 'not-here').songs.length, 0);
+assert.equal(
+  searchLibrary(liked, saved, tracks, 'album-song', 1, [
+    { album: { id: 2 }, songs: [{ id: 8, name: 'album-song' }] },
+  ]).songs[0].sources[0].kind,
+  '专辑'
+);
 let settings = { archiveMode: true };
 const { archiveMode, archiveError } = load(
   'src/utils/archiveMode.js',
