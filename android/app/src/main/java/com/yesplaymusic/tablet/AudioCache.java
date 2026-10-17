@@ -30,6 +30,7 @@ final class AudioCache {
     private static DynamicEvictor evictor;
 
     private static long maximum(Context context) {
+        if (ApiClient.preferences(context).getBoolean("archiveMode", false)) return Long.MAX_VALUE;
         long mb = ApiClient.preferences(context).getLong("cacheLimitMb", 8192);
         return mb <= 0 ? Long.MAX_VALUE : mb * 1024L * 1024L;
     }
@@ -50,6 +51,10 @@ final class AudioCache {
             evictor.trim(cache, 0);
         }
     }
+    static synchronized void preserve(Context context, boolean enabled) {
+        ApiClient.preferences(context).edit().putBoolean("archiveMode", enabled).apply();
+        if (evictor != null) evictor.maximum = maximum(context);
+    }
     private static String key(Context context, String id, String level) {
         String server = ApiClient.preferences(context).getBoolean("useRemoteApi", false)
             ? ApiClient.preferences(context).getString("apiUrl", "") : "embedded-api";
@@ -68,6 +73,8 @@ final class AudioCache {
             String level = ApiClient.preferences(app).getString("qualityLevel", "exhigh");
             String[] id = { null }, cacheKey = { null };
             DataSource.Factory upstream = () -> new ResolvingDataSource(network.createDataSource(), spec -> {
+                if (ApiClient.preferences(app).getBoolean("archiveMode", false))
+                    throw new java.io.IOException("纪念模式：此歌曲没有完整本地缓存");
                 if (id[0] == null) return spec;
                 // Always refresh through the original track, even if cached redirect URLs have expired.
                 Uri address = ApiClient.resolveAudio(app, id[0], level);
@@ -90,7 +97,7 @@ final class AudioCache {
                     return cacheKey[0];
                 });
             // Disabling automatic caching stops new writes; existing music can still be read.
-            if (!ApiClient.preferences(app).getBoolean("cacheEnabled", true)) factory.setCacheWriteDataSinkFactory(null);
+            if (ApiClient.preferences(app).getBoolean("archiveMode", false) || !ApiClient.preferences(app).getBoolean("cacheEnabled", true)) factory.setCacheWriteDataSinkFactory(null);
             return factory.createDataSource();
         };
     }

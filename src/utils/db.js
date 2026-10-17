@@ -1,3 +1,4 @@
+import { archiveMode } from './archiveMode';
 import axios from 'axios';
 import Dexie from 'dexie';
 import store from '@/store';
@@ -71,6 +72,7 @@ async function initTracksCacheBytes() {
 initTracksCacheBytes();
 
 async function deleteExcessCache() {
+  if (archiveMode()) return;
   if (
     store.state.settings.cacheLimit === false ||
     tracksCacheBytes < store.state.settings.cacheLimit * Math.pow(1024, 2)
@@ -136,12 +138,14 @@ export function getTrackSource(id) {
 }
 
 export function cacheTrackDetail(track, privileges) {
-  db.trackDetail.put({
-    id: track.id,
-    detail: track,
-    privileges: privileges,
-    updateTime: new Date().getTime(),
-  });
+  return db.trackDetail
+    .put({
+      id: track.id,
+      detail: track,
+      privileges: privileges,
+      updateTime: new Date().getTime(),
+    })
+    .catch(error => console.debug('Unable to save track detail', error));
 }
 
 export function getTrackDetailFromCache(ids) {
@@ -220,4 +224,13 @@ export function clearDB() {
     });
     resolve();
   });
+}
+
+// Local-only lookup for library search, including ordinary paginated track reads.
+export async function getSavedTrackDetails(ids) {
+  const known = new Set(ids.map(String));
+  return db.trackDetail
+    .filter(row => known.has(String(row.id)))
+    .toArray()
+    .then(rows => rows.map(row => row.detail));
 }

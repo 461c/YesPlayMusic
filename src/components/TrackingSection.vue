@@ -12,30 +12,69 @@
       <p v-if="error" role="status" class="muted">{{ error }}</p>
       <div v-if="payload" v-page-reveal>
         <template v-if="tab === 'profile'">
-          <div class="profile-card"
-            ><p v-if="profile.signature">{{ profile.signature }}</p
-            ><p v-if="profile.description">{{ profile.description }}</p
-            ><p
+          <div
+            v-if="profile.backgroundUrl || profile.avatarUrl"
+            class="profile-photos"
+          >
+            <button
+              v-if="profile.backgroundUrl"
+              class="profile-background"
+              aria-label="查看背景照片"
+              @click="
+                viewPhotos(
+                  [profile.backgroundUrl, profile.avatarUrl].filter(Boolean),
+                  0
+                )
+              "
+              ><img
+                v-image-fade
+                :src="profile.backgroundUrl | resizeImage(1024)"
+                alt="背景照片"
+                loading="lazy"
+            /></button>
+            <button
+              v-if="profile.avatarUrl"
+              class="profile-portrait"
+              aria-label="查看头像照片"
+              @click="viewPhotos([profile.avatarUrl], 0)"
+              ><img
+                v-image-fade
+                :src="profile.avatarUrl | resizeImage(224)"
+                alt="头像"
+            /></button>
+          </div>
+          <div class="profile-identity"
+            ><strong>{{ profile.nickname }}</strong
+            ><span>ID {{ profile.userId || uid }}</span></div
+          >
+          <div v-if="profileTags.length" class="profile-tags"
+            ><span v-for="tag in profileTags" :key="tag">{{ tag }}</span></div
+          >
+          <div class="profile-card">
+            <p v-if="profile.signature">{{ profile.signature }}</p>
+            <p v-if="profile.description">{{ profile.description }}</p>
+            <p
               v-if="
                 profile.detailDescription &&
                 profile.detailDescription !== profile.description
               "
               >{{ profile.detailDescription }}</p
-            ></div
-          >
+            >
+          </div>
           <dl class="stats"
             ><div v-for="stat in profileStats" :key="stat.label"
               ><dt>{{ stat.label }}</dt
               ><dd>{{ stat.value }}</dd></div
             ></dl
           >
-          <p v-if="payload.identify && payload.identify.imageDesc"
-            >身份认证：{{ payload.identify.imageDesc }}</p
+          <router-link
+            v-if="profile.artistId"
+            class="artist-link"
+            :to="'/artist/' + profile.artistId"
+            >查看歌手主页</router-link
           >
-          <p v-if="profile.artistId"
-            ><router-link :to="'/artist/' + profile.artistId"
-              >查看歌手主页</router-link
-            ></p
+          <small v-if="updatedAt" class="snapshot-date"
+            >保存于 {{ date(updatedAt) }}</small
           >
         </template>
         <template v-else-if="tab === 'playlists'">
@@ -58,35 +97,94 @@
           />
         </template>
         <template v-else-if="tab === 'events'">
-          <article v-for="item in items" :key="item.id" class="event"
-            ><small>{{ date(item.eventTime || item.showTime) }}</small
-            ><p>{{ eventData(item).msg || '分享了一条动态' }}</p
-            ><router-link
-              v-if="eventData(item).song"
-              :to="'/album/' + (eventData(item).song.album || {}).id"
-              >分享歌曲：{{ eventData(item).song.name }}</router-link
-            ><router-link
-              v-if="eventData(item).playlist"
-              :to="'/playlist/' + eventData(item).playlist.id"
-              >分享歌单：{{ eventData(item).playlist.name }}</router-link
-            ><router-link
-              v-if="eventData(item).album"
-              :to="'/album/' + eventData(item).album.id"
-              >分享专辑：{{ eventData(item).album.name }}</router-link
-            ><div class="event-images"
-              ><img
+          <article
+            v-for="item in items"
+            :key="item.id"
+            class="event"
+            :class="{ 'event-unavailable': item.archiveStatus }"
+          >
+            <div class="event-meta"
+              ><time>{{ date(item.eventTime || item.showTime) }}</time
+              ><span v-if="item.archiveStatus" class="deleted-badge"
+                >已删除或不可见</span
+              ><span v-if="item.topEvent || item.top">置顶</span></div
+            >
+            <p>{{ eventData(item).msg || item.message || '分享了一条动态' }}</p>
+            <template v-for="resource in eventResources(item)">
+              <button
+                v-if="resource.kind === 'song'"
+                :key="resource.key"
+                class="event-resource"
+                @click="play(resource.id)"
+              >
+                <img
+                  v-if="resource.cover"
+                  v-image-fade
+                  :src="resource.cover | resizeImage(224)"
+                  loading="lazy"
+                  alt=""
+                /><span
+                  ><strong>{{ resource.name }}</strong
+                  ><small>{{ resource.subtitle || '歌曲' }}</small></span
+                ><span class="resource-action">播放</span>
+              </button>
+              <router-link
+                v-else
+                :key="resource.key"
+                class="event-resource"
+                :to="resource.path"
+                ><img
+                  v-if="resource.cover"
+                  v-image-fade
+                  :src="resource.cover | resizeImage(224)"
+                  loading="lazy"
+                  alt=""
+                /><span
+                  ><strong>{{ resource.name }}</strong
+                  ><small>{{ resource.subtitle }}</small></span
+                ></router-link
+              >
+            </template>
+            <div v-if="eventData(item).event" class="forwarded-event"
+              ><strong>{{
+                (eventData(item).event.user || {}).nickname || '转发动态'
+              }}</strong
+              ><p>{{ eventData(eventData(item).event).msg }}</p
+              ><div class="event-images"
+                ><button
+                  v-for="(pic, index) in eventData(item).event.pics || []"
+                  :key="index"
+                  :aria-label="'查看转发图片 ' + (index + 1)"
+                  @click="viewPhotos(eventData(item).event.pics, index)"
+                  ><img
+                    v-image-fade
+                    :src="(pic.originUrl || pic.squareUrl) | resizeImage(224)"
+                    loading="lazy"
+                    alt="转发图片" /></button></div
+            ></div>
+            <div class="event-images"
+              ><button
                 v-for="(pic, index) in item.pics || []"
                 :key="index"
-                v-image-fade
-                :src="(pic.originUrl || pic.squareUrl) | resizeImage(224)"
-                loading="lazy"
-                alt="动态图片" /></div
-            ><small
-              >赞 {{ (item.info || {}).likedCount || 0 }} · 评论
-              {{ (item.info || {}).commentCount || 0 }} · 转发
-              {{ (item.info || {}).shareCount || 0 }}</small
-            ></article
-          >
+                :aria-label="'查看图片 ' + (index + 1)"
+                @click="viewPhotos(item.pics, index)"
+                ><img
+                  v-image-fade
+                  :src="(pic.originUrl || pic.squareUrl) | resizeImage(224)"
+                  loading="lazy"
+                  alt="动态图片" /></button
+            ></div>
+            <div class="event-footer"
+              ><span v-if="item.rcmdInfo && item.rcmdInfo.reason">{{
+                item.rcmdInfo.reason
+              }}</span
+              ><span
+                >赞 {{ (item.info || {}).likedCount || 0 }} · 评论
+                {{ (item.info || {}).commentCount || 0 }} · 转发
+                {{ (item.info || {}).shareCount || 0 }}</span
+              ></div
+            >
+          </article>
         </template>
         <p v-if="tab !== 'profile' && !items.length" class="muted">暂无内容</p>
         <button
@@ -101,6 +199,10 @@
   </section>
 </template>
 <script>
+import { cacheTrackDetail } from '@/utils/db';
+import { archiveMode, archiveError } from '@/utils/archiveMode';
+import { openPhotos, closePhotos } from '@/utils/photoLightbox';
+import { eventData, mergeTrackingEvents } from '@/utils/trackingEvents';
 import { mapTrackPlayableStatus } from '@/utils/common';
 import { observeTrackingArtwork } from '@/utils/trackingArtwork';
 import CoverRow from '@/components/CoverRow.vue';
@@ -162,6 +264,19 @@ export default {
     profile() {
       return this.payload?.profile || {};
     },
+    profileTags() {
+      const tags = [
+        ...(this.profile.expertTags || []),
+        ...(this.profile.allAuthTypes || []).map(
+          item => item.desc || item.name
+        ),
+      ];
+      const identity = this.payload?.identify?.imageDesc;
+      if (identity) tags.unshift(identity);
+      return [
+        ...new Set(tags.filter(value => typeof value === 'string' && value)),
+      ];
+    },
     profileStats() {
       const p = this.profile,
         d = this.payload || {};
@@ -169,7 +284,13 @@ export default {
         ['等级', d.level],
         ['累计听歌', d.listenSongs],
         ['村龄（天）', d.createDays],
-        ['创建歌单', p.playlistCount],
+        ['歌单', p.playlistCount],
+        ['收藏', p.playlistBeSubscribedCount],
+        ['积分', d.userPoint?.balance],
+        [
+          '听歌排行',
+          d.peopleCanSeeMyPlayRecord === false ? '不公开' : undefined,
+        ],
         ['动态', p.eventCount],
         ['关注', p.follows],
         ['粉丝', p.followeds],
@@ -224,6 +345,7 @@ export default {
     },
   },
   beforeDestroy() {
+    closePhotos();
     this.generation++;
   },
   methods: {
@@ -241,7 +363,7 @@ export default {
         snapshotKey =
           section === 'likes' ? `likes:${this.playlistId}` : section;
       const current = () => epoch === this.generation && scope === this.scope;
-      const previous = append ? this.payload : null;
+      let previous = append || force ? this.payload : null;
       this.loading = true;
       this.error = '';
       if (!append) {
@@ -257,6 +379,7 @@ export default {
             : null;
           if (!current()) return;
           if (saved) {
+            previous = saved.data;
             this.payload = saved.data;
             this.updatedAt = saved.updatedAt;
             observeTrackingArtwork(scope, uid, section, saved.data);
@@ -268,6 +391,10 @@ export default {
             return;
           }
         }
+        if (archiveMode()) {
+          if (!this.payload) this.error = archiveError().message;
+          return;
+        }
         const cursor = append
           ? section === 'events'
             ? { lasttime: previous.lasttime }
@@ -278,8 +405,10 @@ export default {
           section,
           section === 'likes' ? { id: this.playlistId, s: 0 } : cursor
         );
-        if (!current()) return;
-        if (append) {
+        if (!current() || archiveMode()) return;
+        if (section === 'events' && this.cacheEnabled) {
+          Object.assign(data, mergeTrackingEvents(previous, data, cursor));
+        } else if (append) {
           const key = {
             playlists: 'playlist',
             events: 'events',
@@ -302,6 +431,13 @@ export default {
           this.$emit('profile', { uid, profile: data.profile });
         if (this.cacheEnabled) {
           observeTrackingArtwork(scope, uid, section, data);
+          if (['likes', 'week', 'all'].includes(section)) {
+            for (const track of this.tracks)
+              cacheTrackDetail(
+                track,
+                (data.privileges || []).find(item => item.id === track.id)
+              );
+          }
           await saveTrackingSnapshot(scope, uid, snapshotKey, data).catch(
             () => {
               if (current()) this.$emit('notice', '离线副本保存失败');
@@ -322,14 +458,37 @@ export default {
         .map(artist => artist.name)
         .join(' / ');
     },
-    eventData(item) {
-      try {
-        return typeof item.json === 'string'
-          ? JSON.parse(item.json)
-          : item.json || {};
-      } catch (_) {
-        return {};
+    eventData,
+    viewPhotos: openPhotos,
+    eventResources(item) {
+      const data = eventData(item),
+        output = [];
+      for (const kind of ['song', 'playlist', 'album', 'mv', 'video']) {
+        const value = data[kind];
+        if (!value || !(value.id || value.vid)) continue;
+        const id = value.id || value.vid;
+        const album = value.al || value.album || {};
+        output.push({
+          kind,
+          id,
+          key: kind + ':' + id,
+          name: value.name || value.title || '分享内容',
+          cover:
+            value.coverImgUrl ||
+            value.picUrl ||
+            value.coverUrl ||
+            value.imgurl ||
+            album.picUrl,
+          subtitle:
+            kind === 'song'
+              ? this.artists(value)
+              : { playlist: '歌单', album: '专辑', mv: 'MV', video: '视频' }[
+                  kind
+                ],
+          path: '/' + kind + '/' + id,
+        });
       }
+      return output;
     },
     play(id) {
       this.$store.state.player.addTrackToPlayNext(id, true);
@@ -564,6 +723,190 @@ small {
 @media (max-width: 600px) {
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+.profile-photos {
+  position: relative;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+}
+.profile-background {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  img {
+    display: block;
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+  }
+}
+.profile-portrait {
+  position: relative;
+  display: block;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  margin: -35px 0 0 16px;
+  border: 4px solid var(--color-body-bg, #fff);
+  border-radius: 50%;
+  overflow: hidden;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+.profile-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  strong {
+    font-size: 22px;
+    overflow-wrap: anywhere;
+  }
+  span {
+    font-size: 12px;
+    opacity: 0.5;
+  }
+}
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  span {
+    padding: 5px 8px;
+    background: var(--color-secondary-bg);
+    border-radius: 6px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+}
+.profile-card {
+  padding: 16px;
+}
+.stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  dd {
+    font-size: 18px;
+  }
+  div {
+    padding: 14px;
+  }
+}
+.artist-link {
+  display: inline-block;
+  color: var(--color-primary);
+  margin-top: 18px;
+}
+.snapshot-date {
+  margin-top: 18px;
+}
+.event {
+  margin-top: 0;
+  margin-bottom: 18px;
+  padding: 22px;
+}
+.event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text);
+  time {
+    opacity: 0.55;
+  }
+}
+.deleted-badge {
+  padding: 4px 7px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 5px;
+}
+.event-unavailable {
+  border: 1px dashed rgba(128, 128, 128, 0.35);
+}
+.event-resource {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: rgba(128, 128, 128, 0.08);
+  color: var(--color-text) !important;
+  img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 7px;
+    flex-shrink: 0;
+  }
+  > span {
+    min-width: 0;
+  }
+  strong {
+    display: block;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .resource-action {
+    margin-left: auto;
+    font-size: 12px;
+    opacity: 0.55;
+    flex-shrink: 0;
+  }
+}
+.forwarded-event {
+  padding: 14px;
+  margin: 12px 0;
+  border-left: 2px solid rgba(128, 128, 128, 0.3);
+  strong {
+    font-size: 13px;
+  }
+}
+.event-images {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+  button {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    background: none;
+  }
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    cursor: zoom-in;
+  }
+}
+.event-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  opacity: 0.55;
+  margin-top: 14px;
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .event {
+    padding: 16px;
   }
 }
 </style>

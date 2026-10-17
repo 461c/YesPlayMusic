@@ -50,6 +50,7 @@ public final class MainActivity extends Activity {
     private final List<JSONObject> pending = new ArrayList<>();
     private volatile String snapshot = "{}";
     private boolean pageReady = false;
+    private String photoToSave;
     private volatile boolean apiStartupFailed = false;
     private java.util.concurrent.CompletableFuture<String> observedApiStartup;
     private boolean visible = false;
@@ -123,7 +124,13 @@ public final class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if (!"appassets.androidplatform.net".equals(uri.getHost())) return ArtworkCache.get(MainActivity.this).read(uri);
+                if (!"appassets.androidplatform.net".equals(uri.getHost())) {
+                    WebResourceResponse cached = ArtworkCache.get(MainActivity.this).read(uri);
+                    if (cached != null) return cached;
+                    if (ApiClient.preferences(MainActivity.this).getBoolean("archiveMode", false))
+                        return new WebResourceResponse("text/plain", "UTF-8", new java.io.ByteArrayInputStream(new byte[0]));
+                    return null;
+                }
                 return assets.shouldInterceptRequest(uri);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -343,6 +350,25 @@ public final class MainActivity extends Activity {
     }
 
     public final class Bridge {
+        @JavascriptInterface public void setArchiveMode(boolean enabled) {
+            AudioCache.preserve(MainActivity.this, enabled);
+        }
+        @JavascriptInterface public void savePhoto(String address) {
+            String url = ArtworkCache.canonical(address);
+            if (url == null) return;
+            handler.post(() -> {
+                if (photoToSave != null) return;
+                photoToSave = url;
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                String last = Uri.parse(url).getLastPathSegment();
+                String extension = last != null && last.matches("(?i).*\\.(png|webp|gif|jpeg|jpg)$") ? last.substring(last.lastIndexOf('.')) : ".jpg";
+                intent.setType("image/*");
+                intent.putExtra(Intent.EXTRA_TITLE, "YesPlayMusic-" + System.currentTimeMillis() + extension);
+                try { startActivityForResult(intent, 604); }
+                catch (Exception error) { photoToSave = null; Toast.makeText(MainActivity.this, "无法打开保存位置", Toast.LENGTH_SHORT).show(); }
+            });
+        }
         @JavascriptInterface public String getEnvironment() { return environment; }
         @JavascriptInterface public boolean isSystemDark() { return systemDark(); }
         @JavascriptInterface public String getMediaDiagnostics() { return PlaybackService.systemMediaReport(); }
@@ -421,7 +447,46 @@ public final class MainActivity extends Activity {
         visible = false; handler.removeCallbacks(progress);
         web.onPause(); web.pauseTimers(); super.onPause();
     }
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != 604) return;
+        String source = photoToSave;
+        photoToSave = null;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null || source == null) return;
+        Uri destination = data.getData();
+        apiWorker.execute(() -> {
+            String message;
+            java.net.HttpURLConnection connection = null;
+            try {
+                WebResourceResponse saved = ArtworkCache.get(this).read(Uri.parse(source + "?ypmPhoto=1"));
+                java.io.InputStream input = saved == null ? null : saved.getData();
+                if (input == null) {
+                    if (ApiClient.preferences(this).getBoolean("archiveMode", false)) throw new IOException("没有可保存的本地图片");
+                    connection = (java.net.HttpURLConnection) new java.net.URL(source).openConnection();
+                    connection.setConnectTimeout(12000); connection.setReadTimeout(15000);
+                    input = connection.getInputStream();
+                }
+                try (java.io.InputStream in = input;
+                     java.io.OutputStream out = getContentResolver().openOutputStream(destination)) {
+                    if (out == null) throw new IOException("无法写入保存位置");
+                    byte[] buffer = new byte[8192]; int count; long size = 0;
+                    while ((count = in.read(buffer)) != -1) { out.write(buffer, 0, count); size += count; }
+                    if (size == 0) throw new IOException("没有可保存的本地图片");
+                }
+                message = "图片已保存";
+            } catch (Exception error) { message = error.getMessage(); }
+            finally { if (connection != null) connection.disconnect(); }
+            String notice = message;
+            handler.post(() -> Toast.makeText(this, notice, Toast.LENGTH_LONG).show());
+        });
+    }
+
     @Override public void onBackPressed() {
+        web.evaluateJavascript("Boolean(window.__closePhotoLightbox && window.__closePhotoLightbox())", closed -> {
+            if (!"true".equals(closed)) backFromPage();
+        });
+    }
+    private void backFromPage() {
         web.evaluateJavascript("window.yesplaymusicAndroidBack && window.yesplaymusicAndroidBack()", value -> {
             if (!"true".equals(value)) {
                 if (web.canGoBack()) web.goBack();

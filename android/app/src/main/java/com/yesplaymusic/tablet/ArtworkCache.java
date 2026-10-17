@@ -26,6 +26,7 @@ final class ArtworkCache {
         return instance;
     }
     private final File directory;
+    private final Context app;
     private final ExecutorService downloads = Executors.newFixedThreadPool(2);
     private final Set<String> eligible = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<String, FutureTask<Boolean>> pending = new ConcurrentHashMap<>();
@@ -33,6 +34,7 @@ final class ArtworkCache {
     private final AtomicLong hits = new AtomicLong(), network = new AtomicLong(), failures = new AtomicLong();
     private volatile long generation;
     private ArtworkCache(Context context) {
+        app = context;
         directory = new File(context.getFilesDir(), "library-artwork");
         directory.mkdirs();
         File[] files = directory.listFiles();
@@ -67,9 +69,12 @@ final class ArtworkCache {
         return new File(directory, name + ".img");
     }
     private File file(String address, int size) throws Exception {
-        return hashedFile(identity(address) + (size == 224 ? ":224" : ""));
+        return hashedFile(identity(address) + (size == 224 ? ":224" : size == 2048 ? ":photo" : ""));
     }
     private File existing(String address, int size) throws Exception {
+        File original = file(address, 2048);
+        if (original.isFile()) return original;
+        if (size == 2048) return null;
         File large = file(address, 1024);
         if (large.isFile()) return large;
         File small = file(address, 224);
@@ -127,9 +132,10 @@ final class ArtworkCache {
         File temporary = null;
         try {
             if (existing(address, size) != null) return true;
+            if (ApiClient.preferences(app).getBoolean("archiveMode", false)) return false;
             if (directory.getUsableSpace() < 128L * 1024 * 1024) return false;
             File target = file(address, size);
-            String location = address + "?param=" + size + "y" + size;
+            String location = size == 2048 ? address : address + "?param=" + size + "y" + size;
             for (int redirect = 0; redirect <= 3; redirect++) {
                 network.incrementAndGet();
                 connection = (HttpURLConnection) new URL(location).openConnection();
@@ -175,6 +181,7 @@ final class ArtworkCache {
         }
     }
     static int requestedSize(Uri uri) {
+        if ("1".equals(uri.getQueryParameter("ypmPhoto"))) return 2048;
         for (String name : uri.getQueryParameterNames()) {
             if (!Arrays.asList("param", "imageView", "thumbnail", "quality", "enlarge", "type").contains(name)) return 0;
         }
@@ -195,15 +202,20 @@ final class ArtworkCache {
         DataInputStream input = null;
         try {
             File cached = existing(address, size);
+            if (cached == null && size == 2048 && ApiClient.preferences(app).getBoolean("archiveMode", false)) cached = existing(address, 224);
             boolean hit = cached != null;
-            if (cached == null && eligible.contains(identity(address))) {
-                FutureTask<Boolean> active = pending.get(identity(address) + ":1024");
+            if (cached == null && !ApiClient.preferences(app).getBoolean("archiveMode", false) && eligible.contains(identity(address))) {
+                FutureTask<Boolean> active = size == 2048 ? null : pending.get(identity(address) + ":1024");
                 if (active == null) active = task(address, size);
                 // Run a queued task now or share the in-flight one; never fall through just because it is pending.
                 active.run(); active.get(35, TimeUnit.SECONDS);
                 cached = existing(address, size);
             }
-            if (cached == null) return null;
+            if (cached == null) {
+                if (ApiClient.preferences(app).getBoolean("archiveMode", false))
+                    return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
+                return null;
+            }
             input = new DataInputStream(new BufferedInputStream(new FileInputStream(cached)));
             String mime = input.readUTF();
             WebResourceResponse response = new WebResourceResponse(mime, null, input);

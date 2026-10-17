@@ -104,6 +104,21 @@
       </div>
       <PlayerButtonSettings />
       <h3>缓存</h3>
+      <div class="item">
+        <div class="left"
+          ><div class="title">纪念模式</div>
+          <div class="description"
+            >停止接口更新，只浏览已保存的内容。保留条目、图片与歌曲缓存，暂停自动淘汰；只有已缓存的音频可以离线播放。</div
+          ></div
+        >
+        <div class="right"
+          ><div class="toggle"
+            ><input
+              id="archive-mode"
+              v-model="archiveMode"
+              type="checkbox" /><label for="archive-mode"></label></div
+        ></div>
+      </div>
       <div v-if="isElectron || isAndroid" class="item">
         <div class="left">
           <div class="title">
@@ -998,6 +1013,14 @@ export default {
     };
   },
   computed: {
+    archiveMode: {
+      get() {
+        return this.settings.archiveMode === true;
+      },
+      set(value) {
+        this.$store.commit('updateSettings', { key: 'archiveMode', value });
+      },
+    },
     floatingPlayer: {
       get() {
         return this.settings.floatingPlayer !== false;

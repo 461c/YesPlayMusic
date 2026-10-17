@@ -1,4 +1,5 @@
 import Vue from 'vue';
+import { archiveMode } from '@/utils/archiveMode';
 import Vuex from 'vuex';
 import state from './state';
 import mutations from './mutations';
@@ -92,6 +93,12 @@ store.watch(
       state.settings.cacheLimit,
     ]),
   updateAndroidCache,
+  { immediate: true }
+);
+
+store.watch(
+  state => state.settings.archiveMode,
+  () => window.YesPlayMusicAndroid?.setArchiveMode?.(archiveMode()),
   { immediate: true }
 );
 

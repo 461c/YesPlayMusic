@@ -65,3 +65,13 @@ export function savePlaylistSnapshot(id, value, scope = libraryScope()) {
     })
     .catch(error => console.debug('Unable to save playlist snapshot', error));
 }
+
+export async function readSavedPlaylists(scope) {
+  if (!scope) return [];
+  try {
+    const rows = await cache.playlists.where('scope').equals(scope).toArray();
+    return rows.map(row => row.value).filter(value => value?.playlist);
+  } catch (_) {
+    return [];
+  }
+}

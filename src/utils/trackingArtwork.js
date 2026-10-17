@@ -33,6 +33,9 @@ const imageKeys = new Set([
   'coverImgUrl',
   'originUrl',
   'squareUrl',
+  'backgroundUrl',
+  'rectangleUrl',
+  'originalUrl',
 ]);
 function allow(data) {
   const native = window.YesPlayMusicAndroid;
@@ -42,7 +45,13 @@ function allow(data) {
     if (!value || typeof value !== 'object') return;
     for (const [key, child] of Object.entries(value)) {
       if (imageKeys.has(key) && typeof child === 'string') urls.add(child);
-      else if (typeof child === 'object') collect(child);
+      else if (key === 'json' && typeof child === 'string') {
+        try {
+          collect(JSON.parse(child));
+        } catch (_) {
+          /* Malformed event data. */
+        }
+      } else if (typeof child === 'object') collect(child);
     }
   };
   collect(data);

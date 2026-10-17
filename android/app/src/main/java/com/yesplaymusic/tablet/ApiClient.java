@@ -139,6 +139,7 @@ final class ApiClient {
         return Uri.parse(result);
     }
     static void ensureReady(Context context) throws Exception {
+        if (preferences(context).getBoolean("archiveMode", false)) throw new IOException("纪念模式：停止接口更新");
         if (!preferences(context).getBoolean("useRemoteApi", false)) {
             LocalApi.ensureStarted(context).get(45, java.util.concurrent.TimeUnit.SECONDS);
         }

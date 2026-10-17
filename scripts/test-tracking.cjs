@@ -21,7 +21,22 @@ vm.runInNewContext(
     .replace(/export /g, '') + '\nmodule.exports = { mapTrackPlayableStatus };',
   playableContext
 );
+const eventContext = { module: { exports: {} } };
+vm.runInNewContext(
+  fs
+    .readFileSync('src/utils/trackingEvents.js', 'utf8')
+    .replace(/export /g, '') +
+    '\nmodule.exports={eventData,mergeTrackingEvents};',
+  eventContext
+);
 const sandbox = {
+  ...eventContext.module.exports,
+  archiveMode: () => false,
+  archiveError: () => new Error('archive'),
+  cacheTrackDetail() {},
+  openPhotos() {},
+  closePhotos() {},
+  LibrarySearch: {},
   Date,
   Promise,
   JSON,

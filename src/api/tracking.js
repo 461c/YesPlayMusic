@@ -31,6 +31,19 @@ export function readTrackingSection(uid, section, cursor = {}) {
         data?.message || data?.msg || '当前内容不可见或接口暂不可用'
       );
     }
+    const listKey = {
+      playlists: 'playlist',
+      week: 'weekData',
+      all: 'allData',
+      follows: 'follow',
+      fans: 'followeds',
+      events: 'events',
+    }[section];
+    if (
+      (listKey && !Array.isArray(data[listKey])) ||
+      (section === 'likes' && !data.playlist)
+    )
+      throw new Error('当前内容不可见或接口返回不完整，保留本地副本');
     if (section === 'profile' && !data.profile)
       throw new Error('未找到该用户的公开资料');
     return data;

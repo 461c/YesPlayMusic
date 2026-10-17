@@ -1,5 +1,5 @@
-import router from '@/router';
-import { doLogout, getCookie } from '@/utils/auth';
+import { getCookie } from '@/utils/auth';
+import { archiveMode, archiveError } from '@/utils/archiveMode';
 import axios from 'axios';
 import { isAndroid } from '@/utils/androidAudio';
 import androidApiAdapter from '@/utils/androidApi';
@@ -24,6 +24,7 @@ const service = axios.create({
 });
 
 service.interceptors.request.use(function (config) {
+  if (archiveMode()) throw archiveError();
   if (!config.params) config.params = {};
   if (baseURL.length) {
     if (
@@ -72,6 +73,7 @@ service.interceptors.request.use(function (config) {
 
 service.interceptors.response.use(
   response => {
+    if (archiveMode()) throw archiveError();
     const res = response.data;
     return res;
   },
@@ -95,19 +97,10 @@ service.interceptors.response.use(
       data.code === 301 &&
       data.msg === '需要登录'
     ) {
-      console.warn('Token has expired. Logout now!');
-
-      // 登出帳戶
-      doLogout();
-
-      // 導向登入頁面
-      if (process.env.IS_ELECTRON === true) {
-        router.push({ name: 'loginAccount' });
-      } else {
-        router.push({ name: 'login' });
-      }
+      // Keep the saved identity and snapshots usable if authentication/API support disappears.
+      console.warn('登录状态失效，保留本地音乐库；请手动重新登录。');
     }
-    if (isAndroid) return Promise.reject(error);
+    return Promise.reject(error);
   }
 );
 

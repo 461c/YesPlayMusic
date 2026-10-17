@@ -31,7 +31,6 @@
           >返回</button
         >
         <template v-if="!managing">
-          <button @click="managing = true">管理</button>
           <button :disabled="!selected || refreshing" @click="refreshCurrent">{{
             refreshing ? '刷新中…' : '刷新'
           }}</button>
@@ -52,6 +51,8 @@
         @click="selectUser(user.id)"
         >{{ user.alias || user.name || user.id }}</div
       >
+      <hr />
+      <div class="item" @click="managing = true">管理跟踪</div>
     </ContextMenu>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
     <div v-if="managing" key="management" v-page-reveal>
@@ -199,7 +200,7 @@
               </div>
             </div>
             <div :key="group" v-page-reveal>
-              <template v-if="group === 'activity'">
+              <div v-if="group === 'activity'" class="activity-columns">
                 <TrackingSection
                   :uid="selected"
                   :scope="scope"
@@ -219,7 +220,7 @@
                   title="动态"
                   @notice="notice = $event"
                 />
-              </template>
+              </div>
               <template v-else-if="group === 'created' || group === 'saved'">
                 <p v-if="error" role="status" class="muted">{{ error }}</p>
                 <CoverRow
@@ -762,5 +763,35 @@ select {
 .context-menu.tracking-switch-menu .menu .item.selected {
   color: var(--color-primary);
   background: var(--color-primary-bg-for-transparent);
+}
+</style>
+
+<style lang="scss" scoped>
+.activity-columns {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.65fr);
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 850px) {
+  .activity-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+</style>
+
+<style lang="scss">
+.pswp {
+  --pswp-icon-color: #fff;
+  --pswp-root-z-index: 20000;
+}
+.pswp__top-bar {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pswp .pswp__button--save-photo {
+  width: 60px;
+  color: #fff;
+  font-size: 14px;
 }
 </style>
