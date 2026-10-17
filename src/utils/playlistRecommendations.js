@@ -7,7 +7,7 @@ const PAGE_SIZE = 50;
 const clean = value =>
   String(value || '')
     .toLowerCase()
-    .replace(/[\s\u3000·•\-—_，。！!？?、:：;；"'“”‘’（）()\[\]【】]/g, '');
+    .replace(/[\s\u3000·•\-—_，。！!？?、:：;；"'“”‘’（）()[\]【】]/g, '');
 export function playlistSignature(item) {
   const owner = item.creator?.userId || item.creator?.nickname;
   return owner && item.name ? `${owner}:${clean(item.name)}` : '';
