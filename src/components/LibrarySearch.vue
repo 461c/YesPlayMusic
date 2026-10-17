@@ -93,6 +93,7 @@
         >专辑 <span>{{ results.albums.length }}</span></h3
       ><CoverRow
         :items="results.albums"
+        :compact="results.albums.length > 20"
         type="album"
         sub-text="artist"
         :show-play-button="true"

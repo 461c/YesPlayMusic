@@ -4,9 +4,16 @@ import { isLooseLoggedIn, isAccountLoggedIn } from '@/utils/auth';
 
 Vue.use(VueRouter);
 const routes = [
+  { path: '/tracking', redirect: '/library/people' },
   {
-    path: '/tracking',
-    name: 'tracking',
+    path: '/library/people',
+    name: 'libraryPeople',
+    component: () => import('@/views/tracking.vue'),
+    meta: { keepAlive: true, savePosition: true },
+  },
+  {
+    path: '/library/people/:uid',
+    name: 'libraryPerson',
     component: () => import('@/views/tracking.vue'),
     meta: { keepAlive: true, savePosition: true },
   },
@@ -151,22 +158,6 @@ VueRouter.prototype.push = function push(location) {
 };
 
 router.beforeEach((to, from, next) => {
-  if (to.name === 'tracking') {
-    let enabled = false;
-    try {
-      enabled =
-        (
-          router.app.$store?.state.settings ||
-          JSON.parse(localStorage.getItem('settings') || '{}')
-        ).showTracking === true;
-    } catch (_) {
-      /* Missing settings leave optional tracking disabled. */
-    }
-    if (!enabled) {
-      next({ name: 'settings' });
-      return;
-    }
-  }
   // 需要登录的逻辑
   if (to.meta.requireAccountLogin) {
     if (isAccountLoggedIn()) {

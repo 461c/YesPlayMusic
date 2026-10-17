@@ -2,58 +2,21 @@
   <div v-page-reveal class="tracking-page library-page">
     <header>
       <h1
-        ><button
-          v-if="!managing && selected"
-          class="tracking-avatar-trigger"
-          aria-label="切换跟踪用户"
-          @click="openTrackedUsers"
-        >
-          <img
-            v-if="selectedUser.avatar"
-            v-image-fade
-            class="tracking-avatar"
-            :src="selectedUser.avatar | resizeImage(96)"
-            alt=""
-          />
-          <span v-else>{{
-            (selectedUser.alias || selectedUser.name || selected).slice(0, 1)
-          }}</span> </button
-        >{{
+        ><LibraryAvatarMenu
+          :avatar="managing ? ownUser.avatarUrl : selectedUser.avatar"
+          :label="
+            managing
+              ? ownUser.nickname
+              : selectedUser.alias || selectedUser.name || selected
+          "
+        />{{
           managing
-            ? '管理跟踪'
-            : selected
-            ? (selectedUser.alias || selectedUser.name || selected) + '的跟踪'
-            : '跟踪'
+            ? '人员管理'
+            : selectedUser.alias || selectedUser.name || selected
         }}</h1
       >
-      <div class="header-actions">
-        <button v-if="!managing && userHistory.length" @click="backUser"
-          >返回</button
-        >
-        <template v-if="!managing">
-          <button :disabled="!selected || refreshing" @click="refreshCurrent">{{
-            refreshing ? '刷新中…' : '刷新'
-          }}</button>
-        </template>
-        <button v-else @click="managing = false">返回</button>
-      </div>
+      <div class="header-actions"><button @click="backUser">返回</button></div>
     </header>
-    <ContextMenu
-      v-if="users.length"
-      ref="trackingUserMenu"
-      class="tracking-switch-menu"
-    >
-      <div
-        v-for="user in users"
-        :key="user.id"
-        class="item"
-        :class="{ selected: user.id === selected }"
-        @click="selectUser(user.id)"
-        >{{ user.alias || user.name || user.id }}</div
-      >
-      <hr />
-      <div class="item" @click="managing = true">管理跟踪</div>
-    </ContextMenu>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
     <div v-if="managing" key="management" v-page-reveal>
       <form class="add-user" @submit.prevent="addUser()"
@@ -201,16 +164,24 @@
             </div>
             <div :key="group" v-page-reveal>
               <div v-if="group === 'activity'" class="activity-columns">
-                <TrackingSection
-                  :uid="selected"
-                  :scope="scope"
-                  :cache-enabled="isSavedUser"
-                  ref="profile"
-                  section="profile"
-                  title="资料"
-                  @profile="updateProfile"
-                  @notice="notice = $event"
-                />
+                <div class="profile-column">
+                  <TrackingSection
+                    :uid="selected"
+                    :scope="scope"
+                    :cache-enabled="isSavedUser"
+                    ref="profile"
+                    section="profile"
+                    title="资料"
+                    @profile="updateProfile"
+                    @notice="notice = $event"
+                  />
+                  <button
+                    class="person-refresh"
+                    :disabled="!selected || refreshing"
+                    @click="refreshCurrent"
+                    >{{ refreshing ? '刷新中…' : '刷新' }}</button
+                  >
+                </div>
                 <TrackingSection
                   :uid="selected"
                   :scope="scope"
@@ -281,14 +252,17 @@
           </div>
         </template>
       </TrackingSection>
-      <button v-else-if="ready" class="empty-add" @click="managing = true"
+      <button
+        v-else-if="ready"
+        class="empty-add"
+        @click="$router.push({ name: 'libraryPeople' })"
         >添加用户</button
       >
     </template>
   </div>
 </template>
 <script>
-import ContextMenu from '@/components/ContextMenu.vue';
+import LibraryAvatarMenu from '@/components/LibraryAvatarMenu.vue';
 import { removeTrackingArtwork } from '@/utils/trackingArtwork';
 import CoverRow from '@/components/CoverRow.vue';
 import TrackList from '@/components/TrackList.vue';
@@ -302,7 +276,7 @@ import {
 } from '@/utils/trackingStore';
 export default {
   name: 'Tracking',
-  components: { TrackingSection, CoverRow, TrackList, ContextMenu },
+  components: { TrackingSection, CoverRow, TrackList, LibraryAvatarMenu },
   data() {
     return {
       users: [],
@@ -332,6 +306,9 @@ export default {
     };
   },
   computed: {
+    ownUser() {
+      return this.$store.state.data.user || {};
+    },
     scope() {
       return trackingScope(this.$store.state.data?.user?.userId);
     },
@@ -354,18 +331,33 @@ export default {
       },
     },
   },
+  async activated() {
+    if (!this.ready) return;
+    const scope = this.scope;
+    const users = await readTrackingList(scope);
+    if (scope !== this.scope || this._isDestroyed) return;
+    this.users = users
+      .filter(user => normalizeTrackingId(user.id))
+      .map(user => ({ alias: '', ...user }));
+    this.syncRoute();
+  },
   beforeDestroy() {
     this.scopeGeneration++;
   },
   methods: {
-    openTrackedUsers(event) {
-      if (!this.$refs.trackingUserMenu) return;
-      const bounds = event.currentTarget.getBoundingClientRect();
-      this.$refs.trackingUserMenu.openMenu({
-        x: bounds.left,
-        y: bounds.bottom + 6,
-        preventDefault: () => event.preventDefault(),
-      });
+    syncRoute() {
+      if (!this.$route) return;
+      this.managing = this.$route.name === 'libraryPeople';
+      const id = normalizeTrackingId(this.$route.params.uid);
+      this.selected = id || '';
+      this.visiting =
+        id && !this.users.some(user => user.id === id)
+          ? {
+              id,
+              name: this.$route.query.name || '',
+              avatar: this.$route.query.avatar || '',
+            }
+          : null;
     },
     async refreshCurrent() {
       if (this.refreshing || !this.selected) return;
@@ -388,6 +380,16 @@ export default {
       }
     },
     openUser(user) {
+      if (this.$router) {
+        const uid = normalizeTrackingId(user.userId);
+        if (uid && uid !== this.selected)
+          this.$router.push({
+            name: 'libraryPerson',
+            params: { uid },
+            query: { name: user.nickname || '', avatar: user.avatarUrl || '' },
+          });
+        return;
+      }
       const id = normalizeTrackingId(user.userId);
       if (!id || id === this.selected) return;
       this.userHistory.push({
@@ -407,6 +409,10 @@ export default {
       this.notice = '';
     },
     backUser() {
+      if (this.$router) {
+        this.$router.back();
+        return;
+      }
       const previous = this.userHistory.pop();
       if (!previous) return;
       this.selected = previous.id;
@@ -457,7 +463,8 @@ export default {
         .filter(user => normalizeTrackingId(user.id))
         .map(user => ({ alias: '', ...user }));
       this.ready = true;
-      if (this.users.length) this.selectUser(this.users[0].id);
+      if (this.$route) this.syncRoute();
+      else if (this.users.length) this.selectUser(this.users[0].id, false);
     },
     persist() {
       const scope = this.scope,
@@ -469,7 +476,15 @@ export default {
           if (scope === this.scope) this.notice = '列表保存失败';
         });
     },
-    selectUser(id) {
+    selectUser(id, navigate = true) {
+      if (navigate && this.$router) {
+        this.listWrites
+          .catch(() => {})
+          .then(() =>
+            this.$router.push({ name: 'libraryPerson', params: { uid: id } })
+          );
+        return;
+      }
       if (!this.users.some(user => user.id === id)) return;
       this.visiting = null;
       this.userHistory = [];
@@ -486,7 +501,7 @@ export default {
         return;
       }
       if (this.users.some(user => user.id === id)) {
-        this.notice = '用户已存在';
+        this.notice = '此用户已添加';
         return;
       }
       this.users.push({ id, name: '', avatar: '', alias: '' });
@@ -507,7 +522,7 @@ export default {
         return;
       }
       if (this.users.some(user => user.id === id && user.id !== oldId)) {
-        this.notice = '用户已存在';
+        this.notice = '此用户已添加';
         return;
       }
       const index = this.users.findIndex(user => user.id === oldId);
@@ -535,7 +550,7 @@ export default {
       deleteTrackingSnapshots(this.scope, id).catch(() => {});
       if (this.selected === id) {
         this.selected = '';
-        if (this.users.length) this.selectUser(this.users[0].id);
+        if (this.users.length) this.selectUser(this.users[0].id, false);
       }
     },
     move(index, delta) {
@@ -768,6 +783,12 @@ select {
 </style>
 
 <style lang="scss" scoped>
+.profile-column {
+  min-width: 0;
+}
+.person-refresh {
+  margin: 20px 0 0;
+}
 .activity-columns {
   display: grid;
   grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.65fr);

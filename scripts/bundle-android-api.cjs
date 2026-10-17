@@ -68,29 +68,6 @@ fs.writeFileSync(
   )
 );
 
-// The shared request helper otherwise defaults to a PC identity, even for eapi.
-// Opt in only for the selected user's mobile-profile request; keep auth cookies.
-const profileModule = path.join(
-  output,
-  'node_modules/@neteaseapireborn/api/module/user_detail_new.js'
-);
-const profileSource = fs.readFileSync(profileModule, 'utf8');
-const profileEntry = 'module.exports = async (query, request) => {';
-if (!profileSource.includes(profileEntry))
-  throw new Error('Review upstream mobile profile module');
-fs.writeFileSync(
-  profileModule,
-  profileSource.replace(
-    profileEntry,
-    profileEntry +
-      `
-  if (String(query.ypmMobile) === '1') {
-    const existing = typeof query.cookie === 'string' ? require('../util/index').cookieToJson(query.cookie) : query.cookie || {};
-    query = { ...query, cookie: { ...existing, os: 'android', appver: '9.1.65.240927161425', versioncode: '9001065', osver: '14' } };
-  }
-`
-  )
-);
 fs.copyFileSync(
   path.join(root, 'android/api/server.js'),
   path.join(output, 'server.js')

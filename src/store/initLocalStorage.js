@@ -32,7 +32,7 @@ let localStorage = {
     enableDiscordRichPresence: false,
     enableGlobalShortcut: true,
     showLibraryDefault: false,
-    showTracking: false,
+    showSystemStatusBar: true,
     homeSections: null,
     floatingPlayer: true,
     playerButtons: {},

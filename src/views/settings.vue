@@ -203,6 +203,21 @@
         </div>
       </div>
       <h3>外观</h3>
+      <div v-if="isAndroid" class="item"
+        ><div class="left"
+          ><div class="title">显示系统时间栏</div
+          ><div class="description"
+            >控制顶部系统时间、电量等状态信息。</div
+          ></div
+        ><div class="right"
+          ><div class="toggle"
+            ><input
+              id="system-status-bar"
+              v-model="showSystemStatusBar"
+              type="checkbox" /><label
+              for="system-status-bar"
+            ></label></div></div
+      ></div>
       <div class="item"
         ><div class="left"
           ><div class="title">悬浮播放栏</div
@@ -476,23 +491,6 @@
               name="enable-osdlyrics-support"
             />
             <label for="enable-osdlyrics-support"></label>
-          </div>
-        </div>
-      </div>
-      <div class="item">
-        <div class="left">
-          <div class="title">显示跟踪页面</div>
-          <div class="description">关闭时隐藏入口，保留已添加的用户。</div>
-        </div>
-        <div class="right">
-          <div class="toggle">
-            <input
-              id="show-tracking"
-              v-model="showTracking"
-              type="checkbox"
-              name="show-tracking"
-            />
-            <label for="show-tracking"></label>
           </div>
         </div>
       </div>
@@ -1013,6 +1011,17 @@ export default {
     };
   },
   computed: {
+    showSystemStatusBar: {
+      get() {
+        return this.settings.showSystemStatusBar !== false;
+      },
+      set(value) {
+        this.$store.commit('updateSettings', {
+          key: 'showSystemStatusBar',
+          value,
+        });
+      },
+    },
     archiveMode: {
       get() {
         return this.settings.archiveMode === true;
@@ -1230,14 +1239,6 @@ export default {
         if (value === this.settings.musicQuality) return;
         this.$store.commit('changeMusicQuality', value);
         if (!this.isAndroid) this.clearCache();
-      },
-    },
-    showTracking: {
-      get() {
-        return this.settings.showTracking === true;
-      },
-      set(value) {
-        this.$store.commit('updateSettings', { key: 'showTracking', value });
       },
     },
     allowConcurrentPlayback: {

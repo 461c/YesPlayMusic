@@ -22,6 +22,7 @@ const context = {
   TrackList: {},
   Modal: {},
   ContextMenu: {},
+  PlaylistScrollHandle: {},
 };
 const code = fs
   .readFileSync('src/views/playlist.vue', 'utf8')
@@ -131,11 +132,11 @@ function page() {
   );
   assert.equal(
     profile.profile.backgroundUrl,
-    'https://p2.music.126.net/custom/123456.jpg'
+    'https://p1.music.126.net/default/109951162868128395.jpg'
   );
-  assert.equal(profile.profile.backgroundCandidates.length, 1);
+  assert.equal(profile.profile.backgroundCandidates, undefined);
   console.log(
-    'Playlist: first 50, cached batches, scroll-only pagination and navigation races; mobile background candidates passed'
+    'Playlist: first 50, cached batches, scroll-only pagination and navigation races; standard profile request passed'
   );
 })().catch(error => {
   console.error(error);

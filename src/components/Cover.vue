@@ -21,7 +21,14 @@
           </button>
         </transition>
       </div>
-      <img v-image-fade :src="imageUrl" :style="imageStyles" loading="lazy" />
+      <img
+        v-if="visibleImage"
+        v-image-fade
+        :src="visibleImage"
+        :style="imageStyles"
+        loading="lazy"
+        @error="imageFailed"
+      /><div v-else class="missing-cover" :style="imageStyles"></div>
       <transition v-if="coverHover || alwaysShowShadow" name="fade">
         <div
           v-show="focus || alwaysShowShadow"
@@ -51,9 +58,13 @@ export default {
   data() {
     return {
       focus: false,
+      failedImages: [],
     };
   },
   watch: {
+    imageUrl() {
+      this.failedImages = [];
+    },
     $route() {
       this.focus = false;
     },
@@ -62,6 +73,27 @@ export default {
     this.focus = false;
   },
   computed: {
+    visibleImage() {
+      if (!this.imageUrl) return null;
+      const candidates = [this.imageUrl];
+      try {
+        const original = new URL(this.imageUrl, window.location.href);
+        for (const size of [224, 512, 128]) {
+          const smaller = new URL(original.href);
+          for (const key of ['param', 'thumbnail', 'imageView'])
+            smaller.searchParams.delete(key);
+          smaller.searchParams.set('param', size + 'y' + size);
+          candidates.push(smaller.href);
+        }
+        const plain = new URL(original.href);
+        for (const key of ['param', 'thumbnail', 'imageView'])
+          plain.searchParams.delete(key);
+        candidates.push(plain.href);
+      } catch (_) {
+        /* Keep local or non-URL artwork usable. */
+      }
+      return candidates.find(url => !this.failedImages.includes(url));
+    },
     imageStyles() {
       let styles = {};
       if (this.fixedSize !== 0) {
@@ -85,6 +117,9 @@ export default {
     },
   },
   methods: {
+    imageFailed() {
+      if (this.visibleImage) this.failedImages.push(this.visibleImage);
+    },
     play() {
       const player = this.$store.state.player;
       const playActions = {
@@ -197,5 +232,14 @@ img {
 }
 .fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
   opacity: 0;
+}
+</style>
+
+<style lang="scss" scoped>
+.missing-cover {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: var(--color-secondary-bg);
 }
 </style>

@@ -102,6 +102,12 @@ store.watch(
   { immediate: true }
 );
 
+store.watch(
+  state => state.settings.showSystemStatusBar,
+  value => window.YesPlayMusicAndroid?.setStatusBarVisible?.(value !== false),
+  { immediate: true }
+);
+
 let player = new Player();
 player = new Proxy(player, {
   set(target, prop, val) {

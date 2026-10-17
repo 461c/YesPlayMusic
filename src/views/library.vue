@@ -2,12 +2,10 @@
   <div v-page-reveal="show" v-show="show" ref="library" class="library-page">
     <header class="library-header"
       ><h1>
-        <img
-          v-image-fade
-          class="avatar"
-          :src="data.user.avatarUrl | resizeImage"
-          loading="lazy"
-        />{{ data.user.nickname }}{{ $t('library.sLibrary') }}
+        <LibraryAvatarMenu
+          :avatar="data.user.avatarUrl"
+          :label="data.user.nickname || '音乐库'"
+        />{{ data.user.nickname }}
       </h1>
       <div class="library-search" :class="{ expanded: searchOpen }">
         <button
@@ -58,16 +56,13 @@
     <div v-show="!searchQuery">
       <div class="section-one">
         <div class="liked-songs" @click="goToLikedSongsList">
-          <div class="top">
-            <p>
-              <span
-                v-for="(line, index) in pickedLyric"
-                v-show="line !== ''"
-                :key="`${line}${index}`"
-                >{{ line }}<br
-              /></span>
-            </p>
-          </div>
+          <div class="top"
+            ><img
+              v-if="liked.playlists[0] && liked.playlists[0].coverImgUrl"
+              v-image-fade
+              :src="liked.playlists[0].coverImgUrl | resizeImage(224)"
+              alt="喜欢的音乐封面"
+          /></div>
           <div class="bottom">
             <div class="titles">
               <div class="title">{{ $t('library.likedSongs') }}</div>
@@ -173,6 +168,7 @@
         <div v-show="currentTab === 'albums'">
           <CoverRow
             :items="liked.albums"
+            :compact="liked.albums.length > 20"
             type="album"
             sub-text="artist"
             :show-play-button="true"
@@ -253,33 +249,24 @@ import { archiveMode } from '@/utils/archiveMode';
 import { libraryScope } from '@/utils/offlineLibrary';
 import LibrarySearch from '@/components/LibrarySearch.vue';
 import { mapActions, mapMutations, mapState } from 'vuex';
-import { randomNum, dailyTask } from '@/utils/common';
+import { dailyTask } from '@/utils/common';
 import { isAccountLoggedIn } from '@/utils/auth';
 import { uploadSong } from '@/api/user';
-import { getLyric } from '@/api/track';
 import NProgress from 'nprogress';
 import locale from '@/locale';
 
 import ContextMenu from '@/components/ContextMenu.vue';
+import LibraryAvatarMenu from '@/components/LibraryAvatarMenu.vue';
 import TrackList from '@/components/TrackList.vue';
 import CoverRow from '@/components/CoverRow.vue';
 import SvgIcon from '@/components/SvgIcon.vue';
 import MvRow from '@/components/MvRow.vue';
 
-/**
- * Pick the lyric part from a string formed in `[timecode] lyric`.
- *
- * @param {string} rawLyric The raw lyric string formed in `[timecode] lyric`
- * @returns {string} The lyric part
- */
-function extractLyricPart(rawLyric) {
-  return rawLyric.split(']').pop().trim();
-}
-
 export default {
   name: 'Library',
   components: {
     LibrarySearch,
+    LibraryAvatarMenu,
     SvgIcon,
     CoverRow,
     TrackList,
@@ -296,7 +283,6 @@ export default {
       offline: navigator.onLine === false,
       refreshing: false,
       likedSongs: [],
-      lyric: undefined,
       currentTab:
         this.$store.state.data.libraryPlaylistFilter === 'liked'
           ? 'saved'
@@ -318,32 +304,6 @@ export default {
         'mvs',
         'cloudDisk',
       ].some(name => this.liked[name].length > 0);
-    },
-    /**
-     * @returns {string[]}
-     */
-    pickedLyric() {
-      /** @type {string?} */
-      const lyric = this.lyric;
-
-      // Returns [] if we got no lyrics.
-      if (!lyric) return [];
-
-      const lyricLine = lyric
-        .split('\n')
-        .filter(line => !line.includes('作词') && !line.includes('作曲'));
-
-      // Pick 3 or fewer lyrics based on the lyric lines.
-      const lyricsToPick = Math.min(lyricLine.length, 3);
-
-      // The upperBound of the lyric line to pick
-      const randomUpperBound = lyricLine.length - lyricsToPick;
-      const startLyricLineIndex = randomNum(0, randomUpperBound - 1);
-
-      // Pick lyric lines to render.
-      return lyricLine
-        .slice(startLyricLineIndex, startLyricLineIndex + lyricsToPick)
-        .map(extractLyricPart);
     },
     filterPlaylists() {
       const playlists = this.liked.playlists.slice(1);
@@ -430,7 +390,6 @@ export default {
           ...actions.map(action => this.$store.dispatch(action)),
         ]);
         this.offline = results.some(result => result.status === 'rejected');
-        if (!this.offline) this.getRandomLyric();
       } finally {
         this.refreshing = false;
         this.show = true;
@@ -471,21 +430,6 @@ export default {
     },
     goToLikedSongsList() {
       this.$router.push({ path: '/library/liked-songs' });
-    },
-    getRandomLyric() {
-      if (this.liked.songs.length === 0) return;
-      getLyric(this.liked.songs[randomNum(0, this.liked.songs.length - 1)])
-        .then(data => {
-          if (data.lrc !== undefined) {
-            const isInstrumental = data.lrc.lyric
-              .split('\n')
-              .filter(l => l.includes('纯音乐，请欣赏'));
-            if (isInstrumental.length === 0) {
-              this.lyric = data.lrc.lyric;
-            }
-          }
-        })
-        .catch(() => {});
     },
     openAddPlaylistModal() {
       if (!isAccountLoggedIn()) {
@@ -596,6 +540,21 @@ export default {
 @media (prefers-reduced-motion: reduce) {
   .library-search .search-input {
     transition: none;
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+.liked-songs {
+  min-height: 190px;
+  .top {
+    padding-bottom: 16px;
+    img {
+      width: 76px;
+      height: 76px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
   }
 }
 </style>

@@ -82,6 +82,7 @@ const sandbox = {
   SvgIcon: {},
   MvRow: {},
   ContextMenu: {},
+  LibraryAvatarMenu: {},
   TrackingSection: {},
   CoverRow: {},
   TrackList: {},

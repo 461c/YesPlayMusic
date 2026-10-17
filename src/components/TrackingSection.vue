@@ -18,14 +18,12 @@
           >
             <button
               v-if="backgroundSource"
-              class="profile-background"
-              :class="{ 'avatar-fallback': !hasBackground }"
+              class="profile-background avatar-fallback"
               aria-label="查看背景照片"
               @click="viewPhotos([backgroundSource], 0)"
               ><img
                 v-image-fade
                 :src="backgroundSource | resizeImage(1024)"
-                @error="backgroundFailed"
                 alt=""
                 loading="lazy"
             /></button>
@@ -218,7 +216,6 @@
 </template>
 <script>
 import { retainTracks } from '@/utils/retainedTracks';
-import { usableBackground } from '@/api/tracking';
 import { cacheTrackDetail } from '@/utils/db';
 import { archiveMode, archiveError } from '@/utils/archiveMode';
 import { openPhotos, closePhotos } from '@/utils/photoLightbox';
@@ -245,7 +242,6 @@ export default {
   },
   data() {
     return {
-      failedBackgrounds: [],
       payload: null,
       updatedAt: 0,
       loading: false,
@@ -285,19 +281,8 @@ export default {
     profile() {
       return this.payload?.profile || {};
     },
-    availableBackground() {
-      return [
-        ...(this.profile.backgroundCandidates || []),
-        this.profile.backgroundUrl,
-      ].find(
-        url => usableBackground(url) && !this.failedBackgrounds.includes(url)
-      );
-    },
-    hasBackground() {
-      return Boolean(this.availableBackground);
-    },
     backgroundSource() {
-      return this.availableBackground || this.profile.avatarUrl;
+      return this.profile.avatarUrl;
     },
     profileTags() {
       const tags = [
@@ -383,10 +368,6 @@ export default {
     this.generation++;
   },
   methods: {
-    backgroundFailed() {
-      if (this.availableBackground)
-        this.failedBackgrounds.push(this.availableBackground);
-    },
     async load(force = false, append = false) {
       if (
         !this.uid ||
@@ -985,7 +966,7 @@ small {
 .profile-background.avatar-fallback {
   overflow: hidden;
   img {
-    filter: blur(6px);
+    filter: blur(9px);
     transform: scale(1.18);
     opacity: 0.72;
   }

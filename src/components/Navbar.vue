@@ -21,14 +21,8 @@
           >{{ $t('nav.explore') }}</router-link
         >
         <router-link
-          v-if="settings.showTracking"
-          to="/tracking"
-          :class="{ active: $route.name === 'tracking' }"
-          >跟踪</router-link
-        >
-        <router-link
           to="/library"
-          :class="{ active: $route.name === 'library' }"
+          :class="{ active: $route.path.startsWith('/library') }"
           >{{ $t('nav.library') }}</router-link
         >
       </div>
@@ -44,6 +38,11 @@
     </nav>
 
     <ContextMenu ref="userProfileMenu">
+      <div class="item" @click="$router.push('/library')">音乐库</div>
+      <div class="item" @click="$router.push({ name: 'libraryPeople' })"
+        >人员管理</div
+      >
+      <hr />
       <div class="item" @click="toSettings">
         {{ $t('library.userProfileMenu.settings') }}
       </div>

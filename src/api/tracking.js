@@ -33,7 +33,7 @@ export function readTrackingSection(uid, section, cursor = {}) {
       ...cursor,
       ...(item.type === undefined ? {} : { type: item.type }),
     },
-  }).then(async data => {
+  }).then(data => {
     if (!data || (data.code !== undefined && data.code !== 200)) {
       throw new Error(
         data?.message || data?.msg || '当前内容不可见或接口暂不可用'
@@ -54,46 +54,6 @@ export function readTrackingSection(uid, section, cursor = {}) {
       throw new Error('当前内容不可见或接口返回不完整，保留本地副本');
     if (section === 'profile' && !data.profile)
       throw new Error('未找到该用户的公开资料');
-    if (section === 'profile') {
-      const backgrounds = [];
-      const collect = value => {
-        if (!value || typeof value !== 'object') return;
-        for (const key of [
-          'backgroundUrl',
-          'backgroundImageUrl',
-          'backgroundImgUrl',
-        ])
-          if (usableBackground(value[key]))
-            backgrounds.push(value[key].replace(/^http:/, 'https:'));
-        for (const key of [
-          'data',
-          'profile',
-          'userProfile',
-          'profileInfo',
-          'backgroundInfo',
-        ])
-          if (value[key] && typeof value[key] === 'object') collect(value[key]);
-      };
-      try {
-        const alternate = await request({
-          url: '/user/detail/new',
-          method: 'get',
-          timeout: 7000,
-          skipAuthRedirect: true,
-          params: { uid, ypmMobile: 1, timestamp: Date.now() },
-        });
-        if (
-          alternate &&
-          (alternate.code === undefined || alternate.code === 200)
-        )
-          collect(alternate);
-      } catch (_) {
-        /* Preserve the standard profile when the mobile view is unavailable. */
-      }
-      collect(data.profile);
-      data.profile.backgroundCandidates = [...new Set(backgrounds)];
-      if (backgrounds.length) data.profile.backgroundUrl = backgrounds[0];
-    }
     return data;
   });
 }

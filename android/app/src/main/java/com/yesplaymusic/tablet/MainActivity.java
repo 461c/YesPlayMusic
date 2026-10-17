@@ -228,6 +228,22 @@ public final class MainActivity extends Activity {
         }
         appearanceDark = startupDark();
         updateSystemBarIcons();
+        applyStatusBarVisibility();
+    }
+    private void applyStatusBarVisibility() {
+        boolean show = ApiClient.preferences(this).getBoolean("showSystemStatusBar", true);
+        if (Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowInsetsController control = getWindow().getDecorView().getWindowInsetsController();
+            if (control != null) {
+                if (show) control.show(WindowInsets.Type.statusBars());
+                else { control.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE); control.hide(WindowInsets.Type.statusBars()); }
+            }
+        } else {
+            View decor = getWindow().getDecorView();
+            int flags = decor.getSystemUiVisibility();
+            decor.setSystemUiVisibility(show ? flags & ~View.SYSTEM_UI_FLAG_FULLSCREEN : flags | View.SYSTEM_UI_FLAG_FULLSCREEN);
+        }
+        if (content != null) content.requestApplyInsets();
     }
     private void updateSystemBarIcons() {
         int flags = getWindow().getDecorView().getSystemUiVisibility();
@@ -254,6 +270,7 @@ public final class MainActivity extends Activity {
     @Override public void onConfigurationChanged(Configuration configuration) {
         super.onConfigurationChanged(configuration);
         applyAppearance(startupDark());
+        applyStatusBarVisibility();
         content.requestApplyInsets();
         emitEnvironment();
     }
@@ -350,6 +367,10 @@ public final class MainActivity extends Activity {
     }
 
     public final class Bridge {
+        @JavascriptInterface public void setStatusBarVisible(boolean visible) {
+            ApiClient.preferences(MainActivity.this).edit().putBoolean("showSystemStatusBar", visible).apply();
+            handler.post(() -> { applyStatusBarVisibility(); emitEnvironment(); });
+        }
         @JavascriptInterface public int preserveCachedTrack(String id) { return AudioCache.preserveTrack(MainActivity.this, id); }
         @JavascriptInterface public void setArchiveMode(boolean enabled) {
             AudioCache.preserve(MainActivity.this, enabled);
@@ -439,6 +460,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume(); visible = true;
+        applyStatusBarVisibility();
         web.onResume(); web.resumeTimers();
         applyAppearance(startupDark());
         emitEnvironment();

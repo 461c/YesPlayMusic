@@ -61,7 +61,10 @@
           }}</router-link>
         </div>
         <div v-if="compact" class="info"
-          >{{ item.trackCount != null ? item.trackCount + ' 首' : ''
+          >{{
+            (item.trackCount ?? item.size ?? item.songCount) != null
+              ? (item.trackCount ?? item.size ?? item.songCount) + ' 首'
+              : ''
           }}<span v-if="item.creator && item.creator.nickname">
             · {{ item.creator.nickname }}</span
           ></div
