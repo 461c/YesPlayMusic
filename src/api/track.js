@@ -1,3 +1,4 @@
+import { retainTracks } from '@/utils/retainedTracks';
 import { observeTrackedTrackArtwork } from '@/utils/trackingArtwork';
 import { cachedResource } from '@/utils/cachedResource';
 import { observeTrackArtwork } from '@/utils/libraryArtwork';
@@ -9,6 +10,7 @@ import { musicQualityLevel } from '@/utils/musicQuality';
 import {
   cacheTrackDetail,
   getTrackDetailFromCache,
+  getSavedTrackDetails,
   cacheLyric,
   getLyricFromCache,
 } from '@/utils/db';
@@ -59,11 +61,18 @@ export function getTrackDetail(ids) {
       params: {
         ids,
       },
-    }).then(data => {
+    }).then(async data => {
+      if (!Array.isArray(data?.songs))
+        throw new Error('歌曲信息暂不可用，保留缓存');
+      const privileges = data.privileges || [];
+      data.songs = await retainTracks(
+        mapTrackPlayableStatus(data.songs, privileges),
+        await getSavedTrackDetails(String(ids).split(','))
+      );
       observeTrackArtwork(data.songs || []);
       observeTrackedTrackArtwork(data.songs || []);
       data.songs.map(song => {
-        const privileges = data.privileges.find(t => t.id === song.id);
+        const privileges = (data.privileges || []).find(t => t.id === song.id);
         cacheTrackDetail(song, privileges);
       });
       data.songs = mapTrackPlayableStatus(data.songs, data.privileges);

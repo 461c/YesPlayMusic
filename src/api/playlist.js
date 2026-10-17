@@ -1,3 +1,4 @@
+import { retainTracks } from '@/utils/retainedTracks';
 import { observeTrackedPlaylistArtwork } from '@/utils/trackingArtwork';
 import { cachedResource } from '@/utils/cachedResource';
 import {
@@ -67,6 +68,24 @@ export function getPlaylistDetail(id, noCache = false) {
       params: { id, ...(noCache ? { timestamp: Date.now() } : {}) },
     }).then(async data => {
       if (!data?.playlist) throw new Error('无法获取歌单信息');
+      const previous = await getCachedPlaylist(id, scope);
+      const tracks = await retainTracks(
+        mapTrackPlayableStatus(
+          data.playlist.tracks || [],
+          data.privileges || []
+        ),
+        [
+          ...(previous?.playlist?.tracks || []),
+          ...(previous?.playlist?.archivedTracks || []),
+        ],
+        data.playlist.trackIds || null
+      );
+      data.playlist.archivedTracks = tracks.filter(
+        track => track.archiveStatus === 'removed'
+      );
+      data.playlist.tracks = tracks.filter(
+        track => track.archiveStatus !== 'removed'
+      );
       observePlaylistArtwork(data.playlist);
       observeTrackedPlaylistArtwork(data.playlist);
       data.playlist.tracks = mapTrackPlayableStatus(

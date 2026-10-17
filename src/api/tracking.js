@@ -12,6 +12,13 @@ export const trackingSections = [
   { key: 'events', title: '动态', url: '/user/event' },
 ];
 
+export function usableBackground(url) {
+  return (
+    typeof url === 'string' &&
+    /^https?:\/\//.test(url) &&
+    !/109951162868128395|109951162868126486/.test(url)
+  );
+}
 export function readTrackingSection(uid, section, cursor = {}) {
   const item = trackingSections.find(item => item.key === section);
   return request({
@@ -25,7 +32,7 @@ export function readTrackingSection(uid, section, cursor = {}) {
       ...cursor,
       ...(item.type === undefined ? {} : { type: item.type }),
     },
-  }).then(data => {
+  }).then(async data => {
     if (!data || (data.code !== undefined && data.code !== 200)) {
       throw new Error(
         data?.message || data?.msg || '当前内容不可见或接口暂不可用'
@@ -46,6 +53,25 @@ export function readTrackingSection(uid, section, cursor = {}) {
       throw new Error('当前内容不可见或接口返回不完整，保留本地副本');
     if (section === 'profile' && !data.profile)
       throw new Error('未找到该用户的公开资料');
+    if (
+      section === 'profile' &&
+      !usableBackground(data.profile.backgroundUrl)
+    ) {
+      try {
+        const alternate = await request({
+          url: '/user/detail/new',
+          method: 'get',
+          skipAuthRedirect: true,
+          params: { uid, timestamp: Date.now() },
+        });
+        const profile =
+          alternate?.profile || alternate?.data?.profile || alternate?.data;
+        if (usableBackground(profile?.backgroundUrl))
+          data.profile.backgroundUrl = profile.backgroundUrl;
+      } catch (_) {
+        /* Preserve the standard profile; the view falls back to its avatar. */
+      }
+    }
     return data;
   });
 }

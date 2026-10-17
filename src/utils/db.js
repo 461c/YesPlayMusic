@@ -80,7 +80,14 @@ async function deleteExcessCache() {
     return;
   }
   try {
-    const delCache = await db.trackSources.orderBy('createTime').first();
+    const pinned = new Set(
+      JSON.parse(localStorage.getItem('preserved-audio') || '[]')
+    );
+    const delCache = await db.trackSources
+      .orderBy('createTime')
+      .filter(track => !pinned.has(String(track.id)))
+      .first();
+    if (!delCache) return;
     await db.trackSources.delete(delCache.id);
     tracksCacheBytes -= delCache.source.byteLength;
     console.debug(

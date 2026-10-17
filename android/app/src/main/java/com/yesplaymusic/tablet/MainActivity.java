@@ -350,6 +350,7 @@ public final class MainActivity extends Activity {
     }
 
     public final class Bridge {
+        @JavascriptInterface public int preserveCachedTrack(String id) { return AudioCache.preserveTrack(MainActivity.this, id); }
         @JavascriptInterface public void setArchiveMode(boolean enabled) {
             AudioCache.preserve(MainActivity.this, enabled);
         }

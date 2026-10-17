@@ -12,15 +12,20 @@
       <p v-if="error" role="status" class="muted">{{ error }}</p>
       <div v-if="payload" v-page-reveal>
         <template v-if="tab === 'profile'">
-          <div v-if="profile.avatarUrl" class="profile-photos">
+          <div
+            v-if="profile.avatarUrl || backgroundSource"
+            class="profile-photos"
+          >
             <button
-              v-if="profile.avatarUrl"
+              v-if="backgroundSource"
               class="profile-background"
-              aria-label="查看头像照片"
-              @click="viewPhotos([profile.avatarUrl], 0)"
+              :class="{ 'avatar-fallback': !hasBackground }"
+              aria-label="查看背景照片"
+              @click="viewPhotos([backgroundSource], 0)"
               ><img
                 v-image-fade
-                :src="profile.avatarUrl | resizeImage(224)"
+                :src="backgroundSource | resizeImage(1024)"
+                @error="failedBackground = profile.backgroundUrl || ''"
                 alt=""
                 loading="lazy"
             /></button>
@@ -212,6 +217,8 @@
   </section>
 </template>
 <script>
+import { retainTracks } from '@/utils/retainedTracks';
+import { usableBackground } from '@/api/tracking';
 import { cacheTrackDetail } from '@/utils/db';
 import { archiveMode, archiveError } from '@/utils/archiveMode';
 import { openPhotos, closePhotos } from '@/utils/photoLightbox';
@@ -238,6 +245,7 @@ export default {
   },
   data() {
     return {
+      failedBackground: '',
       payload: null,
       updatedAt: 0,
       loading: false,
@@ -276,6 +284,17 @@ export default {
     },
     profile() {
       return this.payload?.profile || {};
+    },
+    hasBackground() {
+      return (
+        usableBackground(this.profile.backgroundUrl) &&
+        this.failedBackground !== this.profile.backgroundUrl
+      );
+    },
+    backgroundSource() {
+      return this.hasBackground
+        ? this.profile.backgroundUrl
+        : this.profile.avatarUrl;
     },
     profileTags() {
       const tags = [
@@ -437,6 +456,38 @@ export default {
             }
           );
         }
+        if (this.cacheEnabled && section === 'likes') {
+          data.playlist.tracks = await retainTracks(
+            mapTrackPlayableStatus(
+              data.playlist.tracks || [],
+              data.privileges || []
+            ),
+            previous?.playlist?.tracks || [],
+            data.playlist.trackIds || null
+          );
+        } else if (this.cacheEnabled && ['week', 'all'].includes(section)) {
+          const key = section === 'week' ? 'weekData' : 'allData';
+          const rows = new Map(
+            [...(previous?.[key] || []), ...(data[key] || [])].map(row => [
+              String(row.song.id),
+              row,
+            ])
+          );
+          const songs = await retainTracks(
+            mapTrackPlayableStatus(
+              (data[key] || []).map(row => row.song),
+              data.privileges || []
+            ),
+            (previous?.[key] || []).map(row => row.song),
+            null,
+            'not-listed'
+          );
+          data[key] = songs.map(song => ({
+            ...rows.get(String(song.id)),
+            song,
+          }));
+        }
+        if (!current() || archiveMode()) return;
         this.payload = data;
         this.updatedAt = Date.now();
         if (section === 'profile')
@@ -924,10 +975,10 @@ small {
 </style>
 
 <style lang="scss" scoped>
-.profile-background {
+.profile-background.avatar-fallback {
   overflow: hidden;
   img {
-    filter: blur(18px);
+    filter: blur(6px);
     transform: scale(1.18);
     opacity: 0.72;
   }

@@ -34,6 +34,17 @@
       <div class="container">
         <div class="title">
           {{ track.name }}
+          <span
+            v-if="track.localOnly || track.archiveStatus"
+            class="local-status"
+            >{{
+              track.localOnly
+                ? '仅本地'
+                : track.archiveStatus === 'not-listed'
+                ? '本次未上榜'
+                : '已移除'
+            }}</span
+          >
           <span v-if="isSubTitle" :title="subTitle" class="sub-title">
             ({{ subTitle }})
           </span>
@@ -119,6 +130,8 @@ export default {
         : this.trackProp;
     },
     playable() {
+      if (this.track?.localOnly || this.track?.archiveStatus === 'removed')
+        return this.track.localPlayable === true;
       return this.track?.privilege?.pl > 0 || this.track?.playable;
     },
     imgUrl() {
@@ -446,5 +459,18 @@ button {
     color: var(--color-primary);
     opacity: 0.78;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.local-status {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 5px;
+  margin-left: 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.6;
+  vertical-align: middle;
 }
 </style>

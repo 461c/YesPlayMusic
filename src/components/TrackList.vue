@@ -208,6 +208,20 @@ export default {
         this.playThisList(track.id || track.songId);
     },
     playThisList(trackID) {
+      const retained = this.tracks.find(
+        track =>
+          String(track.id) === String(trackID) &&
+          (track.localOnly || track.archiveStatus === 'removed')
+      );
+      if (retained) {
+        if (retained.localPlayable)
+          this.player.addTrackToPlayNext(trackID, true);
+        else
+          this.showToast(
+            retained.reason || '该条目仅保留在本地，音频未完整缓存'
+          );
+        return;
+      }
       if (this.dbclickTrackFunc === 'default') {
         this.playThisListDefault(trackID);
       } else if (this.dbclickTrackFunc === 'none') {

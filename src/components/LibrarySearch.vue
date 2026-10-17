@@ -52,7 +52,13 @@
             loading="lazy"
             alt="" /><span class="song-cover-placeholder" v-else>♪</span
           ><span class="song-info"
-            ><strong>{{ entry.song.name }}</strong
+            ><strong
+              >{{ entry.song.name
+              }}<span
+                v-if="entry.song.localOnly || entry.song.archiveStatus"
+                class="local-status"
+                >{{ entry.song.localOnly ? '仅本地' : '已移除' }}</span
+              ></strong
             ><small
               >{{ artists(entry.song)
               }}<template v-if="album(entry.song)">
@@ -244,6 +250,16 @@ export default {
       return song.al?.picUrl || song.album?.picUrl || song.cover;
     },
     play(entry) {
+      if (
+        (entry.song.localOnly || entry.song.archiveStatus === 'removed') &&
+        !entry.song.localPlayable
+      ) {
+        this.$store.dispatch(
+          'showToast',
+          entry.song.reason || '本地音频未完整缓存'
+        );
+        return;
+      }
       if (entry.sources.some(source => source.key === 'cloud'))
         this.$store.state.player.replacePlaylist(
           [entry.song.id],
@@ -404,5 +420,13 @@ export default {
   .search-summary h2 {
     font-size: 21px;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.local-status {
+  font-size: 11px;
+  margin-left: 7px;
+  opacity: 0.55;
 }
 </style>

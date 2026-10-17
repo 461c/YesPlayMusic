@@ -1,3 +1,4 @@
+import { retainTracks } from '@/utils/retainedTracks';
 import { cachedResource } from '@/utils/cachedResource';
 import request from '@/utils/request';
 import { mapTrackPlayableStatus } from '@/utils/common';
@@ -16,9 +17,15 @@ export function getAlbum(id) {
       params: {
         id,
       },
-    }).then(data => {
+    }).then(async data => {
+      if (!Array.isArray(data?.songs))
+        throw new Error('专辑暂不可用，保留本地副本');
+      const previous = await getAlbumFromCache(id);
+      data.songs = await retainTracks(
+        mapTrackPlayableStatus(data.songs),
+        previous?.songs || []
+      );
       cacheAlbum(id, data);
-      data.songs = mapTrackPlayableStatus(data.songs);
       return data;
     });
   };

@@ -37,7 +37,7 @@ final class AudioCache {
     static synchronized SimpleCache get(Context context) {
         if (cache == null) {
             Context app = context.getApplicationContext();
-            evictor = new DynamicEvictor(maximum(app));
+            evictor = new DynamicEvictor(app, maximum(app));
             cache = new SimpleCache(new File(app.getFilesDir(), "music-cache"), evictor,
                 new StandaloneDatabaseProvider(app));
         }
@@ -67,6 +67,27 @@ final class AudioCache {
         } catch (Exception error) { throw new IllegalStateException(error); }
     }
 
+    private static String[] levels() { return new String[] { "standard", "higher", "exhigh", "lossless", "hires" }; }
+    private static boolean complete(SimpleCache storage, String key) {
+        long length = ContentMetadata.getContentLength(storage.getContentMetadata(key));
+        return length > 0 && storage.isCached(key, 0, length);
+    }
+    static synchronized int preserveTrack(Context context, String id) {
+        if (!id.matches("\\d+")) return 0;
+        SimpleCache storage = get(context);
+        java.util.Set<String> pinned = new java.util.HashSet<>(ApiClient.preferences(context).getStringSet("preservedAudio", java.util.Collections.emptySet()));
+        int state = 0;
+        for (String level : levels()) {
+            String entry = key(context, id, level);
+            if (!storage.getCachedSpans(entry).isEmpty()) {
+                pinned.add(entry);
+                state = Math.max(state, complete(storage, entry) ? 2 : 1);
+            }
+        }
+        if (state > 0) ApiClient.preferences(context).edit().putStringSet("preservedAudio", pinned).apply();
+        return state;
+    }
+
     static DataSource.Factory dataSources(Context context, DefaultHttpDataSource.Factory network) {
         Context app = context.getApplicationContext();
         return () -> {
@@ -77,7 +98,9 @@ final class AudioCache {
                     throw new java.io.IOException("纪念模式：此歌曲没有完整本地缓存");
                 if (id[0] == null) return spec;
                 // Always refresh through the original track, even if cached redirect URLs have expired.
-                Uri address = ApiClient.resolveAudio(app, id[0], level);
+                Uri address;
+                try { address = ApiClient.resolveAudio(app, id[0], level); }
+                catch (java.io.IOException error) { preserveTrack(app, id[0]); throw error; }
                 try {
                     get(app).applyContentMetadataMutations(cacheKey[0], new ContentMetadataMutations()
                         .set(INFO, ApiClient.audioInfo(app, id[0]).toString()));
@@ -90,6 +113,13 @@ final class AudioCache {
                     if (!"ypm".equals(spec.uri.getScheme())) return spec.uri.toString();
                     id[0] = spec.uri.getLastPathSegment();
                     cacheKey[0] = key(app, id[0], level);
+                    java.util.Set<String> pinned = ApiClient.preferences(app).getStringSet("preservedAudio", java.util.Collections.emptySet());
+                    if (!complete(get(app), cacheKey[0])) {
+                        for (String other : levels()) {
+                            String candidate = key(app, id[0], other);
+                            if ((pinned.contains(candidate) || ApiClient.preferences(app).getBoolean("archiveMode", false)) && complete(get(app), candidate)) { cacheKey[0] = candidate; break; }
+                        }
+                    }
                     try {
                         String info = get(app).getContentMetadata(cacheKey[0]).get(INFO, "");
                         if (!info.isEmpty()) ApiClient.restoreAudioInfo(id[0], new JSONObject(info));
@@ -134,7 +164,8 @@ final class AudioCache {
     /** Dynamic capacity changes do not close a cache currently used by the player. */
     private static final class DynamicEvictor implements CacheEvictor {
         volatile long maximum;
-        DynamicEvictor(long maximum) { this.maximum = maximum; }
+        final Context app;
+        DynamicEvictor(Context app, long maximum) { this.app = app; this.maximum = maximum; }
         @Override public boolean requiresCacheSpanTouches() { return true; }
         @Override public void onCacheInitialized() { }
         @Override public void onStartFile(Cache cache, String key, long position, long length) {
@@ -148,7 +179,9 @@ final class AudioCache {
             List<CacheSpan> spans = new ArrayList<>();
             for (String key : cache.getKeys()) spans.addAll(cache.getCachedSpans(key));
             spans.sort(Comparator.comparingLong(span -> span.lastTouchTimestamp));
+            java.util.Set<String> pinned = ApiClient.preferences(app).getStringSet("preservedAudio", java.util.Collections.emptySet());
             for (CacheSpan span : spans) {
+                if (pinned.contains(span.key)) continue;
                 if (cache.getCacheSpace() <= maximum - incoming) break;
                 try { cache.removeSpan(span); } catch (RuntimeException error) { break; }
             }

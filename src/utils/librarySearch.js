@@ -60,7 +60,11 @@ export function buildLibraryIndex(liked, saved, tracks, ownerId, albums = []) {
       path: '/playlist/' + playlist.id,
       kind: '歌单',
     };
-    for (const song of snapshot.playlist.tracks || []) add(song, source);
+    for (const song of [
+      ...(snapshot.playlist.tracks || []),
+      ...(snapshot.playlist.archivedTracks || []),
+    ])
+      add(song, source);
     for (const song of snapshot.playlist.trackIds ||
       snapshot.playlist.tracks ||
       [])

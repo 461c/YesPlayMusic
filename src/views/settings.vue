@@ -240,9 +240,9 @@
         </div>
         <div class="right">
           <select v-model="lang">
-            <option value="en">🇬🇧 English</option>
-            <option value="tr">🇹🇷 Türkçe</option>
-            <option value="zh-CN">🇨🇳 简体中文</option>
+            <option value="en">English</option>
+            <option value="tr">Türkçe</option>
+            <option value="zh-CN">简体中文</option>
             <option value="zh-TW">繁體中文</option>
           </select>
         </div>

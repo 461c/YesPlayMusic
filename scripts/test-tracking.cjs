@@ -22,6 +22,19 @@ vm.runInNewContext(
     .replace(/export /g, '') + '\nmodule.exports = { mapTrackPlayableStatus };',
   playableContext
 );
+const retainContext = {
+  module: { exports: {} },
+  window: {},
+  process: { env: {} },
+  getTrackSource: async () => null,
+};
+vm.runInNewContext(
+  fs
+    .readFileSync('src/utils/retainedTracks.js', 'utf8')
+    .replace(/import[\s\S]*?from ['"][^'"]+['"];?/g, '')
+    .replace(/export /g, '') + '\nmodule.exports={retainTracks};',
+  retainContext
+);
 const eventContext = { module: { exports: {} } };
 vm.runInNewContext(
   fs
@@ -32,6 +45,8 @@ vm.runInNewContext(
 );
 const sandbox = {
   ...eventContext.module.exports,
+  ...retainContext.module.exports,
+  usableBackground: () => false,
   archiveMode: () => archived,
   archiveError: () => new Error('archive'),
   cacheTrackDetail() {},
@@ -416,13 +431,11 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     200,
     'Use the server cursor, not the retained item count'
   );
-  requests
-    .at(-1)
-    .resolve({
-      events: [{ id: 1, eventTime: 100 }],
-      more: false,
-      lasttime: 100,
-    });
+  requests.at(-1).resolve({
+    events: [{ id: 1, eventTime: 100 }],
+    more: false,
+    lasttime: 100,
+  });
   await eventMore;
   assert.equal(page.items.length, 4);
   saved = { data: page.payload, updatedAt: 43 };

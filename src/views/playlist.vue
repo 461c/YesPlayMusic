@@ -394,7 +394,7 @@ export default {
       );
     },
     filteredTracks() {
-      return this.tracks.filter(
+      return [...this.tracks, ...(this.playlist.archivedTracks || [])].filter(
         track =>
           (track.name &&
             track.name

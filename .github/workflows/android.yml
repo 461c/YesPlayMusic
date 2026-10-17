@@ -9,6 +9,7 @@ on:
       - 'scripts/check-android-packages.py'
       - 'scripts/test-tracking.cjs'
       - 'scripts/test-library-archive.cjs'
+      - 'scripts/test-retained-tracks.cjs'
       - 'scripts/test-home-sections.cjs'
       - 'scripts/test-discovery-cache.cjs'
       - 'scripts/test-playlist-recommendations.cjs'
@@ -61,6 +62,7 @@ jobs:
           node scripts/test-playlist-recommendations.cjs
           node scripts/test-tracking.cjs
           node scripts/test-library-archive.cjs
+          node scripts/test-retained-tracks.cjs
           node scripts/test-android-startup.cjs
       - name: Build tablet interface
         run: yarn android:web

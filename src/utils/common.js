@@ -137,6 +137,13 @@ export function isTrackPlayable(track) {
     playable: true,
     reason: '',
   };
+  if (track?.localOnly)
+    return {
+      playable: track.localPlayable === true,
+      reason: track.reason || '仅本地',
+    };
+  if (track?.archiveStatus === 'removed')
+    return { playable: false, reason: '已移除或不可见' };
   if (track?.privilege?.pl > 0) {
     return result;
   }
@@ -170,7 +177,7 @@ export function isTrackPlayable(track) {
 export function mapTrackPlayableStatus(tracks, privileges = []) {
   if (tracks?.length === undefined) return tracks;
   return tracks.map(t => {
-    const privilege = privileges.find(item => item.id === t.id) || {};
+    const privilege = privileges.find(item => item?.id === t.id) || {};
     if (t.privilege) {
       Object.assign(t.privilege, privilege);
     } else {
