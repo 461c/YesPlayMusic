@@ -9,7 +9,23 @@ vm.runInNewContext(
 );
 const { homeSectionCatalog, normalizeHomeSections, homeSections } =
   moduleContext.module.exports;
-assert(homeSectionCatalog.length >= 20);
+assert.equal(
+  homeSectionCatalog
+    .filter(item => ['playlist', 'recommend'].includes(item.type))
+    .map(item => item.key)
+    .join(','),
+  'recommend,discoverPlaylists'
+);
+assert.equal(
+  normalizeHomeSections([
+    'hot',
+    'artists',
+    'highQuality',
+    'recommend',
+    'newChinese',
+  ]).join(','),
+  'discoverPlaylists,artists,recommend,newChinese'
+);
 assert.equal(
   homeSectionCatalog.find(item => item.key === 'forYou').title,
   'For You'
@@ -105,14 +121,23 @@ function instance(keys) {
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
 (async () => {
-  const page = instance(['charts', 'albums', 'hot', 'light']);
+  const page = instance([
+    'charts',
+    'albums',
+    'discoverPlaylists',
+    'newChinese',
+  ]);
   const work = page.loadData();
   await tick();
   assert.equal(requests.length, 3, 'Limit initial concurrency');
   const duplicate = page.loadData();
   await tick();
   assert.equal(requests.length, 3, 'Reactivation must share in-flight workers');
-  page.$store.state.settings.homeSections = ['charts', 'albums', 'hot'];
+  page.$store.state.settings.homeSections = [
+    'charts',
+    'albums',
+    'discoverPlaylists',
+  ];
   requests.slice(0, 3).forEach(request => request.resolve([]));
   await Promise.all([work, duplicate]);
   assert.equal(

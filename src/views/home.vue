@@ -44,6 +44,16 @@
             section.type === 'playlist' || section.type === 'recommend'
           "
         />
+        <p
+          v-if="
+            ['playlist', 'recommend'].includes(section.type) &&
+            !rows[section.key].length
+          "
+          class="empty-home"
+          >{{
+            section.key === 'recommend' ? '暂无个人推荐歌单' : '暂无歌单'
+          }}</p
+        >
       </template>
       <div v-else class="section-placeholder"
         ><button v-if="errors[section.key]" @click="retry(section)"
@@ -190,7 +200,13 @@ export default {
         if (section.type === 'forYou') {
           await ensureDailyTracks(this.$store, force);
           items = [];
-        } else items = await fetchHomeSection(section);
+        } else
+          items = await fetchHomeSection(section, {
+            scope: this.accountScope,
+            isCurrent: () =>
+              generation === this.generation &&
+              this.sections.some(item => item.key === section.key),
+          });
         if (generation === this.generation) {
           this.$set(this.rows, section.key, items);
           this.$set(this.updatedAt, section.key, Date.now());

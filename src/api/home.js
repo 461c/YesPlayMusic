@@ -1,8 +1,9 @@
 import request from '@/utils/request';
-import { getRecommendPlayList } from '@/utils/playList';
-export async function fetchHomeSection(section) {
+import { fetchPlaylistRecommendations } from '@/utils/playlistRecommendations';
+export async function fetchHomeSection(section, options) {
   if (section.type === 'forYou') return [];
-  if (section.type === 'recommend') return getRecommendPlayList(10, false);
+  if (['playlist', 'recommend'].includes(section.type))
+    return fetchPlaylistRecommendations(section, options);
   const result = await request({
     url: section.url || '/toplist',
     method: 'get',
