@@ -1,5 +1,10 @@
 module.exports = [
   {
+    identifier: 'ypm_settings_sync',
+    route: '/ypm/settings/sync',
+    module: require('./electron/settingsBackup'),
+  },
+  {
     identifier: 'user_update',
     route: '/user/update',
     module: require('@neteaseapireborn/api/module/user_update'),

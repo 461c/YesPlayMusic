@@ -232,6 +232,7 @@
           :scope="profileScope"
           :cache-enabled="true"
           section="follows"
+          :extra-artists="liked.artists"
           title="关注"
           @open-user="openUser"
           @notice="showToast($event)"
@@ -282,6 +283,7 @@
     <input
       ref="cloudDiskUploadInput"
       type="file"
+      accept="audio/*,.mp3,.flac,.m4a,.wav,.ogg"
       style="display: none"
       @change="uploadSongToCloudDisk"
     />
@@ -471,6 +473,10 @@ export default {
         return;
       }
       this.currentTab = tab;
+      if (tab === 'follows' && !archiveMode() && navigator.onLine !== false)
+        this.$store
+          .dispatch('fetchLikedArtists')
+          .catch(() => this.showToast('艺人列表刷新失败，保留缓存'));
       if (['created', 'saved'].includes(tab)) {
         this.updateData({
           key: 'libraryPlaylistFilter',
@@ -507,6 +513,10 @@ export default {
       }
     },
     openUser(user) {
+      if (user._artistId) {
+        this.$router.push({ path: `/artist/${user._artistId}` });
+        return;
+      }
       if (String(user.userId) === this.ownUid) return;
       this.$router.push({
         name: 'libraryPerson',
@@ -517,18 +527,20 @@ export default {
     selectUploadFiles() {
       this.$refs.cloudDiskUploadInput.click();
     },
-    uploadSongToCloudDisk(e) {
-      const files = e.target.files;
-      uploadSong(files[0]).then(result => {
-        if (result.code === 200) {
-          let newCloudDisk = this.liked.cloudDisk;
-          newCloudDisk.unshift(result.privateCloud);
-          this.$store.commit('updateLikedXXX', {
-            name: 'cloudDisk',
-            data: newCloudDisk,
-          });
-        }
-      });
+    async uploadSongToCloudDisk(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        this.showToast('正在上传歌曲…');
+        const result = await uploadSong(file);
+        if (result?.code !== 200) throw new Error(result?.msg || '上传未成功');
+        await this.$store.dispatch('fetchCloudDisk');
+        this.showToast('歌曲已上传');
+      } catch (error) {
+        this.showToast(error.message || '上传失败，请重试');
+      } finally {
+        e.target.value = '';
+      }
     },
   },
 };

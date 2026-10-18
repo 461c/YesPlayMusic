@@ -102,6 +102,12 @@ async function testAdapter() {
       'multipart/form-data; boundary='
     )
   );
+  await service.get('/long-request', { timeout: 240000 });
+  assert.strictEqual(
+    nativeRequest.timeout,
+    240000,
+    'Native timeout must permit cloud uploads and settings readback'
+  );
   await assert.rejects(
     service.get('/unauthorized'),
     error => error.response.status === 401 && error.response.data.code === 200

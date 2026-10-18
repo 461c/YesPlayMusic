@@ -476,7 +476,9 @@
         class="settings-panel"
         ><h3 class="panel-title">其它</h3
         ><div class="settings-cards"
-          ><section class="settings-card" v-if="isAndroid"
+          ><SettingsSync v-if="isAndroid || isElectron" /><section
+            class="settings-card"
+            v-if="isAndroid"
             ><h4 class="card-heading">系统播控</h4
             ><div v-if="isAndroid" class="item media-diagnostic"
               ><div class="left"
@@ -1115,6 +1117,7 @@ import { isAndroid } from '@/utils/androidAudio';
 import pkg from '../../package.json';
 import HomeSectionSettings from '@/components/HomeSectionSettings.vue';
 import PlayerButtonSettings from '@/components/PlayerButtonSettings.vue';
+import SettingsSync from '@/components/SettingsSync.vue';
 
 const electron =
   process.env.IS_ELECTRON === true ? window.require('electron') : null;
@@ -1125,7 +1128,7 @@ const validShortcutCodes = ['=', '-', '~', '[', ']', ';', "'", ',', '.', '/'];
 
 export default {
   name: 'Settings',
-  components: { HomeSectionSettings, PlayerButtonSettings },
+  components: { HomeSectionSettings, PlayerButtonSettings, SettingsSync },
   data() {
     return {
       activeCategory:
@@ -2891,5 +2894,16 @@ input[type='number'] {
   .settings-tabs button {
     transition: none;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.settings-card .android-api-address > .right {
+  flex-direction: column;
+  align-items: stretch;
+}
+.settings-card .android-api-address > .right > button {
+  align-self: flex-start;
+  margin-top: 4px;
 }
 </style>

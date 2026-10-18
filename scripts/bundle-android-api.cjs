@@ -80,6 +80,12 @@ fs.copyFileSync(
   path.join(root, 'src/electron/scrobble.js'),
   path.join(output, 'scrobble.js')
 );
+for (const file of ['settingsBackup.js', 'settings-silence.json']) {
+  fs.copyFileSync(
+    path.join(root, 'src/electron', file),
+    path.join(output, file)
+  );
+}
 const files = [];
 function inventory(directory) {
   for (const name of fs.readdirSync(directory).sort()) {

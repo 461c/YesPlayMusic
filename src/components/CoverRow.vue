@@ -118,6 +118,7 @@ export default {
   },
   methods: {
     userLink(item) {
+      if (item._artistId) return `/artist/${item._artistId}`;
       return `https://music.163.com/#/user/home?id=${encodeURIComponent(
         item.userId
       )}`;
@@ -277,7 +278,7 @@ export default {
     align-items: center;
     gap: 13px;
     min-width: 0;
-    padding: 4px 0;
+    padding: 0;
     background: transparent;
   }
   .cover {

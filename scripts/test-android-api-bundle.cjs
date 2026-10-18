@@ -54,6 +54,8 @@ try {
     'scripts/bundle-android-api.cjs',
     'android/api/server.js',
     'src/electron/scrobble.js',
+    'src/electron/settingsBackup.js',
+    'src/electron/settings-silence.json',
   ]) {
     write(path.join(fixture, file), fs.readFileSync(path.join(root, file)));
   }

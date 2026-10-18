@@ -4,10 +4,14 @@
     :class="{ 'user-select-none': userSelectNone }"
     :style="{ '--phone-player-height': phonePlayerHeight }"
   >
-    <Scrollbar v-show="!showLyrics" ref="scrollbar" />
+    <Scrollbar
+      v-show="!showLyrics && $route.name !== 'playlist'"
+      ref="scrollbar"
+    />
     <Navbar v-show="showNavbar" ref="navbar" :scrolled="pageScrolled" />
     <main
       ref="main"
+      :class="{ 'playlist-content': $route.name === 'playlist' }"
       :style="{ overflow: enableScrolling ? 'auto' : 'hidden' }"
       @scroll="handleScroll"
     >
@@ -201,5 +205,16 @@ body:not([data-platform='android']) main::-webkit-scrollbar {
 .player.slide-up-enter,
 .player.slide-up-leave-to {
   transform: translateY(calc(100% + var(--player-bottom-gap)));
+}
+</style>
+
+<style lang="scss">
+main.playlist-content {
+  scrollbar-width: none;
+}
+main.playlist-content::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 </style>

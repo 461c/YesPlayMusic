@@ -51,6 +51,7 @@ public final class MainActivity extends Activity {
     private volatile String snapshot = "{}";
     private boolean pageReady = false;
     private String photoToSave;
+    private android.webkit.ValueCallback<Uri[]> uploadFiles;
     private volatile boolean apiStartupFailed = false;
     private java.util.concurrent.CompletableFuture<String> observedApiStartup;
     private boolean visible = false;
@@ -105,7 +106,7 @@ public final class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
+        settings.setAllowContentAccess(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         web.addJavascriptInterface(new Bridge(), "YesPlayMusicAndroid");
@@ -121,6 +122,17 @@ public final class MainActivity extends Activity {
                     "UTF-8", getAssets().open("web/" + file));
             } catch (IOException error) { return null; }
         }).build();
+        web.setWebChromeClient(new android.webkit.WebChromeClient() {
+            @Override public boolean onShowFileChooser(WebView view, android.webkit.ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (uploadFiles != null) uploadFiles.onReceiveValue(null);
+                uploadFiles = callback;
+                Intent choose = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("audio/*");
+                choose.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                try { startActivityForResult(choose, 605); }
+                catch (Exception error) { uploadFiles.onReceiveValue(null); uploadFiles = null; showError("无法打开文件选择器"); }
+                return true;
+            }
+        });
         web.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -473,6 +485,13 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 605) {
+            if (uploadFiles != null) {
+                uploadFiles.onReceiveValue(resultCode == RESULT_OK && data != null && data.getData() != null ? new Uri[] { data.getData() } : null);
+                uploadFiles = null;
+            }
+            return;
+        }
         if (requestCode != 604) return;
         String source = photoToSave;
         photoToSave = null;
@@ -520,6 +539,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onDestroy() {
         destroyed = true;
+        if (uploadFiles != null) { uploadFiles.onReceiveValue(null); uploadFiles = null; }
         ApiClient.preferences(this).unregisterOnSharedPreferenceChangeListener(audioInfoListener);
         apiWorker.shutdownNow();
         handler.removeCallbacksAndMessages(null);

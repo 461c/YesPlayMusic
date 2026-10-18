@@ -78,7 +78,7 @@
         <template v-else-if="tab === 'follows' || tab === 'fans'">
           <CoverRow
             type="user"
-            :items="items"
+            :items="displayPeople"
             :column-number="6"
             @open-user="$emit('open-user', $event)"
           />
@@ -239,6 +239,7 @@ export default {
     title: { type: String, required: true },
     playlistId: { type: Number, default: 0 },
     cacheEnabled: { type: Boolean, default: false },
+    extraArtists: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -250,6 +251,28 @@ export default {
     };
   },
   computed: {
+    displayPeople() {
+      if (this.tab !== 'follows') return this.items;
+      const users = this.items;
+      const extra = (this.extraArtists || [])
+        .filter(
+          artist =>
+            !users.some(
+              user =>
+                (artist.accountId > 0 &&
+                  String(user.userId) === String(artist.accountId)) ||
+                (user.artistId > 0 &&
+                  String(user.artistId) === String(artist.id))
+            )
+        )
+        .map(artist => ({
+          userId: 'artist-' + artist.id,
+          nickname: artist.name,
+          avatarUrl: artist.picUrl || artist.img1v1Url,
+          _artistId: artist.id,
+        }));
+      return [...users, ...extra];
+    },
     tracks() {
       const tracks = this.items.map(item => {
         const song = { ...(item.song || item) };

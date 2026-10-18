@@ -39,6 +39,7 @@ server
             cookie: [],
           }),
         },
+        { route: '/ypm/settings/sync', module: require('./settingsBackup') },
         ...moduleDefs.map(definition =>
           definition.route === '/scrobble'
             ? { ...definition, module: require('./scrobble') }

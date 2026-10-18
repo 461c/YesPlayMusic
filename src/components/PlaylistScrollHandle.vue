@@ -165,7 +165,7 @@ export default {
 <style lang="scss" scoped>
 .playlist-scroll-handle {
   position: fixed;
-  left: 3px;
+  right: calc(3px + var(--android-inset-right, 0px));
   width: 24px;
   z-index: 90;
   touch-action: none;

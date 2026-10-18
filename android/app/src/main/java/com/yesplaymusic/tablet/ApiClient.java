@@ -156,6 +156,7 @@ final class ApiClient {
         HttpURLConnection connection = (HttpURLConnection) new URL(baseUrl(context) + path.substring(4)).openConnection();
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(15000);
+        connection.setReadTimeout(Math.min(300000, Math.max(15000, request.optInt("timeout", 15000))));
         connection.setRequestMethod(request.optString("method", "GET").toUpperCase(java.util.Locale.ROOT));
         JSONObject headers = request.optJSONObject("headers");
         if (headers != null) {

@@ -327,8 +327,8 @@ export default {
   position: absolute;
   right: 0;
   top: 0;
-  border: 2px solid var(--color-body-bg);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+  border: none;
+  box-shadow: none;
 }
 .people-picker {
   position: absolute;

@@ -69,6 +69,7 @@ export default async function androidApiAdapter(config) {
       )}`,
     }),
     method: (config.method || 'get').toUpperCase(),
+    timeout: Math.min(300000, Math.max(15000, Number(config.timeout) || 15000)),
     headers: { ...config.headers },
   };
   if (config.data instanceof FormData) {
