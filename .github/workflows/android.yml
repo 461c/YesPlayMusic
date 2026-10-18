@@ -56,6 +56,7 @@ jobs:
         run: yarn install --frozen-lockfile --ignore-engines --ignore-scripts --non-interactive
       - name: Verify UI state, navigation and API readiness
         run: |
+          node --experimental-vm-modules scripts/test-startup-imports.mjs
           node scripts/test-appearance.cjs
           node scripts/test-player-options.cjs
           node scripts/test-home-sections.cjs

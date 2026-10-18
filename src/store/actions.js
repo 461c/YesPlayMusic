@@ -1,4 +1,3 @@
-import { retainTracks } from '@/utils/retainedTracks';
 import { libraryScope, readLibrary } from '@/utils/offlineLibrary';
 import { syncLibraryArtwork } from '@/utils/libraryArtwork';
 // import store, { state, dispatch, commit } from "@/store";
@@ -211,6 +210,7 @@ const actions = {
       userPlayHistory({ uid: state.data.user?.userId, type: 0 }),
       userPlayHistory({ uid: state.data.user?.userId, type: 1 }),
     ]).then(async result => {
+      const { retainTracks } = await import('@/utils/retainedTracks');
       const data = {};
       const dataType = { 0: 'allData', 1: 'weekData' };
       if (result[0] && result[1]) {

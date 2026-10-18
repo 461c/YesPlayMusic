@@ -9,8 +9,8 @@ android {
         manifestPlaceholders = [applicationLabel: 'YesPlayMusic']
         minSdk 24
         targetSdk 35
-        versionCode 41145
-        versionName '0.4.11-android.45'
+        versionCode 41146
+        versionName '0.4.11-android.46'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
         externalNativeBuild { cmake { cppFlags '-std=c++20'; arguments '-DANDROID_STL=c++_shared' } }

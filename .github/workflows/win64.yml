@@ -42,6 +42,9 @@ jobs:
         run: |
           node -e "require('@unblockneteasemusic/rust-napi'); require('esbuild').transformSync('const x = 1')"
 
+      - name: Verify renderer startup imports
+        run: node --experimental-vm-modules scripts/test-startup-imports.mjs
+
       - name: Build Windows x64 Setup
         run: yarn electron:build-win64
 

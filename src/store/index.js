@@ -1,5 +1,4 @@
 import Vue from 'vue';
-import { androidCommand, isAndroid } from '@/utils/androidAudio';
 import { archiveMode } from '@/utils/archiveMode';
 import Vuex from 'vuex';
 import state from './state';
@@ -35,12 +34,15 @@ const store = new Vuex.Store(options);
 store.watch(
   state => JSON.stringify([state.data.user?.userId, state.liked.songs]),
   () => {
-    if (isAndroid)
-      androidCommand({
-        action: 'favorites',
-        userId: String(store.state.data.user?.userId || ''),
-        likedSongIds: store.state.liked.songs,
-      });
+    const native = window.YesPlayMusicAndroid;
+    if (process.env.VUE_APP_ANDROID === 'true' && native?.send)
+      native.send(
+        JSON.stringify({
+          action: 'favorites',
+          userId: String(store.state.data.user?.userId || ''),
+          likedSongIds: store.state.liked.songs,
+        })
+      );
   }
 );
 
