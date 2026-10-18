@@ -7,7 +7,25 @@ const cloudDelete = require('@neteaseapireborn/api/module/user_cloud_del');
 const downloadUrl = require('@neteaseapireborn/api/module/song_download_url');
 const playerUrl = require('@neteaseapireborn/api/module/song_url');
 const silence = Buffer.from(require('./settings-silence.json'), 'base64');
-const filename = 'YesPlayMusic-Settings.mp3';
+const legacyFilename = 'YesPlayMusic-Settings.mp3';
+const backupPrefix = 'YPM设置备份-';
+const nameCharacters =
+  '春夏秋冬山川星月清风云海松竹兰荷晴雨晨暮溪石花叶雪霜青白飞流湖林远近明静光影';
+function randomName() {
+  return (
+    backupPrefix +
+    Array.from(
+      crypto.randomBytes(6),
+      byte => nameCharacters[byte % nameCharacters.length]
+    ).join('')
+  );
+}
+function textFrame(text) {
+  return Buffer.concat([
+    Buffer.from([1, 255, 254]),
+    Buffer.from(text, 'utf16le'),
+  ]);
+}
 const owner = 'YesPlayMusic.Settings';
 const busy = new Set();
 function clean(value, depth = 0) {
@@ -35,7 +53,7 @@ function frame(name, data) {
   header.writeUInt32BE(data.length, 4);
   return Buffer.concat([header, data]);
 }
-function encode(settings) {
+function encode(settings, title = randomName()) {
   const text = JSON.stringify(clean(settings));
   if (Buffer.byteLength(text) > 65536) throw new Error('设置超过 64KB');
   const envelope = JSON.stringify({
@@ -46,7 +64,7 @@ function encode(settings) {
     settings: JSON.parse(text),
   });
   const tag = Buffer.concat([
-    frame('TIT2', Buffer.from('\0YesPlayMusic Settings')),
+    frame('TIT2', textFrame(title)),
     frame('TPE1', Buffer.from('\0YesPlayMusic')),
     frame('TALB', Buffer.from('\0YesPlayMusic Settings Backup')),
     frame(
@@ -100,12 +118,27 @@ function decode(bytes) {
   throw new Error('云盘文件中的设置标签已丢失，未修改当前设置');
 }
 function isBackup(item) {
+  const name = String(item.fileName || '');
+  const title = String(
+    item.songName || (item.simpleSong && item.simpleSong.name) || ''
+  );
+  const marked =
+    item.album === 'YesPlayMusic Settings Backup' ||
+    item.artist === 'YesPlayMusic';
   return (
-    item.fileName === filename &&
-    (item.album === 'YesPlayMusic Settings Backup' ||
-      item.artist === 'YesPlayMusic')
+    marked &&
+    (name === legacyFilename ||
+      title === 'YesPlayMusic Settings' ||
+      /^YPM设置备份-[\u4e00-\u9fff]{6}(?:\.mp3)?$/.test(name) ||
+      /^YPM设置备份-[\u4e00-\u9fff]{6}$/.test(title))
   );
 }
+function cloudId(item) {
+  return (
+    item && (item.songId || (item.simpleSong && item.simpleSong.id) || item.id)
+  );
+}
+
 async function handler(query, request) {
   const cookie = query.cookie || {};
   if (!cookie.MUSIC_U)
@@ -188,7 +221,7 @@ async function handler(query, request) {
         try {
           return {
             status: 200,
-            body: { code: 200, snapshot: await read(item.songId) },
+            body: { code: 200, snapshot: await read(cloudId(item)) },
             cookie: [],
           };
         } catch (_) {
@@ -203,39 +236,62 @@ async function handler(query, request) {
         : query.settings;
     if (!settings || typeof settings !== 'object' || Array.isArray(settings))
       throw new Error('设置格式无效');
-    const data = encode(settings);
+    const title = randomName();
+    const filename = title + '.mp3';
+    const data = encode(settings, title);
     const uploaded = await call(cloudUpload, {
       songFile: {
-        name: filename,
+        // Upstream cloud.js decodes multipart names from Latin-1 to UTF-8.
+        name: Buffer.from(filename, 'utf8').toString('latin1'),
         data,
         size: data.length,
         md5: crypto.createHash('md5').update(data).digest('hex'),
         mimetype: 'audio/mpeg',
       },
     });
-    createdId =
-      uploaded.songId ||
-      (uploaded.privateCloud && uploaded.privateCloud.songId);
     const after = await list();
-    if (!createdId) {
-      const added = after.find(
-        item =>
-          !old.some(previous => String(previous.songId) === String(item.songId))
-      );
-      createdId = added && added.songId;
-    }
+    const added = after.find(
+      item => item.fileName === filename || item.songName === title
+    );
+    // The upload-check ID may differ from the final published cloud song ID.
+    createdId =
+      cloudId(added) ||
+      (uploaded.privateCloud && cloudId(uploaded.privateCloud)) ||
+      (uploaded.data &&
+        uploaded.data.privateCloud &&
+        cloudId(uploaded.data.privateCloud)) ||
+      uploaded.songId;
     if (!createdId) throw new Error('没有取得新备份编号，保留原备份');
     const verified = await read(createdId);
     if (JSON.stringify(verified.settings) !== JSON.stringify(clean(settings)))
       throw new Error('云盘备份内容不一致，保留原备份');
     verifiedNew = true;
-    const obsolete = after
-      .filter(item => String(item.songId) !== String(createdId))
-      .map(item => item.songId);
-    if (obsolete.length) await call(cloudDelete, { id: obsolete.join(',') });
+    const obsolete = [
+      ...new Set(
+        [...old, ...after]
+          .map(cloudId)
+          .filter(id => id && String(id) !== String(createdId))
+          .map(String)
+      ),
+    ];
+    const retained = [];
+    for (const id of obsolete) {
+      // user_cloud_del wraps query.id in an array itself: never pass comma-joined IDs.
+      try {
+        await call(cloudDelete, { id });
+      } catch (_) {
+        retained.push(id);
+      }
+    }
+    const warning = retained.length
+      ? '最新设置已保存并校验，但有 ' +
+        retained.length +
+        ' 个旧备份未能清理；下次手动导出会再尝试'
+      : '';
+
     return {
       status: 200,
-      body: { code: 200, savedAt: verified.savedAt },
+      body: { code: 200, savedAt: verified.savedAt, warning },
       cookie: [],
     };
   } catch (error) {
@@ -243,7 +299,7 @@ async function handler(query, request) {
     if (
       !verifiedNew &&
       createdId &&
-      !old.some(item => String(item.songId) === String(createdId))
+      !old.some(item => String(cloudId(item)) === String(createdId))
     ) {
       try {
         await call(cloudDelete, { id: String(createdId) });

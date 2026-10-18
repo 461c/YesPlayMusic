@@ -110,3 +110,5 @@
 - Playlist routes hide the WebView/native main scrollbar and the generic desktop scrollbar, keeping native touch scrolling active. The dedicated playlist drag handle belongs on the right, respecting the right safe inset. Other routes retain their existing scrollbar behavior.
 
 - Hide all browser scrollbars globally, disable WebView horizontal/vertical indicators and keep the old Scrollbar component headless for full-path position history only. Mount one page drag handle in App for all routes, with no rail line; observe current route content after entry and retain keyboard/touch scrolling. Settings sync buttons bind disabled to an explicit boolean, never the empty busy string.
+
+- Each cloud settings export uses YPM设置备份- plus six random Chinese characters for file/title, encoded as UTF-16 ID3 text and Latin-1 transport names expected by the upstream cloud module. Recognize legacy fixed-name backups too. Prefer published cloud IDs/list identity over preliminary upload-check IDs. Delete obsolete backups one ID per upstream call; a verified export with cleanup errors returns success plus an explicit warning, not a false total failure.

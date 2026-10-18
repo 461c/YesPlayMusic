@@ -80,7 +80,9 @@ export default {
           }
           this.message = '设置已导入，正在重新加载…';
           window.location.reload();
-        } else this.message = '设置已导出并校验，云盘保留最新一份备份';
+        } else
+          this.message =
+            result.warning || '设置已导出并校验，云盘保留最新一份备份';
       } catch (error) {
         this.message = error.message || '设置同步失败，请重试';
       } finally {

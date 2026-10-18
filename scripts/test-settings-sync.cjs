@@ -55,17 +55,21 @@ const request = async (kind, query) => {
     buffers.set(songId, query.songFile.data);
     files.push({
       songId,
-      fileName: query.songFile.name,
+      fileName: Buffer.from(query.songFile.name, 'latin1').toString('utf8'),
       artist: 'YesPlayMusic',
       album: 'YesPlayMusic Settings Backup',
       addTime: songId,
     });
-    body.songId = songId;
+    body.songId = 777; // The preliminary upload-check ID is not the published song ID.
+    body.privateCloud = { songId };
   }
   if (kind === 'delete') {
     if (rejectDelete) throw new Error('delete failed');
-    const ids = query.id.split(',').map(Number);
-    files = files.filter(file => !ids.includes(file.songId));
+    assert(
+      !String(query.id).includes(','),
+      'Upstream delete accepts one ID, not a comma-separated batch'
+    );
+    files = files.filter(file => String(file.songId) !== String(query.id));
   }
   if (kind === 'url')
     body.data = { url: 'https://m701.music.126.net/' + query.id };
@@ -98,9 +102,22 @@ const query = operation => ({
   const index = damaged.indexOf(Buffer.from('purple'));
   damaged[index] = 120;
   assert.throws(() => handler.decode(damaged), /校验/);
+  // Include several legacy duplicates to exercise the real per-ID delete contract.
+  files.push(
+    ...[40, 41, 42].map(songId => ({
+      songId,
+      fileName: 'YesPlayMusic-Settings.mp3',
+      artist: 'YesPlayMusic',
+      album: 'YesPlayMusic Settings Backup',
+    }))
+  );
+  const generatedNames = new Set();
   for (let i = 0; i < 2; i++) {
     const result = await handler(query('export'), request);
     assert.equal(result.body.code, 200);
+    const backup = files.find(file => file.artist === 'YesPlayMusic');
+    assert(/^YPM设置备份-[\u4e00-\u9fff]{6}\.mp3$/.test(backup.fileName));
+    generatedNames.add(backup.fileName);
     assert.equal(
       files.filter(file => file.artist === 'YesPlayMusic').length,
       1,
@@ -111,6 +128,11 @@ const query = operation => ({
       'Never delete similarly named user music'
     );
   }
+  assert.equal(
+    generatedNames.size,
+    2,
+    'Each export uses a new Chinese filename'
+  );
   const imported = await handler(query('import'), request);
   assert.equal(imported.body.snapshot.settings.themeColor, 'purple');
   const before = files.map(file => file.songId).join(',');
@@ -123,7 +145,13 @@ const query = operation => ({
   );
   corrupt = false;
   rejectDelete = true;
-  assert.equal((await handler(query('export'), request)).body.code, 500);
+  const cleanupFailure = await handler(query('export'), request);
+  assert.equal(
+    cleanupFailure.body.code,
+    200,
+    'Verified export is still successful if old cleanup fails'
+  );
+  assert(cleanupFailure.body.warning.includes('未能清理'));
   assert.equal(
     files.filter(file => file.artist === 'YesPlayMusic').length,
     2,
@@ -138,7 +166,7 @@ const query = operation => ({
     'Import never uploads or modifies cloud files'
   );
   console.log(
-    'Settings sync: valid tagged MP3, checksum, secret omission, manual roundtrip, singleton cleanup and rollback passed'
+    'Settings sync: valid tagged MP3, checksum, secret omission, manual roundtrip, random Chinese filenames, published IDs, per-ID cleanup, partial success and rollback passed'
   );
 })().catch(error => {
   console.error(error);
