@@ -4,18 +4,19 @@
     :class="{ 'user-select-none': userSelectNone }"
     :style="{ '--phone-player-height': phonePlayerHeight }"
   >
-    <Scrollbar
-      v-show="!showLyrics && $route.name !== 'playlist'"
-      ref="scrollbar"
-    />
+    <Scrollbar ref="scrollbar" />
     <Navbar v-show="showNavbar" ref="navbar" :scrolled="pageScrolled" />
     <main
       ref="main"
-      :class="{ 'playlist-content': $route.name === 'playlist' }"
       :style="{ overflow: enableScrolling ? 'auto' : 'hidden' }"
       @scroll="handleScroll"
     >
-      <transition name="page" mode="out-in" @before-enter="restorePagePosition">
+      <transition
+        name="page"
+        mode="out-in"
+        @before-enter="restorePagePosition"
+        @after-enter="refreshScrollHandle"
+      >
         <keep-alive
           include="Home,Artist,ArtistMV,Next,Search,Explore,Library,Tracking"
         >
@@ -23,6 +24,7 @@
         </keep-alive>
       </transition>
     </main>
+    <PlaylistScrollHandle ref="pageScrollbar" />
     <transition name="slide-up">
       <Player v-if="enablePlayer" v-show="showPlayer" ref="player" />
     </transition>
@@ -39,6 +41,7 @@
 import ModalAddTrackToPlaylist from './components/ModalAddTrackToPlaylist.vue';
 import ModalNewPlaylist from './components/ModalNewPlaylist.vue';
 import Scrollbar from './components/Scrollbar.vue';
+import PlaylistScrollHandle from './components/PlaylistScrollHandle.vue';
 import Navbar from './components/Navbar.vue';
 import Player from './components/Player.vue';
 import Toast from './components/Toast.vue';
@@ -57,6 +60,7 @@ export default {
     ModalNewPlaylist,
     Lyrics,
     Scrollbar,
+    PlaylistScrollHandle,
   },
   data() {
     return {
@@ -127,6 +131,9 @@ export default {
         .dispatch('fetchLikedPlaylist')
         .then(() => this.$store.dispatch('fetchLikedSongsWithDetails'))
         .catch(() => {});
+    },
+    refreshScrollHandle() {
+      this.$nextTick(() => this.$refs.pageScrollbar?.observeContent());
     },
     restorePagePosition() {
       this.$refs.scrollbar.restorePosition();

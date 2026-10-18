@@ -101,6 +101,8 @@ public final class MainActivity extends Activity {
             return insets;
         });
         web.addOnLayoutChangeListener((view, l, t, r, b, oldL, oldT, oldR, oldB) -> emitEnvironment());
+        web.setVerticalScrollBarEnabled(false);
+        web.setHorizontalScrollBarEnabled(false);
         web.setBackgroundColor(appearanceDark ? android.graphics.Color.BLACK : android.graphics.Color.WHITE);
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);

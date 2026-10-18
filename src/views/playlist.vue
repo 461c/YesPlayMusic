@@ -165,7 +165,6 @@
       </div>
     </div>
 
-    <PlaylistScrollHandle />
     <TrackList
       :id="playlist.id"
       :tracks="filteredTracks"
@@ -246,7 +245,6 @@ import ButtonTwoTone from '@/components/ButtonTwoTone.vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import TrackList from '@/components/TrackList.vue';
 import Cover from '@/components/Cover.vue';
-import PlaylistScrollHandle from '@/components/PlaylistScrollHandle.vue';
 import Modal from '@/components/Modal.vue';
 
 const specialPlaylist = {
@@ -343,7 +341,6 @@ const specialPlaylist = {
 export default {
   name: 'Playlist',
   components: {
-    PlaylistScrollHandle,
     Cover,
     ButtonTwoTone,
     TrackList,

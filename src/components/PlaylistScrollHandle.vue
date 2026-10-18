@@ -5,7 +5,7 @@
     :style="{ top: top + 'px', height: height + 'px' }"
     role="slider"
     tabindex="0"
-    aria-label="歌单滚动位置"
+    aria-label="页面滚动位置"
     aria-orientation="vertical"
     :aria-valuenow="Math.round(progress * 100)"
     aria-valuemin="0"
@@ -13,8 +13,7 @@
     @pointerdown="start"
     @keydown="key"
   >
-    <div class="rail"></div
-    ><div
+    <div
       class="thumb"
       :class="{ dragging }"
       :style="{
@@ -46,7 +45,7 @@ export default {
     },
   },
   mounted() {
-    this.scroller = this.$parent.$parent.$refs.main;
+    this.scroller = this.$parent.$refs.main;
     document.body.appendChild(this.$el);
     this.scroller.addEventListener('scroll', this.schedule, { passive: true });
     window.addEventListener('resize', this.schedule);
@@ -54,7 +53,7 @@ export default {
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(this.schedule)
         : null;
-    this.resizeObserver?.observe(this.$parent.$el);
+    this.observeContent();
     this.fallbackTimer = this.resizeObserver
       ? null
       : setInterval(this.schedule, 750);
@@ -79,6 +78,14 @@ export default {
     this.$el.remove();
   },
   methods: {
+    observeContent() {
+      if (!this.scroller) return;
+      this.resizeObserver?.disconnect();
+      this.resizeObserver?.observe(this.scroller);
+      const content = this.scroller.firstElementChild;
+      if (content) this.resizeObserver?.observe(content);
+      this.schedule();
+    },
     schedule() {
       if (this.frame) return;
       this.frame = requestAnimationFrame(() => {
@@ -97,7 +104,7 @@ export default {
         bar && bar.top > this.top ? bar.top - 16 : window.innerHeight - 30;
       this.height = Math.max(80, bottom - this.top);
       const max = this.scroller.scrollHeight - this.scroller.clientHeight;
-      this.visible = this.active && this.$parent.show && max > 40;
+      this.visible = this.active && max > 40;
       this.thumbSize = Math.max(
         36,
         Math.min(
@@ -172,15 +179,6 @@ export default {
   cursor: ns-resize;
   user-select: none;
   outline: none;
-}
-.rail {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 11px;
-  width: 2px;
-  border-radius: 2px;
-  background: rgba(128, 128, 128, 0.15);
 }
 .thumb {
   position: absolute;

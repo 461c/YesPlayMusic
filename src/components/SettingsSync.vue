@@ -6,10 +6,10 @@
       MP3。不包含网易云登录信息、歌曲和图片缓存。</p
     >
     <div class="sync-actions">
-      <button :disabled="busy" @click="sync('export')">{{
+      <button :disabled="busy !== ''" @click="sync('export')">{{
         busy === 'export' ? '正在导出…' : '导出到云盘'
       }}</button>
-      <button :disabled="busy" @click="sync('import')">{{
+      <button :disabled="busy !== ''" @click="sync('import')">{{
         busy === 'import' ? '正在导入…' : '从云盘导入'
       }}</button>
     </div>

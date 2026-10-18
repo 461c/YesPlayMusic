@@ -122,20 +122,14 @@ a {
   }
 }
 
-body:not([data-platform='android']) ::-webkit-scrollbar {
-  width: 8px;
+// Scroll input stays native; only the single page drag handle is drawn.
+* {
+  scrollbar-width: none !important;
 }
-
-body:not([data-platform='android']) ::-webkit-scrollbar-track {
-  background: transparent;
-  border-left: 1px solid rgba(128, 128, 128, 0.18);
-  background: var(--color-body-bg);
-}
-
-body:not([data-platform='android']) ::-webkit-scrollbar-thumb {
-  -webkit-border-radius: 10px;
-  border-radius: 10px;
-  background: var(--color-scrollbar-thumb);
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .user-select-none {
