@@ -84,8 +84,6 @@ for (const file of [
   'settingsBackup.js',
   'settings-silence.json',
   'ncbl.js',
-  'dailyCategories.js',
-  'xeapi.js',
   'api-enhanced-LICENSE.txt',
 ]) {
   fs.copyFileSync(

@@ -78,7 +78,7 @@ const request = async (kind, query) => {
 const settings = {
   themeColor: 'purple',
   lyricFontSize: 28,
-  homeSections: ['dailyTracks'],
+  playerButtons: { queue: 'show' },
   customCssUrl: '',
   unmCookie: 'private',
   password: 'secret',

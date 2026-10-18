@@ -6,7 +6,7 @@ export default {
   nav: {
     home: 'Home',
     explore: 'Explore',
-    library: 'Library',
+    library: 'Mine',
     search: 'Search',
     github: 'GitHub Repo',
   },
@@ -215,7 +215,6 @@ export default {
     showPlaylistsByAppleMusic: 'Show playlists by Apple Music',
     enableDiscordRichPresence: 'Enable Discord Rich Presence',
     enableGlobalShortcut: 'Enable Global Shortcut',
-    showLibraryDefault: 'Show Library after App Launched',
     subTitleDefault: 'Show Alias for Subtitle by default',
     enableReversedMode: 'Enable Reversed Mode (Experimental)',
     enableCustomTitlebar: 'Enable custom title bar (Need restart)',

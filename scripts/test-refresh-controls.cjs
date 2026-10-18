@@ -44,31 +44,6 @@ assert.equal(clock.seconds(), 5);
 clock.setPlaying(true);
 now += 3000;
 assert.equal(clock.seconds(), 8);
-const { categoryGroups } = load(
-  'src/utils/dailyCategories.js',
-  'categoryGroups'
-);
-const groups = categoryGroups({
-  code: 200,
-  data: {
-    categoryList: [
-      {
-        categoryId: 10,
-        categoryName: '摇滚',
-        songs: [{ id: 1, name: 'One', al: {} }, { id: 2 }],
-      },
-      { categoryId: 20, categoryName: '流行', songIds: [3, 4] },
-    ],
-  },
-});
-assert.equal(groups.length, 2);
-assert.equal(groups[0].title, '摇滚');
-assert.equal(groups[1].ids.join(','), '3,4');
-assert.equal(
-  categoryGroups({ data: { categories: [{ id: 1000, name: '风格' }] } }).length,
-  0,
-  'Category IDs must not become song IDs'
-);
 const vue = fs.readFileSync('src/components/PlaylistScrollHandle.vue', 'utf8');
 const source = vue
   .match(/<script>([\s\S]*?)<\/script>/)[1]
@@ -106,5 +81,5 @@ assert.equal(
 handle.move({ clientY: 323, preventDefault() {} });
 assert.equal(handle.scroller.scrollTop, 600);
 console.log(
-  'Refresh controls: retained collections, partial-page safety, listening clock, daily category IDs and no-jump scrollbar passed'
+  'Refresh controls: retained collections, partial-page safety, listening clock, no-jump scrollbar passed'
 );

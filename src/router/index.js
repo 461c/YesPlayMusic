@@ -17,15 +17,7 @@ const routes = [
     component: () => import('@/views/tracking.vue'),
     meta: { keepAlive: true, savePosition: true },
   },
-  {
-    path: '/',
-    name: 'home',
-    component: () => import('@/views/home.vue'),
-    meta: {
-      keepAlive: true,
-      savePosition: true,
-    },
-  },
+  { path: '/', redirect: '/explore' },
   {
     path: '/login',
     name: 'login',

@@ -174,7 +174,6 @@ class Background {
     log('creating app window');
 
     const appearance = this.store.get('settings.appearance');
-    const showLibraryDefault = this.store.get('settings.showLibraryDefault');
 
     const options = {
       width: this.store.get('window.width') || 1440,
@@ -248,19 +247,11 @@ class Background {
 
     if (process.env.WEBPACK_DEV_SERVER_URL) {
       // Load the url of the dev server if in development mode
-      this.window.loadURL(
-        showLibraryDefault
-          ? `${process.env.WEBPACK_DEV_SERVER_URL}/#/library`
-          : process.env.WEBPACK_DEV_SERVER_URL
-      );
+      this.window.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
       if (!process.env.IS_TEST) this.window.webContents.openDevTools();
     } else {
       createProtocol('app');
-      this.window.loadURL(
-        showLibraryDefault
-          ? 'http://localhost:27232/#/library'
-          : 'http://localhost:27232'
-      );
+      this.window.loadURL('http://localhost:27232');
     }
   }
 

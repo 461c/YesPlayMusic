@@ -8,6 +8,9 @@ const updateSetting = () => {
     ...parsedSettings,
   };
 
+  delete settings.homeSections;
+  delete settings.showLibraryDefault;
+
   if (
     settings.shortcuts.length !== initLocalStorage.settings.shortcuts.length
   ) {

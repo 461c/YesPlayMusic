@@ -9,7 +9,7 @@
       </h1>
       <div class="library-search" :class="{ expanded: searchOpen }">
         <button
-          aria-label="搜索音乐库"
+          aria-label="搜索我的收藏"
           :aria-expanded="searchOpen"
           @click="toggleSearch"
           ><svg-icon icon-class="search"
@@ -18,8 +18,8 @@
           ><input
             ref="librarySearch"
             v-model="searchInput"
-            aria-label="搜索音乐库"
-            placeholder="搜索音乐库"
+            aria-label="搜索我的收藏"
+            placeholder="搜索我的收藏"
             @keydown.esc="closeSearch"
         /></div>
         <button

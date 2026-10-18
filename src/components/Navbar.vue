@@ -12,9 +12,6 @@
         /></button-icon>
       </div>
       <div class="navigation-links">
-        <router-link to="/" :class="{ active: $route.name === 'home' }">{{
-          $t('nav.home')
-        }}</router-link>
         <router-link
           to="/explore"
           :class="{ active: $route.name === 'explore' }"

@@ -119,3 +119,5 @@
 - Desktop artwork uses the same ordinary-response eligibility, persistent on-demand caching, stats and explicit clear as Android; do not crawl playlists or clear on refresh/auth failure. Daily song categories come only from the read-only category endpoint, without modifying account preferences or replacing the ordinary daily list.
 
 - Store bootstrap must not import androidAudio directly: androidAudio → auth → request → androidAudio reads isAndroid before initialization and can blank both renderers. Use the dependency-free native bridge for store favorites synchronization; defer new database-dependent imports until actions run. Run the ESM bootstrap regression in both Android and desktop CI.
+
+- Navigation now has only Explore and Mine (zh-CN 我的). Remove Home and its section configuration/recommendation rotation logic; root redirects to Explore. Keep only the original For You daily-song and personal-FM cards, directly below the Explore heading and above filters, mounted only for 全部. Daily songs have no experimental category selector or XEAPI overrides. Remove obsolete Home/startup-library settings without touching saved people, metadata or media caches.

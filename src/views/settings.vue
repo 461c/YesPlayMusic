@@ -186,7 +186,7 @@
                   {{ artworkCache.size }}</div
                 >
                 <div class="description"
-                  >保存音乐库及已打开歌单的图片，按需缓存，不遍历下载歌曲封面。<details
+                  >保存收藏内容及已打开歌单的图片，按需缓存，不遍历下载歌曲封面。<details
                     ><summary>本次缓存统计</summary>本地命中
                     {{ artworkCache.hits || 0 }} 次，下载
                     {{ artworkCache.downloads || 0 }} 次，失败
@@ -462,10 +462,8 @@
               </div>
             </div></section
           >
-          <section class="settings-card"
-            ><h4 class="card-heading">首页内容</h4
-            ><HomeSectionSettings /></section></div
-      ></section>
+        </div></section
+      >
       <section
         v-show="activeCategory === 'other'"
         v-page-reveal="activeCategory === 'other'"
@@ -559,25 +557,7 @@
                 </div>
               </div> </div></section
           ><section class="settings-card"
-            ><h4 class="card-heading">使用偏好</h4
-            ><div v-if="isElectron" class="item">
-              <div class="left">
-                <div class="title">
-                  {{ $t('settings.showLibraryDefault') }}</div
-                >
-              </div>
-              <div class="right">
-                <div class="toggle">
-                  <input
-                    id="show-library-default"
-                    v-model="showLibraryDefault"
-                    type="checkbox"
-                    name="show-library-default"
-                  />
-                  <label for="show-library-default"></label>
-                </div>
-              </div>
-            </div>
+            ><h4 class="card-heading">使用偏好</h4>
             <div class="item">
               <div class="left">
                 <div class="title">倒序播放按钮</div>
@@ -1116,7 +1096,6 @@ import { countDBSize, clearDB } from '@/utils/db';
 import { applyCustomCss } from '@/utils/customCss';
 import { isAndroid } from '@/utils/androidAudio';
 import pkg from '../../package.json';
-import HomeSectionSettings from '@/components/HomeSectionSettings.vue';
 import PlayerButtonSettings from '@/components/PlayerButtonSettings.vue';
 import SettingsSync from '@/components/SettingsSync.vue';
 
@@ -1129,11 +1108,10 @@ const validShortcutCodes = ['=', '-', '~', '[', ']', ';', "'", ',', '.', '/'];
 
 export default {
   name: 'Settings',
-  components: { HomeSectionSettings, PlayerButtonSettings, SettingsSync },
+  components: { PlayerButtonSettings, SettingsSync },
   data() {
     return {
-      activeCategory:
-        this.$route.hash === '#home-sections' ? 'appearance' : 'playback',
+      activeCategory: 'playback',
       categories: [
         { key: 'playback', title: '播放', caption: '音质与控制' },
         { key: 'cache', title: '缓存', caption: '歌曲与图片' },
@@ -1577,17 +1555,6 @@ export default {
         });
       },
     },
-    showLibraryDefault: {
-      get() {
-        return this.settings.showLibraryDefault || false;
-      },
-      set(value) {
-        this.$store.commit('updateSettings', {
-          key: 'showLibraryDefault',
-          value,
-        });
-      },
-    },
     cacheLimit: {
       get() {
         return this.settings.cacheLimit || false;
@@ -1767,26 +1734,6 @@ export default {
       this.cacheStatsTimer = setInterval(() => this.countDBSize(), 3000);
     }
   },
-  watch: {
-    '$route.hash'(hash) {
-      if (hash === '#home-sections') {
-        this.activeCategory = 'appearance';
-        this.$nextTick(() =>
-          document
-            .getElementById('home-sections')
-            ?.scrollIntoView({ block: 'start' })
-        );
-      }
-    },
-  },
-  mounted() {
-    if (this.$route.hash === '#home-sections')
-      this.$nextTick(() =>
-        document
-          .getElementById('home-sections')
-          ?.scrollIntoView({ block: 'start' })
-      );
-  },
   beforeDestroy() {
     clearInterval(this.cacheStatsTimer);
   },
@@ -1923,7 +1870,7 @@ export default {
     },
     logout() {
       doLogout();
-      this.$router.push({ name: 'home' });
+      this.$router.push({ name: 'explore' });
     },
     async clearArtworkCache() {
       this.artworkClearing = true;
@@ -2787,8 +2734,7 @@ input[type='number'] {
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
-.settings-card ::v-deep .player-button-settings,
-.settings-card ::v-deep .home-section-settings {
+.settings-card ::v-deep .player-button-settings {
   margin: 0 0 14px;
   border: none;
   border-radius: 0;

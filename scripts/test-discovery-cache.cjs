@@ -68,6 +68,8 @@ const exploreContext = {
   CoverRow: {},
   SvgIcon: {},
   ExploreSearch: {},
+  DailyTracksCard: {},
+  FMCard: {},
 };
 vm.runInNewContext(
   fs
@@ -81,7 +83,7 @@ vm.runInNewContext(
 const component = exploreContext.module.exports;
 function explore(category) {
   const page = {
-    ...component.data(),
+    ...component.data.call({ $route: { query: { category } } }),
     active: true,
     $route: { query: { category } },
     $store: { state: { data: { user: { userId: 1 } } } },

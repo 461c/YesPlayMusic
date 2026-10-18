@@ -336,41 +336,35 @@ body[data-platform='android'] {
       max-width: 100%;
     }
 
-    .home .index-row .title {
-      font-size: 23px;
-    }
-    .home .index-row .title a {
-      font-size: 13px;
-    }
-    .home .for-you-row {
+    .explore-page .for-you-row {
       grid-template-columns: minmax(0, 1fr);
       gap: 16px;
     }
-    .home .fm {
+    .explore-page .fm {
       height: 170px;
     }
-    .home .fm .cover {
+    .explore-page .fm .cover {
       max-width: 40%;
       object-fit: cover;
     }
-    .home .fm .right-part {
+    .explore-page .fm .right-part {
       min-width: 0;
     }
-    .home .fm .title {
+    .explore-page .fm .title {
       font-size: 18px;
     }
-    .home .daily-recommend-card {
+    .explore-page .daily-recommend-card {
       height: 170px;
     }
-    .home .daily-recommend-card .container {
+    .explore-page .daily-recommend-card .container {
       height: 170px;
     }
-    .home .daily-recommend-card .title-box {
+    .explore-page .daily-recommend-card .title-box {
       width: 120px;
       height: 120px;
       margin-left: 16px;
     }
-    .home .daily-recommend-card .title-box .title {
+    .explore-page .daily-recommend-card .title-box .title {
       font-size: 50px;
     }
     .artist-page .artist-info {
@@ -517,17 +511,6 @@ body[data-platform='android'] .player.docked {
 }
 
 @media (max-width: 600px) {
-  body[data-platform='android'] .home .mv-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px 12px;
-    padding: 0;
-  }
-  body[data-platform='android'] .home .mv-row .mv {
-    width: 100%;
-    margin: 0;
-    min-width: 0;
-  }
 }
 
 // Explicit choices override only responsive defaults; absent keys retain the old layout.

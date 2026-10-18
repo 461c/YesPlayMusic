@@ -80,7 +80,7 @@ export default {
   components: { ContextMenu },
   props: {
     avatar: { type: String, default: '' },
-    label: { type: String, default: '音乐库' },
+    label: { type: String, default: '我的' },
   },
   data() {
     return {

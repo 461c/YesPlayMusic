@@ -55,8 +55,6 @@ try {
     'android/api/server.js',
     'src/electron/scrobble.js',
     'src/electron/ncbl.js',
-    'src/electron/dailyCategories.js',
-    'src/electron/xeapi.js',
     'src/electron/api-enhanced-LICENSE.txt',
     'src/electron/settingsBackup.js',
     'src/electron/settings-silence.json',

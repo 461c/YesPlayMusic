@@ -1,15 +1,5 @@
 module.exports = [
   {
-    identifier: 'recommend_category_configs',
-    route: '/recommend/category/configs',
-    module: require('./electron/dailyCategories').configs,
-  },
-  {
-    identifier: 'recommend_category_songs',
-    route: '/recommend/category/songs',
-    module: require('./electron/dailyCategories').songs,
-  },
-  {
     identifier: 'ypm_settings_sync',
     route: '/ypm/settings/sync',
     module: require('./electron/settingsBackup'),

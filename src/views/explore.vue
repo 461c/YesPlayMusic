@@ -4,6 +4,9 @@
       ><h1>{{ $t('explore.explore') }}</h1
       ><ExploreSearch
     /></div>
+    <div v-if="activeCategory === '全部'" class="for-you-row">
+      <DailyTracksCard /><FMCard />
+    </div>
     <div class="buttons">
       <div
         v-for="category in settings.enabledPlaylistCategories"
@@ -82,11 +85,15 @@ import ButtonTwoTone from '@/components/ButtonTwoTone.vue';
 import CoverRow from '@/components/CoverRow.vue';
 import SvgIcon from '@/components/SvgIcon.vue';
 import ExploreSearch from '@/components/ExploreSearch.vue';
+import DailyTracksCard from '@/components/DailyTracksCard.vue';
+import FMCard from '@/components/FMCard.vue';
 
 export default {
   name: 'Explore',
   components: {
     ExploreSearch,
+    DailyTracksCard,
+    FMCard,
     CoverRow,
     ButtonTwoTone,
     SvgIcon,
@@ -101,7 +108,7 @@ export default {
       loadingPromise: null,
       error: '',
       playlists: [],
-      activeCategory: '全部',
+      activeCategory: this.$route.query.category || '全部',
       loadingMore: false,
       showLoadMoreButton: false,
       hasMore: true,
@@ -255,6 +262,19 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.for-you-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin: 24px 0 32px;
+}
+@media (max-width: 600px) {
+  .for-you-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
 .explore-header {
   display: flex;
   align-items: center;

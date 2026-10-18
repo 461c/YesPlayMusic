@@ -6,7 +6,7 @@ export default {
   nav: {
     home: 'Anasayfa',
     explore: 'Keşfet',
-    library: 'Kitaplık',
+    library: 'Benim',
     search: 'Ara',
     github: 'GitHub Repo',
   },
@@ -208,7 +208,6 @@ export default {
     showLyricsTranslation: 'Müzik sözlerinin çevirilerini göster',
     showPlaylistsByAppleMusic: "Apple Music'in Çalma Listelerini Göster",
     enableDiscordRichPresence: 'Discord gösterimini aktifleştir',
-    showLibraryDefault: 'Kitaplık Varsayılanını göster',
     subTitleDefault: 'Show Alias for Subtitle by default',
     enableReversedMode: 'Enable Reversed Mode (Experimental)',
     enableCustomTitlebar: 'Enable custom title bar (Need restart)',

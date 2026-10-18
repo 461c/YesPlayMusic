@@ -6,7 +6,7 @@ export default {
   nav: {
     home: '首页',
     explore: '发现',
-    library: '音乐库',
+    library: '我的',
     search: '搜索',
     github: 'GitHub 仓库',
   },
@@ -213,7 +213,6 @@ export default {
     showPlaylistsByAppleMusic: '首页显示来自 Apple Music 的歌单',
     enableDiscordRichPresence: '启用 Discord Rich Presence',
     enableGlobalShortcut: '启用全局快捷键',
-    showLibraryDefault: '启动后显示音乐库',
     subTitleDefault: '副标题使用别名',
     enableReversedMode: '启用倒序播放功能 (实验性功能)',
     enableCustomTitlebar: '启用自定义标题栏 (重启后生效)',
