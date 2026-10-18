@@ -1,3 +1,4 @@
+import { artworkBridge } from './desktopArtwork';
 import { trackingScope } from './trackingStore';
 
 // Eligibility only: persist an image after its ordinary <img> request, never prefetch.
@@ -40,7 +41,7 @@ const imageKeys = new Set([
   'originalUrl',
 ]);
 function allow(data) {
-  const native = window.YesPlayMusicAndroid;
+  const native = artworkBridge();
   if (!native?.allowLibraryArtwork) return;
   const urls = new Set();
   const collect = value => {

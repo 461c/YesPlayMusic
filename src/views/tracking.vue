@@ -72,6 +72,7 @@
     </div>
     <template v-else>
       <TrackingSection
+        :refresh-on-open="true"
         ref="collection"
         v-if="selected"
         :key="selected"
@@ -116,6 +117,7 @@
             </div>
             <div class="songs">
               <TrackingSection
+                :refresh-on-open="true"
                 v-if="likedPlaylist(items)"
                 :uid="selected"
                 :scope="scope"
@@ -168,6 +170,7 @@
               <div v-if="group === 'activity'" class="activity-columns">
                 <div class="profile-column">
                   <TrackingSection
+                    :refresh-on-open="true"
                     :uid="selected"
                     :scope="scope"
                     :cache-enabled="isSavedUser"
@@ -185,6 +188,7 @@
                   >
                 </div>
                 <TrackingSection
+                  :refresh-on-open="true"
                   :uid="selected"
                   :scope="scope"
                   :cache-enabled="isSavedUser"
@@ -217,6 +221,7 @@
                 >
               </template>
               <TrackingSection
+                :refresh-on-open="true"
                 v-else-if="['follows', 'fans'].includes(group)"
                 :uid="selected"
                 :scope="scope"
@@ -241,6 +246,7 @@
                   >所有时间</button
                 >
                 <TrackingSection
+                  :refresh-on-open="true"
                   :uid="selected"
                   :scope="scope"
                   :cache-enabled="isSavedUser"

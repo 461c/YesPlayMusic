@@ -5,6 +5,7 @@ import { fmTrash, personalFM } from '@/api/others';
 import { getPlaylistDetail, intelligencePlaylist } from '@/api/playlist';
 import { getLyric, getMP3, getTrackDetail, scrobble } from '@/api/track';
 import store from '@/store';
+import ListeningClock from '@/utils/listeningClock';
 import { isAccountLoggedIn } from '@/utils/auth';
 import { cacheTrackSource, getTrackSource } from '@/utils/db';
 import { isCreateMpris, isCreateTray } from '@/utils/platform';
@@ -109,6 +110,12 @@ export default class {
     window.yesplaymusic.player = this;
   }
 
+  get nativeLikedSongIds() {
+    return store.state.liked.songs;
+  }
+  get nativeUserId() {
+    return String(store.state.data.user?.userId || '');
+  }
   get repeatMode() {
     return this._repeatMode;
   }
@@ -251,6 +258,20 @@ export default class {
     }
   }
   _syncNativeState(state) {
+    if ([0, 1, 2].includes(state.repeatMode))
+      this._repeatMode = { 0: 'off', 1: 'one', 2: 'on' }[state.repeatMode];
+    if (
+      state.favoriteRevision &&
+      state.favoriteRevision !== this._nativeFavoriteRevision &&
+      String(state.favoriteUserId) === this.nativeUserId &&
+      Array.isArray(state.likedSongIds)
+    ) {
+      this._nativeFavoriteRevision = state.favoriteRevision;
+      store.commit('updateLikedXXX', {
+        name: 'songs',
+        data: state.likedSongIds.map(Number),
+      });
+    }
     this._setPlaying(!!state.playing);
     this._enabled = true;
     if (state.playlistIndex >= 0) this.current = state.playlistIndex;
@@ -343,6 +364,8 @@ export default class {
     // 紧接着切歌又会走 _replaceCurrentTrack，两边都会调用到这里。
     // 没有真正播放过的歌曲 (时长为 0) 也不需要上报。
     const howler = this._howler;
+    if (!isAndroid && howler?._listeningClock)
+      time = howler._listeningClock.seconds();
     if (howler?._scrobbled || time < 1) return;
     if (howler) howler._scrobbled = true;
 
@@ -352,6 +375,9 @@ export default class {
         id: track.id,
         sourceid: this.playlistSource.id,
         time,
+        total: trackDuration,
+        name: track.name,
+        artist: (track.ar || []).map(artist => artist.name).join(', '),
       }).catch(error => {
         console.debug('[debug][Player.js] scrobble failed', error);
       });
@@ -386,6 +412,21 @@ export default class {
       onend: () => {
         this._nextTrackCallback();
       },
+    });
+    const sound = this._howler;
+    sound._listeningClock = new ListeningClock();
+    sound.on('play', () => sound._listeningClock.setPlaying(true));
+    for (const event of ['pause', 'stop', 'end', 'playerror'])
+      sound.on(event, () => sound._listeningClock.setPlaying(false));
+    sound.once('load', () => {
+      const audio = sound._sounds?.[0]?._node;
+      if (!audio?.addEventListener) return;
+      audio.addEventListener('waiting', () =>
+        sound._listeningClock.setPlaying(false)
+      );
+      audio.addEventListener('playing', () =>
+        sound._listeningClock.setPlaying(true)
+      );
     });
     this._howler.on('loaderror', (_, errCode) => {
       // https://developer.mozilla.org/en-US/docs/Web/API/MediaError/code

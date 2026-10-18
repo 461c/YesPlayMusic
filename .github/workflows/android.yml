@@ -64,6 +64,7 @@ jobs:
           node scripts/test-android-api-bundle.cjs
           node scripts/test-settings-sync.cjs
           node scripts/test-netease-history.cjs
+          node scripts/test-refresh-controls.cjs
           node scripts/test-tracking.cjs
           node scripts/test-library-archive.cjs
           node scripts/test-retained-tracks.cjs

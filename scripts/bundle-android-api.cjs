@@ -80,7 +80,14 @@ fs.copyFileSync(
   path.join(root, 'src/electron/scrobble.js'),
   path.join(output, 'scrobble.js')
 );
-for (const file of ['settingsBackup.js', 'settings-silence.json']) {
+for (const file of [
+  'settingsBackup.js',
+  'settings-silence.json',
+  'ncbl.js',
+  'dailyCategories.js',
+  'xeapi.js',
+  'api-enhanced-LICENSE.txt',
+]) {
   fs.copyFileSync(
     path.join(root, 'src/electron', file),
     path.join(output, file)

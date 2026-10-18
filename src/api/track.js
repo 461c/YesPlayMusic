@@ -200,6 +200,8 @@ export function scrobble(params) {
   params.timestamp = new Date().getTime();
   return request({
     url: '/scrobble',
+    timeout: 45000,
+    skipAuthRedirect: true,
     method: 'get',
     params,
   });

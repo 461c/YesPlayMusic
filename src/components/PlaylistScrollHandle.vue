@@ -36,6 +36,7 @@ export default {
       progress: 0,
       visible: false,
       dragging: false,
+      dragOffset: 0,
       frame: null,
     };
   },
@@ -123,7 +124,7 @@ export default {
         0,
         Math.min(
           1,
-          (event.clientY - this.top - this.thumbSize / 2) /
+          (event.clientY - this.top - this.dragOffset) /
             Math.max(1, this.height - this.thumbSize)
         )
       );
@@ -136,7 +137,14 @@ export default {
       event.preventDefault();
       this.dragging = true;
       this.update();
-      this.move(event);
+      const thumbTop =
+        this.top + this.progress * Math.max(0, this.height - this.thumbSize);
+      const withinThumb =
+        event.clientY >= thumbTop && event.clientY <= thumbTop + this.thumbSize;
+      this.dragOffset = withinThumb
+        ? event.clientY - thumbTop
+        : this.thumbSize / 2;
+      if (!withinThumb) this.move(event);
       document.addEventListener('pointermove', this.move, { passive: false });
       document.addEventListener('pointerup', this.finish);
       document.addEventListener('pointercancel', this.finish);
@@ -176,7 +184,7 @@ export default {
   width: 24px;
   z-index: 90;
   touch-action: none;
-  cursor: ns-resize;
+  cursor: pointer;
   user-select: none;
   outline: none;
 }

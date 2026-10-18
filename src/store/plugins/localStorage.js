@@ -6,7 +6,7 @@ export default store => {
       saveLibraryField(
         libraryScope(state.data),
         mutation.payload.name,
-        mutation.payload.data
+        state.liked[mutation.payload.name]
       );
     }
     localStorage.setItem('settings', JSON.stringify(state.settings));

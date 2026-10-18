@@ -60,6 +60,9 @@
             item.name
           }}</router-link>
         </div>
+        <small v-if="item.archiveStatus" class="archived-entry"
+          >已移除或不可见</small
+        >
         <div v-if="compact" class="info"
           >{{
             (item.trackCount ?? item.size ?? item.songCount) != null
@@ -310,5 +313,14 @@ export default {
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 18px !important;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.archived-entry {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.55;
 }
 </style>

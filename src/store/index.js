@@ -1,4 +1,5 @@
 import Vue from 'vue';
+import { androidCommand, isAndroid } from '@/utils/androidAudio';
 import { archiveMode } from '@/utils/archiveMode';
 import Vuex from 'vuex';
 import state from './state';
@@ -31,6 +32,17 @@ const options = {
 };
 
 const store = new Vuex.Store(options);
+store.watch(
+  state => JSON.stringify([state.data.user?.userId, state.liked.songs]),
+  () => {
+    if (isAndroid)
+      androidCommand({
+        action: 'favorites',
+        userId: String(store.state.data.user?.userId || ''),
+        likedSongIds: store.state.liked.songs,
+      });
+  }
+);
 
 if ([undefined, null].includes(store.state.settings.lang)) {
   const defaultLang = 'en';

@@ -86,6 +86,7 @@ const settings = {
 const query = operation => ({
   operation,
   settings,
+  people: [{ id: '456', alias: 'first' }, { id: '123' }],
   cookie: { MUSIC_U: 'account' },
 });
 (async () => {
@@ -93,9 +94,15 @@ const query = operation => ({
   const guest = await handler({ operation: 'export', settings }, request);
   assert.equal(guest.body.code, 500);
   assert.equal(calls.length, 0);
-  const bytes = handler.encode(settings);
+  const people = [
+    { id: '456', alias: '乙', name: 'B' },
+    { id: '123', alias: '甲', name: 'A' },
+  ];
+  const bytes = handler.encode(settings, undefined, people);
   const decoded = handler.decode(bytes);
   assert.equal(decoded.settings.themeColor, 'purple');
+  assert.equal(JSON.stringify(decoded.people), JSON.stringify(people));
+  assert.equal(decoded.version, 2);
   assert.equal(decoded.settings.unmCookie, undefined);
   assert.equal(decoded.settings.password, undefined);
   const damaged = Buffer.from(bytes);

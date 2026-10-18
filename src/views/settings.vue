@@ -179,7 +179,7 @@
                 </button>
               </div>
             </div>
-            <div v-if="isAndroid" class="item">
+            <div v-if="isAndroid || isElectron" class="item">
               <div class="left">
                 <div class="title"
                   >歌单图片缓存：{{ artworkCache.count }} 张 ·
@@ -1103,6 +1103,7 @@
 </template>
 
 <script>
+import { artworkBridge } from '@/utils/desktopArtwork';
 import { mapState, mapActions } from 'vuex';
 import { isLooseLoggedIn, doLogout } from '@/utils/auth';
 import { auth as lastfmAuth } from '@/api/lastfm';
@@ -1930,7 +1931,7 @@ export default {
       try {
         const { cancelArtworkSync } = await import('@/utils/libraryArtwork');
         cancelArtworkSync();
-        window.YesPlayMusicAndroid.clearArtworkCache();
+        artworkBridge().clearArtworkCache();
         this.countDBSize();
       } catch (error) {
         this.showToast('清除图片缓存失败，请稍后重试');
@@ -1939,6 +1940,14 @@ export default {
       }
     },
     countDBSize() {
+      if (this.isElectron) {
+        try {
+          const stats = JSON.parse(artworkBridge().getArtworkCacheStats());
+          this.artworkCache = { ...stats, size: bytesToSize(stats.bytes) };
+        } catch (_) {
+          /* Keep settings usable if disk storage is unavailable. */
+        }
+      }
       if (this.isAndroid) {
         try {
           const artwork = JSON.parse(

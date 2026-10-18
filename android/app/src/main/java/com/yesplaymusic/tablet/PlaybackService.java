@@ -23,6 +23,10 @@ import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaLibraryService;
 import androidx.media3.session.LibraryResult;
 import androidx.media3.session.SessionError;
+import androidx.media3.session.SessionCommand;
+import androidx.media3.session.SessionResult;
+import androidx.media3.session.CommandButton;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -45,9 +49,13 @@ public final class PlaybackService extends MediaLibraryService {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final AtomicBoolean loadingFm = new AtomicBoolean(false);
+    private static final SessionCommand FAVORITE = new SessionCommand("ypm.favorite", Bundle.EMPTY);
+    private static final SessionCommand ORDER = new SessionCommand("ypm.order", Bundle.EMPTY);
+    private final AtomicBoolean favoriteBusy = new AtomicBoolean(false);
     private String metadataId = "";
     private int consecutiveErrors = 0;
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener = (preferences, key) -> {
+        if ("likedSongIds".equals(key) || "cookie".equals(key)) main.post(() -> { if (session != null) updateButtons(); });
         if ("allowConcurrentPlayback".equals(key)) main.post(() -> {
             if (player != null) applyAudioFocusPolicy();
         });
@@ -96,7 +104,9 @@ public final class PlaybackService extends MediaLibraryService {
             }
         });
         player.addListener(new Player.Listener() {
+            @Override public void onRepeatModeChanged(int mode) { updateButtons(); }
             @Override public void onMediaItemTransition(MediaItem item, int reason) {
+                updateButtons();
                 ApiClient.preferences(PlaybackService.this).edit().remove("currentAudioInfo").apply();
                 if (item != null) updateMetadata(item.mediaId);
                 refillFm();
@@ -138,6 +148,27 @@ public final class PlaybackService extends MediaLibraryService {
         });
     }
 
+
+    private boolean liked(String id) {
+        try {
+            JSONArray ids = new JSONArray(ApiClient.preferences(this).getString("likedSongIds", "[]"));
+            for (int i = 0; i < ids.length(); i++) if (id.equals(ids.optString(i))) return true;
+        } catch (Exception ignored) { }
+        return false;
+    }
+    private void updateButtons() {
+        if (session == null || player == null) return;
+        MediaItem item = player.getCurrentMediaItem();
+        boolean favorite = item != null && liked(item.mediaId);
+        int mode = player.getRepeatMode();
+        session.setCustomLayout(ImmutableList.of(
+            new CommandButton.Builder().setDisplayName(favorite ? "取消收藏" : "收藏")
+                .setIconResId(favorite ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite)
+                .setSessionCommand(FAVORITE).setEnabled(item != null && ApiClient.preferences(this).getString("cookie", "").contains("MUSIC_U=")).build(),
+            new CommandButton.Builder().setDisplayName(mode == Player.REPEAT_MODE_ONE ? "单曲循环" : mode == Player.REPEAT_MODE_ALL ? "列表循环" : "顺序播放")
+                .setIconResId(mode == Player.REPEAT_MODE_ONE ? R.drawable.ic_repeat_one : R.drawable.ic_repeat)
+                .setSessionCommand(ORDER).build()));
+    }
 
     private void publishSystemMediaReport() {
         if (session == null || player == null) return;
@@ -284,6 +315,53 @@ public final class PlaybackService extends MediaLibraryService {
     }
 
     private final class LibraryCallback implements MediaLibrarySession.Callback {
+        @Override public MediaSession.ConnectionResult onConnect(MediaSession mediaSession, MediaSession.ControllerInfo controller) {
+            MediaSession.ConnectionResult base = MediaLibrarySession.Callback.super.onConnect(mediaSession, controller);
+            if (!base.isAccepted) return base;
+            return new MediaSession.ConnectionResult.AcceptedResultBuilder(mediaSession)
+                .setAvailableSessionCommands(base.availableSessionCommands.buildUpon().add(FAVORITE).add(ORDER).build())
+                .setAvailablePlayerCommands(base.availablePlayerCommands).build();
+        }
+        @Override public void onPostConnect(MediaSession mediaSession, MediaSession.ControllerInfo controller) { updateButtons(); }
+        @Override public ListenableFuture<SessionResult> onCustomCommand(MediaSession mediaSession, MediaSession.ControllerInfo controller, SessionCommand command, Bundle args) {
+            if (ORDER.customAction.equals(command.customAction)) {
+                int mode = player.getRepeatMode();
+                player.setRepeatMode(mode == Player.REPEAT_MODE_OFF ? Player.REPEAT_MODE_ALL : mode == Player.REPEAT_MODE_ALL ? Player.REPEAT_MODE_ONE : Player.REPEAT_MODE_OFF);
+                updateButtons();
+                return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_SUCCESS));
+            }
+            if (!FAVORITE.customAction.equals(command.customAction)) return Futures.immediateFuture(new SessionResult(SessionError.ERROR_NOT_SUPPORTED));
+            MediaItem item = player.getCurrentMediaItem();
+            if (item == null || !ApiClient.preferences(PlaybackService.this).getString("cookie", "").contains("MUSIC_U=") || ApiClient.preferences(PlaybackService.this).getBoolean("archiveMode", false) || !favoriteBusy.compareAndSet(false, true))
+                return Futures.immediateFuture(new SessionResult(SessionError.ERROR_INVALID_STATE));
+            final String id = item.mediaId;
+            final boolean target = !liked(id);
+            final String cookie = ApiClient.preferences(PlaybackService.this).getString("cookie", "");
+            final String scope = ApiClient.preferences(PlaybackService.this).getBoolean("useRemoteApi", false) ? ApiClient.baseUrl(PlaybackService.this) : "local";
+            SettableFuture<SessionResult> result = SettableFuture.create();
+            worker.execute(() -> {
+                boolean success = false;
+                try { success = ApiClient.json(PlaybackService.this, "/like?id=" + Uri.encode(id) + "&like=" + target + "&timestamp=" + System.currentTimeMillis(), cookie, scope).optInt("code") == 200; }
+                catch (Exception ignored) { }
+                final boolean accepted = success;
+                main.post(() -> {
+                    try {
+                        if (accepted && cookie.equals(ApiClient.preferences(PlaybackService.this).getString("cookie", ""))) {
+                            JSONArray old = new JSONArray(ApiClient.preferences(PlaybackService.this).getString("likedSongIds", "[]"));
+                            JSONArray ids = new JSONArray();
+                            for (int i = 0; i < old.length(); i++) if (!id.equals(old.optString(i))) ids.put(old.get(i));
+                            if (target) ids.put(id);
+                            ApiClient.preferences(PlaybackService.this).edit().putString("likedSongIds", ids.toString()).putLong("favoriteRevision", System.currentTimeMillis()).apply();
+                            updateButtons();
+                        }
+                        result.set(new SessionResult(accepted ? SessionResult.RESULT_SUCCESS : SessionError.ERROR_IO));
+                    } catch (Exception error) { result.set(new SessionResult(SessionError.ERROR_UNKNOWN)); }
+                    finally { favoriteBusy.set(false); }
+                });
+            });
+            return result;
+        }
+
         @Override public ListenableFuture<LibraryResult<MediaItem>> onGetLibraryRoot(
                 MediaLibrarySession session, MediaSession.ControllerInfo browser, LibraryParams params) {
             return Futures.immediateFuture(LibraryResult.ofItem(root(params != null && params.isRecent ? "recent" : "queue"), params));

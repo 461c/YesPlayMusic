@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { artworkBridge } from './desktopArtwork';
 
 const manifests = new Dexie('yesplaymusic-library-artwork');
 manifests.version(1).stores({ playlists: '&key' });
@@ -22,7 +23,7 @@ try {
   /* Storage can be disabled; the next ordinary library response initializes it. */
 }
 
-const native = () => window.YesPlayMusicAndroid;
+const native = artworkBridge;
 function send(method, urls) {
   if (!native()?.[method]) return;
   const unique = [...new Set(urls.filter(Boolean))];

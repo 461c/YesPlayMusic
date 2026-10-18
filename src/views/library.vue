@@ -42,7 +42,7 @@
       <button
         v-if="!$store.state.settings.archiveMode"
         :disabled="refreshing"
-        @click="loadData"
+        @click="loadData(true)"
         >重试</button
       >
     </div>
@@ -90,7 +90,7 @@
         <div class="songs">
           <TrackList
             :id="liked.playlists.length > 0 ? liked.playlists[0].id : 0"
-            :tracks="liked.songsWithDetails"
+            :tracks="liked.songsWithDetails.slice(0, 12)"
             :column-number="3"
             type="tracklist"
             dbclick-track-func="playPlaylistByID"
@@ -200,6 +200,7 @@
         >
           <div class="profile-column">
             <TrackingSection
+              :max-age="600000"
               ref="ownProfile"
               :uid="ownUid"
               :scope="profileScope"
@@ -216,6 +217,7 @@
             >
           </div>
           <TrackingSection
+            :max-age="600000"
             ref="ownEvents"
             :uid="ownUid"
             :scope="profileScope"
@@ -226,6 +228,7 @@
           />
         </div>
         <TrackingSection
+          :max-age="600000"
           v-if="ownUid && currentTab === 'follows'"
           :key="profileScope + ':follows'"
           :uid="ownUid"
@@ -418,7 +421,7 @@ export default {
     },
     ...mapActions(['showToast']),
     ...mapMutations(['updateModal', 'updateData']),
-    async loadData() {
+    async loadData(force = false) {
       if (this.refreshing) return;
       this.refreshing = true;
       try {
@@ -429,9 +432,17 @@ export default {
           this.offline = true;
           return;
         }
+        const refreshKey = 'library-refresh:' + this.accountScope;
+        const refreshedAt = Number(localStorage.getItem(refreshKey)) || 0;
+        if (!force && this.hasLocalData && Date.now() - refreshedAt < 600000) {
+          this.offline = false;
+          return;
+        }
+        const scope = this.accountScope;
         const actions = [
           'fetchLikedSongs',
           'fetchLikedAlbums',
+          'fetchLikedArtists',
           'fetchLikedMVs',
           'fetchCloudDisk',
           'fetchPlayHistory',
@@ -443,6 +454,8 @@ export default {
           ...actions.map(action => this.$store.dispatch(action)),
         ]);
         this.offline = results.some(result => result.status === 'rejected');
+        if (!this.offline && scope === this.accountScope)
+          localStorage.setItem(refreshKey, String(Date.now()));
       } finally {
         this.refreshing = false;
         this.show = true;

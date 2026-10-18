@@ -118,19 +118,6 @@ export default {
     async fetchData() {
       if (!isLooseLoggedIn()) return;
       await this.$store.dispatch('restoreLibrary');
-      const tasks = ['fetchLikedSongs'];
-      if (isAccountLoggedIn())
-        tasks.push(
-          'fetchLikedAlbums',
-          'fetchLikedArtists',
-          'fetchLikedMVs',
-          'fetchCloudDisk'
-        );
-      for (const action of tasks) this.$store.dispatch(action).catch(() => {});
-      this.$store
-        .dispatch('fetchLikedPlaylist')
-        .then(() => this.$store.dispatch('fetchLikedSongsWithDetails'))
-        .catch(() => {});
     },
     refreshScrollHandle() {
       this.$nextTick(() => this.$refs.pageScrollbar?.observeContent());

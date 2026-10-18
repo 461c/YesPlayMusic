@@ -85,6 +85,8 @@ export default class AndroidAudio {
       queue,
       index,
       cookie,
+      likedSongIds: owner.nativeLikedSongIds,
+      userId: owner.nativeUserId,
       sourceId: String(owner.playlistSource?.id || 0),
       source:
         this.sourceTrackId === String(owner.currentTrackID) ? this._src : '',

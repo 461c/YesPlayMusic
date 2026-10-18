@@ -2,14 +2,25 @@ import { emptyLibrary } from '@/utils/offlineLibrary';
 import shortcuts from '@/utils/shortcuts';
 import cloneDeep from 'lodash/cloneDeep';
 import Vue from 'vue';
+import { retainCollection } from '@/utils/retainedCollections';
 
 export default {
   restoreLibrary(state, { scope, snapshot }) {
     state.liked = { ...emptyLibrary(), ...snapshot };
     state.libraryOwner = scope;
   },
-  updateLikedXXX(state, { name, data }) {
-    state.liked[name] = data;
+  updateLikedXXX(state, { name, data, markMissing = true }) {
+    state.liked[name] =
+      [
+        'playlists',
+        'albums',
+        'artists',
+        'mvs',
+        'cloudDisk',
+        'songsWithDetails',
+      ].includes(name) && Array.isArray(data)
+        ? retainCollection(data, state.liked[name], markMissing)
+        : data;
     if (name === 'songs') {
       state.player.sendSelfToIpcMain();
     }

@@ -216,6 +216,7 @@
 </template>
 <script>
 import { retainTracks } from '@/utils/retainedTracks';
+import { retainCollection, entryId } from '@/utils/retainedCollections';
 import { cacheTrackDetail } from '@/utils/db';
 import { archiveMode, archiveError } from '@/utils/archiveMode';
 import { openPhotos, closePhotos } from '@/utils/photoLightbox';
@@ -240,6 +241,8 @@ export default {
     playlistId: { type: Number, default: 0 },
     cacheEnabled: { type: Boolean, default: false },
     extraArtists: { type: Array, default: () => [] },
+    refreshOnOpen: { type: Boolean, default: false },
+    maxAge: { type: Number, default: Infinity },
   },
   data() {
     return {
@@ -270,6 +273,7 @@ export default {
           nickname: artist.name,
           avatarUrl: artist.picUrl || artist.img1v1Url,
           _artistId: artist.id,
+          archiveStatus: artist.archiveStatus,
         }));
       return [...users, ...extra];
     },
@@ -386,6 +390,14 @@ export default {
       },
     },
   },
+  activated() {
+    if (
+      (this.refreshOnOpen || Date.now() - this.updatedAt > this.maxAge) &&
+      this.updatedAt &&
+      !this.loading
+    )
+      this.load(true);
+  },
   beforeDestroy() {
     closePhotos();
     this.generation++;
@@ -426,8 +438,13 @@ export default {
             this.updatedAt = saved.updatedAt;
             observeTrackingArtwork(scope, uid, section, saved.data);
           }
-          // Re-entering a section reads its local snapshot; refresh is explicit.
-          if (saved && !force) {
+          // Render the saved snapshot immediately, then apply the page refresh policy.
+          if (
+            saved &&
+            !force &&
+            !this.refreshOnOpen &&
+            Date.now() - saved.updatedAt < this.maxAge
+          ) {
             if (section === 'profile')
               this.$emit('profile', { uid, profile: saved.data.profile });
             return;
@@ -440,7 +457,7 @@ export default {
         const cursor = append
           ? section === 'events'
             ? { lasttime: previous.lasttime }
-            : { offset: this.items.length }
+            : { offset: previous?.__liveCount ?? this.items.length }
           : {};
         const data = await readTrackingSection(
           uid,
@@ -448,6 +465,22 @@ export default {
           section === 'likes' ? { id: this.playlistId, s: 0 } : cursor
         );
         if (!current() || archiveMode()) return;
+        const collectionKey = {
+          playlists: 'playlist',
+          follows: 'follow',
+          fans: 'followeds',
+        }[section];
+        if (collectionKey) {
+          const page = data[collectionKey] || [];
+          data.__liveCount =
+            (append ? previous?.__liveCount || 0 : 0) + page.length;
+          data.__liveIds = [
+            ...new Set([
+              ...(append ? previous?.__liveIds || [] : []),
+              ...page.map(entryId),
+            ]),
+          ];
+        }
         if (section === 'events' && this.cacheEnabled) {
           Object.assign(data, mergeTrackingEvents(previous, data, cursor));
         } else if (append) {
@@ -465,6 +498,17 @@ export default {
               seen.add(id);
               return true;
             }
+          );
+        }
+        if (this.cacheEnabled && collectionKey) {
+          const live = new Set(data.__liveIds);
+          const fresh = (data[collectionKey] || []).filter(item =>
+            live.has(entryId(item))
+          );
+          data[collectionKey] = retainCollection(
+            fresh,
+            previous?.[collectionKey] || [],
+            !data.more
           );
         }
         if (this.cacheEnabled && section === 'likes') {

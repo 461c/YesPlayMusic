@@ -4,6 +4,25 @@
       <div class="title gradient"> 每日歌曲推荐 </div>
       <div class="subtitle">根据你的音乐口味生成 · 每天6:00更新</div>
       <div class="buttons">
+        <select
+          v-model="category"
+          aria-label="每日推荐分类"
+          @change="selectCategory"
+        >
+          <option value="">每日推荐</option>
+          <option
+            v-for="group in categories"
+            :key="group.key"
+            :value="group.key"
+            >{{ group.title }}</option
+          >
+        </select>
+        <button
+          v-if="!categories.length"
+          :disabled="categoryLoading"
+          @click="loadCategories"
+          >{{ categoryLoading ? '加载中…' : '分类推荐' }}</button
+        >
         <ButtonTwoTone
           class="play-button"
           icon-class="play"
@@ -16,9 +35,9 @@
     </div>
 
     <TrackList
-      :tracks="dailyTracks"
+      :tracks="displayTracks"
       type="playlist"
-      dbclick-track-func="dailyTracks"
+      dbclick-track-func="playAList"
     />
   </div>
 </template>
@@ -26,6 +45,8 @@
 <script>
 import { mapState } from 'vuex';
 import NProgress from 'nprogress';
+import { fetchDailyCategories, categoryTracks } from '@/utils/dailyCategories';
+import { trackingScope } from '@/utils/trackingStore';
 import { ensureDailyTracks } from '@/utils/dailyTracks';
 
 import ButtonTwoTone from '@/components/ButtonTwoTone.vue';
@@ -40,10 +61,27 @@ export default {
   data() {
     return {
       show: false,
+      categories: [],
+      category: '',
+      selectedTracks: [],
+      categoryLoading: false,
+      categoryGeneration: 0,
     };
   },
   computed: {
     ...mapState(['player', 'data', 'dailyTracks']),
+    displayTracks() {
+      return this.category ? this.selectedTracks : this.dailyTracks;
+    },
+  },
+  watch: {
+    'data.user.userId'() {
+      this.categoryGeneration++;
+      this.category = '';
+      this.categories = [];
+      this.selectedTracks = [];
+      this.loadDailyTracks();
+    },
   },
   created() {
     this.show = this.dailyTracks.length > 0;
@@ -54,6 +92,37 @@ export default {
     this.$parent.$refs.main.scrollTo(0, 0);
   },
   methods: {
+    async loadCategories() {
+      if (this.categoryLoading) return;
+      const scope = trackingScope(this.data?.user?.userId);
+      this.categoryLoading = true;
+      try {
+        const groups = await fetchDailyCategories();
+        if (scope === trackingScope(this.data?.user?.userId))
+          this.categories = groups;
+      } catch (error) {
+        this.$store.dispatch('showToast', error.message);
+      } finally {
+        this.categoryLoading = false;
+      }
+    },
+    async selectCategory() {
+      const epoch = ++this.categoryGeneration;
+      const scope = trackingScope(this.data?.user?.userId);
+      if (!this.category) return;
+      const group = this.categories.find(group => group.key === this.category);
+      this.selectedTracks = [];
+      try {
+        const tracks = await categoryTracks(group);
+        if (
+          epoch === this.categoryGeneration &&
+          scope === trackingScope(this.data?.user?.userId)
+        )
+          this.selectedTracks = tracks;
+      } catch (error) {
+        this.$store.dispatch('showToast', '分类歌曲加载失败');
+      }
+    },
     async loadDailyTracks() {
       try {
         await ensureDailyTracks(this.$store);
@@ -65,14 +134,14 @@ export default {
       }
     },
     async playDailyTracks() {
-      await this.loadDailyTracks();
-      if (!this.dailyTracks.length) return;
-      let trackIDs = this.dailyTracks.map(t => t.id);
+      if (!this.category) await this.loadDailyTracks();
+      if (!this.displayTracks.length) return;
+      let trackIDs = this.displayTracks.map(t => t.id);
       this.$store.state.player.replacePlaylist(
         trackIDs,
         '/daily/songs',
         'url',
-        this.dailyTracks[0].id
+        this.displayTracks[0].id
       );
     },
   },
@@ -80,6 +149,30 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.buttons {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  select,
+  > button {
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--color-secondary-bg);
+    color: var(--color-text);
+    cursor: pointer;
+    max-width: 100%;
+  }
+}
+@media (max-width: 600px) {
+  .special-playlist {
+    margin: 72px 0 48px;
+    .title {
+      font-size: 40px;
+    }
+  }
+}
+
 .special-playlist {
   margin-top: 192px;
   margin-bottom: 128px;

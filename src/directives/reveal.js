@@ -1,3 +1,4 @@
+import { artworkBridge } from '@/utils/desktopArtwork';
 // Route transitions handle navigation; these hooks handle content revealed after async data.
 const pageAnimations = new WeakMap();
 const images = new WeakMap();
@@ -64,6 +65,7 @@ export const imageFade = {
         state.revealed
       )
         return;
+      artworkBridge()?.remember?.(el.getAttribute('src'));
       state.revealed = true;
       el.removeAttribute('data-image-pending');
       if (!reducedMotion() && el.animate) {
@@ -75,6 +77,9 @@ export const imageFade = {
     };
     state.failed = () => {
       state.generation++;
+      const url = el.getAttribute('src');
+      const cached = artworkBridge()?.lookup?.(url);
+      if (cached && cached !== url) el.setAttribute('src', cached);
       el.removeAttribute('data-image-pending');
     };
     images.set(el, state);

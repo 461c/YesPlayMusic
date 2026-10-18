@@ -67,7 +67,7 @@ const store = fs.readFileSync('src/store/index.js', 'utf8');
 vm.runInNewContext(
   store.slice(
     store.indexOf('const updateSystemAppearance'),
-    store.indexOf('store.watch(')
+    store.indexOf('store.watch(', store.indexOf('const updateSystemAppearance'))
   ),
   listeners
 );

@@ -53,14 +53,37 @@ function frame(name, data) {
   header.writeUInt32BE(data.length, 4);
   return Buffer.concat([header, data]);
 }
-function encode(settings, title = randomName()) {
+function cleanPeople(people) {
+  if (!Array.isArray(people)) return [];
+  const seen = new Set();
+  return people
+    .filter(person => {
+      const id = String((person && person.id) || '');
+      if (!/^[1-9]\d{0,17}$/.test(id) || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
+    .slice(0, 500)
+    .map(person => ({
+      id: String(person.id),
+      alias: String(person.alias || '').slice(0, 100),
+      name: String(person.name || '').slice(0, 100),
+    }));
+}
+function encode(settings, title = randomName(), people = []) {
   const text = JSON.stringify(clean(settings));
   if (Buffer.byteLength(text) > 65536) throw new Error('设置超过 64KB');
   const envelope = JSON.stringify({
     format: owner,
-    version: 1,
+    version: 2,
     savedAt: Date.now(),
-    checksum: digest(text),
+    checksum: digest(
+      JSON.stringify({
+        settings: JSON.parse(text),
+        people: cleanPeople(people),
+      })
+    ),
+    people: cleanPeople(people),
     settings: JSON.parse(text),
   });
   const tag = Buffer.concat([
@@ -104,15 +127,24 @@ function decode(bytes) {
     const envelope = JSON.parse(data.slice(owner.length + 1).toString());
     if (
       envelope.format !== owner ||
-      envelope.version !== 1 ||
+      ![1, 2].includes(envelope.version) ||
       !envelope.settings ||
       typeof envelope.settings !== 'object' ||
       Array.isArray(envelope.settings)
     )
       throw new Error('设置备份版本不支持');
-    if (digest(JSON.stringify(envelope.settings)) !== envelope.checksum)
+    if (
+      digest(
+        JSON.stringify(
+          envelope.version === 1
+            ? envelope.settings
+            : { settings: envelope.settings, people: envelope.people }
+        )
+      ) !== envelope.checksum
+    )
       throw new Error('设置备份校验失败');
     envelope.settings = clean(envelope.settings);
+    if (envelope.version === 2) envelope.people = cleanPeople(envelope.people);
     return envelope;
   }
   throw new Error('云盘文件中的设置标签已丢失，未修改当前设置');
@@ -238,7 +270,10 @@ async function handler(query, request) {
       throw new Error('设置格式无效');
     const title = randomName();
     const filename = title + '.mp3';
-    const data = encode(settings, title);
+    const people = cleanPeople(
+      typeof query.people === 'string' ? JSON.parse(query.people) : query.people
+    );
+    const data = encode(settings, title, people);
     const uploaded = await call(cloudUpload, {
       songFile: {
         // Upstream cloud.js decodes multipart names from Latin-1 to UTF-8.
@@ -263,7 +298,10 @@ async function handler(query, request) {
       uploaded.songId;
     if (!createdId) throw new Error('没有取得新备份编号，保留原备份');
     const verified = await read(createdId);
-    if (JSON.stringify(verified.settings) !== JSON.stringify(clean(settings)))
+    if (
+      JSON.stringify(verified.settings) !== JSON.stringify(clean(settings)) ||
+      JSON.stringify(verified.people) !== JSON.stringify(people)
+    )
       throw new Error('云盘备份内容不一致，保留原备份');
     verifiedNew = true;
     const obsolete = [

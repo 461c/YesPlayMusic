@@ -40,6 +40,14 @@ server
           }),
         },
         { route: '/ypm/settings/sync', module: require('./settingsBackup') },
+        {
+          route: '/recommend/category/configs',
+          module: require('./dailyCategories').configs,
+        },
+        {
+          route: '/recommend/category/songs',
+          module: require('./dailyCategories').songs,
+        },
         ...moduleDefs.map(definition =>
           definition.route === '/scrobble'
             ? { ...definition, module: require('./scrobble') }

@@ -1,3 +1,4 @@
+import { artworkBridge } from './desktopArtwork';
 import { resizedArtwork } from './imageUrl';
 import Vue from 'vue';
 import dayjs from 'dayjs';
@@ -61,7 +62,10 @@ Vue.filter('formatAlbumType', (type, album) => {
   }
 });
 
-Vue.filter('resizeImage', resizedArtwork);
+Vue.filter('resizeImage', (url, size) => {
+  const address = resizedArtwork(url, size);
+  return artworkBridge()?.lookup?.(address) || address;
+});
 
 Vue.filter('formatPlayCount', count => {
   if (!count) return '';

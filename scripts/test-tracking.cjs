@@ -43,7 +43,15 @@ vm.runInNewContext(
     '\nmodule.exports={eventData,mergeTrackingEvents};',
   eventContext
 );
+const collections = { module: { exports: {} } };
+vm.runInNewContext(
+  fs
+    .readFileSync('src/utils/retainedCollections.js', 'utf8')
+    .replace(/export /g, '') + '\nmodule.exports={retainCollection,entryId};',
+  collections
+);
 const sandbox = {
+  ...collections.module.exports,
   ...eventContext.module.exports,
   ...retainContext.module.exports,
   usableBackground: () => false,
@@ -102,6 +110,8 @@ function instance(component, props = {}) {
   const instance = {
     ...component.data(),
     scope: 'account-A',
+    maxAge: Infinity,
+    refreshOnOpen: false,
     cacheEnabled: true,
     $store: { state: { player: {} } },
     $emit() {},
@@ -125,6 +135,7 @@ function verifyArtworkCache() {
   const enrolled = [];
   const context = {
     module: { exports: {} },
+    artworkBridge: () => context.window.YesPlayMusicAndroid,
     localStorage: {
       getItem: key => storage.get(key),
       setItem: (key, value) => storage.set(key, value),
@@ -187,6 +198,10 @@ function verifyArtworkCache() {
   );
 }
 verifyArtworkCache();
+const watchdog = setTimeout(() => {
+  console.error('Tracking test stalled');
+  process.exit(1);
+}, 8000);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 (async () => {
   const library = component('src/views/library.vue');
@@ -500,6 +515,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     null,
     'Destroyed group must ignore late responses'
   );
+  clearTimeout(watchdog);
   console.log(
     'Tracking: management editing/order/removal, library groups and playlist ownership, temporary browsing isolation, artwork membership, playable preview, request races, offline reads, refresh failure and pagination passed'
   );

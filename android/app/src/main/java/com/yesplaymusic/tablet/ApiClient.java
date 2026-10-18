@@ -97,7 +97,7 @@ final class ApiClient {
         URL url = new URL(("local".equals(api) ? baseUrl(context) : api) + path + separator + "cookie=" + Uri.encode(cookie));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setConnectTimeout(12000);
-        connection.setReadTimeout(15000);
+        connection.setReadTimeout(path.startsWith("/scrobble?") ? 45000 : 15000);
         try {
             if (connection.getResponseCode() != 200) throw new IOException("音乐接口请求失败");
             return new JSONObject(new String(read(connection.getInputStream()), StandardCharsets.UTF_8));

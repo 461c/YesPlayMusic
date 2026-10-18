@@ -19,6 +19,7 @@ final class PlaybackHistory implements Player.Listener {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final AtomicBoolean draining = new AtomicBoolean(false);
     private ListeningSession current;
+    private long currentDuration;
     static volatile String status = "尚无已结束的播放记录";
     PlaybackHistory(Context context, Player player) { this.context = context; this.player = player; }
     private String cookie() { return ApiClient.preferences(context).getString("cookie", ""); }
@@ -28,6 +29,7 @@ final class PlaybackHistory implements Player.Listener {
         if (item == null || !item.mediaId.matches("\\d+") || archived()) return;
         String source = ApiClient.preferences(context).getString("historySourceId", "0");
         if (!source.matches("\\d+")) source = "0";
+        currentDuration = Math.max(0, player.getDuration() / 1000);
         current = new ListeningSession(item.mediaId, source, cookie(), apiScope(),
             SystemClock.elapsedRealtime(), player.isPlaying());
     }
@@ -45,6 +47,7 @@ final class PlaybackHistory implements Player.Listener {
     }
     @Override public void onEvents(Player source, Player.Events events) {
         if (archived()) { current = null; return; }
+        if (current != null && player.getPlaybackState() == Player.STATE_READY) currentDuration = Math.max(currentDuration, Math.max(0, player.getDuration() / 1000));
         if (player.getPlaybackState() == Player.STATE_ENDED || player.getPlaybackState() == Player.STATE_IDLE) {
             finish();
         } else if (player.isPlaying() && current == null) begin(player.getCurrentMediaItem());
@@ -57,7 +60,7 @@ final class PlaybackHistory implements Player.Listener {
         if (seconds < 1 || !session.cookie.contains("MUSIC_U=") || archived()) return;
         try {
             JSONObject report = new JSONObject().put("token", java.util.UUID.randomUUID().toString())
-                .put("id", session.id).put("sourceId", session.sourceId).put("time", seconds)
+                .put("id", session.id).put("sourceId", session.sourceId).put("time", seconds).put("total", Math.max(seconds, currentDuration))
                 .put("cookie", session.cookie).put("api", session.api);
             synchronized (this) {
                 JSONArray pending = pending();
@@ -89,7 +92,7 @@ final class PlaybackHistory implements Player.Listener {
                         || !report.getString("api").equals(apiScope())) continue;
                     JSONObject response = ApiClient.json(context, "/scrobble?id=" + Uri.encode(report.getString("id"))
                         + "&sourceid=" + Uri.encode(report.getString("sourceId"))
-                        + "&time=" + report.getLong("time") + "&timestamp=" + System.currentTimeMillis(),
+                        + "&total=" + report.optLong("total", report.getLong("time")) + "&time=" + report.getLong("time") + "&timestamp=" + System.currentTimeMillis(),
                         report.getString("cookie"), report.getString("api"));
                     if (response.optInt("code") != 200 || !"success".equals(response.optString("data"))) {
                         status = "网易云打卡未接受，已保留待重试（" + response.optInt("code") + "）"; break;

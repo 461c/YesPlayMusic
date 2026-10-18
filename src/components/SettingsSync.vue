@@ -3,7 +3,7 @@
     <h4 class="card-heading">同步设置</h4>
     <p
       >手动导入或导出，云盘保留一份设置
-      MP3。不包含网易云登录信息、歌曲和图片缓存。</p
+      MP3。包含已添加用户及其排序，不包含登录信息、歌曲和图片缓存。</p
     >
     <div class="sync-actions">
       <button :disabled="busy !== ''" @click="sync('export')">{{
@@ -18,6 +18,12 @@
 </template>
 <script>
 import request from '@/utils/request';
+import {
+  trackingScope,
+  readTrackingList,
+  saveTrackingList,
+  normalizeTrackingId,
+} from '@/utils/trackingStore';
 import { isAccountLoggedIn } from '@/utils/auth';
 import { archiveMode } from '@/utils/archiveMode';
 export default {
@@ -44,11 +50,16 @@ export default {
       this.busy = operation;
       this.message = '';
       try {
+        const scope = trackingScope(account);
+        const people = await readTrackingList(scope);
         const settings = JSON.parse(JSON.stringify(this.$store.state.settings));
         const result = await request({
           url: '/ypm/settings/sync',
           method: 'post',
-          data: { operation, ...(operation === 'export' ? { settings } : {}) },
+          data: {
+            operation,
+            ...(operation === 'export' ? { settings, people } : {}),
+          },
           params: { timestamp: Date.now() },
           timeout: 240000,
           skipAuthRedirect: true,
@@ -77,6 +88,16 @@ export default {
                 key,
                 value: imported[key],
               });
+          }
+          if (Array.isArray(result.snapshot.people)) {
+            const seen = new Set();
+            const users = result.snapshot.people.filter(person => {
+              const id = normalizeTrackingId(person.id);
+              if (!id || seen.has(id)) return false;
+              seen.add(id);
+              return true;
+            });
+            await saveTrackingList(scope, users);
           }
           this.message = '设置已导入，正在重新加载…';
           window.location.reload();

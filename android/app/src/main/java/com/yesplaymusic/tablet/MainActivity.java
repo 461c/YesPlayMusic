@@ -335,7 +335,9 @@ public final class MainActivity extends Activity {
                     }
                     ApiClient.setCookie(this, command.optString("cookie", ""));
                     ApiClient.preferences(this).edit().putBoolean("personalFm", command.optBoolean("personalFm", false))
-                        .putString("historySourceId", command.optString("sourceId", "0")).apply();
+                        .putString("historySourceId", command.optString("sourceId", "0"))
+                        .putString("favoriteUserId", command.optString("userId"))
+                        .putString("likedSongIds", command.optJSONArray("likedSongIds") == null ? "[]" : command.optJSONArray("likedSongIds").toString()).apply();
                     controller.setMediaItems(items, index, position);
                     controller.setRepeatMode(command.optInt("repeatMode", Player.REPEAT_MODE_OFF));
                     controller.setVolume((float) command.optDouble("volume", 1));
@@ -343,6 +345,10 @@ public final class MainActivity extends Activity {
                     if (resume) controller.play();
                     break;
                 }
+                case "favorites":
+                    ApiClient.preferences(this).edit().putString("favoriteUserId", command.optString("userId"))
+                        .putString("likedSongIds", command.optJSONArray("likedSongIds") == null ? "[]" : command.optJSONArray("likedSongIds").toString()).apply();
+                    break;
                 case "play": controller.play(); break;
                 case "pause": controller.pause(); break;
                 case "stop": controller.stop(); break;
@@ -364,6 +370,10 @@ public final class MainActivity extends Activity {
             state.put("position", Math.max(0, controller.getCurrentPosition()) / 1000.0);
             state.put("duration", Math.max(0, controller.getDuration()) / 1000.0);
             state.put("playing", controller.isPlaying());
+            state.put("repeatMode", controller.getRepeatMode());
+            state.put("favoriteRevision", ApiClient.preferences(this).getLong("favoriteRevision", 0));
+            state.put("favoriteUserId", ApiClient.preferences(this).getString("favoriteUserId", ""));
+            state.put("likedSongIds", new JSONArray(ApiClient.preferences(this).getString("likedSongIds", "[]")));
             state.put("ended", controller.getPlaybackState() == Player.STATE_ENDED);
             state.put("playlistIndex", current == null || current.mediaMetadata.extras == null ? -1
                 : current.mediaMetadata.extras.getInt("playlistIndex", -1));

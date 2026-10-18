@@ -1,3 +1,4 @@
+import { retainTracks } from '@/utils/retainedTracks';
 import { libraryScope, readLibrary } from '@/utils/offlineLibrary';
 import { syncLibraryArtwork } from '@/utils/libraryArtwork';
 // import store, { state, dispatch, commit } from "@/store";
@@ -131,8 +132,12 @@ const actions = {
           commit('updateLikedXXX', {
             name: 'playlists',
             data: result.playlist,
+            markMissing: result.more !== true,
           });
-          if (process.env.VUE_APP_ANDROID === 'true') {
+          if (
+            process.env.VUE_APP_ANDROID === 'true' ||
+            process.env.IS_ELECTRON
+          ) {
             const account = String(state.data.user?.userId || '');
             syncLibraryArtwork(
               result.playlist,
@@ -158,6 +163,7 @@ const actions = {
         commit('updateLikedXXX', {
           name: 'albums',
           data: result.data,
+          markMissing: result.more !== true,
         });
       }
     });
@@ -169,6 +175,7 @@ const actions = {
         commit('updateLikedXXX', {
           name: 'artists',
           data: result.data,
+          markMissing: result.more !== true,
         });
       }
     });
@@ -180,6 +187,7 @@ const actions = {
         commit('updateLikedXXX', {
           name: 'mvs',
           data: result.data,
+          markMissing: result.more !== true,
         });
       }
     });
@@ -192,6 +200,7 @@ const actions = {
         commit('updateLikedXXX', {
           name: 'cloudDisk',
           data: result.data,
+          markMissing: result.more !== true,
         });
       }
     });
@@ -201,17 +210,24 @@ const actions = {
     return Promise.all([
       userPlayHistory({ uid: state.data.user?.userId, type: 0 }),
       userPlayHistory({ uid: state.data.user?.userId, type: 1 }),
-    ]).then(result => {
+    ]).then(async result => {
       const data = {};
       const dataType = { 0: 'allData', 1: 'weekData' };
       if (result[0] && result[1]) {
         for (let i = 0; i < result.length; i++) {
+          if (!Array.isArray(result[i][dataType[i]]))
+            throw new Error('排行暂不可见，保留缓存');
           const songData = result[i][dataType[i]].map(item => {
             const song = item.song;
             song.playCount = item.playCount;
             return song;
           });
-          data[[dataType[i]]] = songData;
+          data[dataType[i]] = await retainTracks(
+            songData,
+            state.liked.playHistory[dataType[i]] || [],
+            null,
+            'not-listed'
+          );
         }
         commit('updateLikedXXX', {
           name: 'playHistory',
