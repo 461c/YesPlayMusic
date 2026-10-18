@@ -12,8 +12,7 @@
     <button
       ref="trigger"
       class="avatar-stack"
-      :class="{ expanded }"
-      aria-label="切换用户，长按管理"
+      aria-label="用户头像"
       :aria-expanded="expanded"
       aria-controls="library-person-picker"
       @click="toggle"
@@ -205,7 +204,14 @@ export default {
         this.users = users;
     },
     toggle() {
-      if (Date.now() < this.suppressClickUntil) return;
+      if (
+        Date.now() < this.suppressClickUntil ||
+        !this.users.some(
+          user =>
+            String(user.id) !== String(this.$store.state.data.user?.userId)
+        )
+      )
+        return;
       this.measurePicker();
       this.expanded = !this.expanded;
       if (this.expanded) {
@@ -287,6 +293,7 @@ export default {
 }
 .avatar-stack {
   position: relative;
+  z-index: 1;
   height: 44px;
   width: 44px;
   padding: 0;
@@ -296,10 +303,6 @@ export default {
   touch-action: pan-y;
   user-select: none;
   -webkit-touch-callout: none;
-}
-.avatar-stack.expanded {
-  visibility: hidden;
-  pointer-events: none;
 }
 .stack-face,
 .person-face {
@@ -329,6 +332,7 @@ export default {
 }
 .people-picker {
   position: absolute;
+  z-index: 2;
   top: -8px;
   left: -10px;
   width: max-content;

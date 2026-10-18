@@ -271,15 +271,14 @@ export default {
 
 <style lang="scss" scoped>
 .cover-row.compact {
-  gap: 14px 22px !important;
+  gap: 22px 28px !important;
   .item {
     display: flex;
     align-items: center;
     gap: 13px;
     min-width: 0;
-    padding: 8px;
-    border-radius: 10px;
-    background: var(--color-secondary-bg);
+    padding: 4px 0;
+    background: transparent;
   }
   .cover {
     flex: 0 0 64px;
@@ -308,7 +307,7 @@ export default {
 @media (max-width: 600px) {
   .cover-row.compact {
     grid-template-columns: minmax(0, 1fr) !important;
-    gap: 10px !important;
+    gap: 18px !important;
   }
 }
 </style>

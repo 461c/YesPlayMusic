@@ -305,6 +305,13 @@
                   <option value="forest">
                     {{ $t('settings.themeColor.forest') }}
                   </option>
+                  <option value="yellow">黄色</option>
+                  <option value="red">红色</option>
+                  <option value="purple">紫色</option>
+                  <option value="navy">深蓝</option>
+                  <option value="sky">天蓝</option>
+                  <option value="monochrome">黑白</option>
+                  <option value="orange">橙色</option>
                 </select>
               </div>
             </div>

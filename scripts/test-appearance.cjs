@@ -112,7 +112,19 @@ vm.runInContext(
 const primaries = new Set();
 const neutralPalettes = {};
 for (const appearance of ['light', 'dark']) {
-  for (const preset of ['default', 'sunset', 'ocean', 'forest']) {
+  for (const preset of [
+    'default',
+    'sunset',
+    'ocean',
+    'forest',
+    'yellow',
+    'red',
+    'purple',
+    'navy',
+    'sky',
+    'monochrome',
+    'orange',
+  ]) {
     paletteContext.changeThemeColor(preset, appearance);
     assert.deepEqual(
       themeRoot,
@@ -152,11 +164,11 @@ for (const appearance of ['light', 'dark']) {
         themeBody['--color-player-bg'],
         themeBody['--color-navbar-bg']
       );
-    if (preset !== 'default')
+    if (['sunset', 'ocean', 'forest'].includes(preset))
       assert(themeBody['--color-primary-gradient'].includes('gradient'));
   }
 }
-assert.equal(primaries.size, 4);
+assert.equal(primaries.size, 11);
 paletteContext.changeThemeColor('sunset', 'light');
 const sunsetSurface = themeBody['--color-secondary-bg'];
 paletteContext.changeThemeColor('forest', 'light');
@@ -172,5 +184,5 @@ assert.equal(
   'Unknown/removed themes reset every token to default'
 );
 console.log(
-  'Theme palette: four presets, light/dark, global/overlay tokens, neutral surfaces, white glyphs and solid accents passed'
+  'Theme palette: eleven presets, light/dark, global/overlay tokens, neutral surfaces, white glyphs and solid accents passed'
 );

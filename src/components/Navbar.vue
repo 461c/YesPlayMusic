@@ -239,9 +239,6 @@ nav.has-custom-titlebar {
     cursor: pointer;
     -webkit-app-region: no-drag;
     -webkit-user-drag: none;
-    &:hover {
-      filter: brightness(80%);
-    }
   }
   .search-button {
     display: none;

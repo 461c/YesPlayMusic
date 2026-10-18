@@ -64,6 +64,104 @@ const themeColorPresets = {
       primaryGradient: 'linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)',
     },
   },
+  yellow: {
+    light: {
+      primary: '#a66a00',
+      primaryBg: '#fff4cb',
+      primaryBgForTransparent: 'rgba(166, 106, 0, 0.18)',
+      primaryGradient: '#b87900',
+    },
+    dark: {
+      primary: '#ffd75e',
+      primaryBg: '#332b12',
+      primaryBgForTransparent: 'rgba(255, 215, 94, 0.22)',
+      primaryGradient: '#a66a00',
+    },
+  },
+  red: {
+    light: {
+      primary: '#d72d3e',
+      primaryBg: '#ffe6e9',
+      primaryBgForTransparent: 'rgba(215, 45, 62, 0.18)',
+      primaryGradient: '#cf2438',
+    },
+    dark: {
+      primary: '#ff7381',
+      primaryBg: '#381b22',
+      primaryBgForTransparent: 'rgba(255, 115, 129, 0.22)',
+      primaryGradient: '#cf2438',
+    },
+  },
+  purple: {
+    light: {
+      primary: '#8150cf',
+      primaryBg: '#f0e7ff',
+      primaryBgForTransparent: 'rgba(129, 80, 207, 0.18)',
+      primaryGradient: '#8150cf',
+    },
+    dark: {
+      primary: '#c09aff',
+      primaryBg: '#2c203e',
+      primaryBgForTransparent: 'rgba(192, 154, 255, 0.22)',
+      primaryGradient: '#8150cf',
+    },
+  },
+  navy: {
+    light: {
+      primary: '#183a83',
+      primaryBg: '#e7edfa',
+      primaryBgForTransparent: 'rgba(24, 58, 131, 0.18)',
+      primaryGradient: '#183a83',
+    },
+    dark: {
+      primary: '#91aff4',
+      primaryBg: '#19243b',
+      primaryBgForTransparent: 'rgba(145, 175, 244, 0.22)',
+      primaryGradient: '#244b9c',
+    },
+  },
+  sky: {
+    light: {
+      primary: '#007fa8',
+      primaryBg: '#def6ff',
+      primaryBgForTransparent: 'rgba(0, 127, 168, 0.18)',
+      primaryGradient: '#007fa8',
+    },
+    dark: {
+      primary: '#6cdbff',
+      primaryBg: '#132d38',
+      primaryBgForTransparent: 'rgba(108, 219, 255, 0.22)',
+      primaryGradient: '#007fa8',
+    },
+  },
+  monochrome: {
+    light: {
+      primary: '#252525',
+      primaryBg: '#ededed',
+      primaryBgForTransparent: 'rgba(37, 37, 37, 0.12)',
+      primaryGradient: '#252525',
+    },
+    dark: {
+      primary: '#ededed',
+      primaryBg: '#292929',
+      primaryBgForTransparent: 'rgba(237, 237, 237, 0.18)',
+      primaryGradient: '#595959',
+    },
+  },
+  orange: {
+    light: {
+      primary: '#c4510b',
+      primaryBg: '#ffeddf',
+      primaryBgForTransparent: 'rgba(196, 81, 11, 0.18)',
+      primaryGradient: '#c4510b',
+    },
+    dark: {
+      primary: '#ffae70',
+      primaryBg: '#352519',
+      primaryBgForTransparent: 'rgba(255, 174, 112, 0.22)',
+      primaryGradient: '#c4510b',
+    },
+  },
 };
 
 export function changeThemeColor(themeColor, appearance) {
