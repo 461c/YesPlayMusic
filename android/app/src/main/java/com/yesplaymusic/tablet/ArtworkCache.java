@@ -127,6 +127,23 @@ final class ArtworkCache {
             }
         } catch (Exception ignored) { }
     }
+    boolean hasSelected(String url) {
+        try { String address = canonical(url); return address != null && (existing(address, 1024) != null || existing(address, 224) != null); }
+        catch (Exception ignored) { return false; }
+    }
+    boolean cacheSelected(String url) throws Exception {
+        String address = canonical(url);
+        if (address == null) return false;
+        if (existing(address, 1024) != null) return true;
+        if (ApiClient.preferences(app).getBoolean("archiveMode", false)) return false;
+        eligible.add(identity(address));
+        FutureTask<Boolean> selected = task(address, 1024);
+        selected.run();
+        if (selected.get(40, TimeUnit.SECONDS)) return true;
+        FutureTask<Boolean> thumbnail = task(address, 224);
+        thumbnail.run();
+        return thumbnail.get(40, TimeUnit.SECONDS);
+    }
     private boolean download(String address, int size, long epoch) {
         HttpURLConnection connection = null;
         File temporary = null;

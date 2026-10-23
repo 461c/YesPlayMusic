@@ -28,6 +28,7 @@ final class AudioCache {
     private static final String INFO = "ypm.audio-info";
     private static SimpleCache cache;
     private static DynamicEvictor evictor;
+    private static final java.util.concurrent.atomic.AtomicInteger manualWrites = new java.util.concurrent.atomic.AtomicInteger();
 
     private static long maximum(Context context) {
         if (ApiClient.preferences(context).getBoolean("archiveMode", false)) return Long.MAX_VALUE;
@@ -86,6 +87,52 @@ final class AudioCache {
         }
         if (state > 0) ApiClient.preferences(context).edit().putStringSet("preservedAudio", pinned).apply();
         return state;
+    }
+
+    static synchronized int state(Context context, String id) {
+        if (!id.matches("\\d+")) return 0;
+        String entry = key(context, id, ApiClient.preferences(context).getString("qualityLevel", "exhigh"));
+        return get(context).getCachedSpans(entry).isEmpty() ? 0 : complete(get(context), entry) ? 2 : 1;
+    }
+    static void cacheSelected(Context context, String id, java.util.function.BooleanSupplier cancelled) throws Exception {
+        if (!id.matches("\\d+")) throw new java.io.IOException("无效歌曲编号");
+        if (ApiClient.preferences(context).getBoolean("archiveMode", false)) throw new java.io.IOException("纪念模式已停止更新");
+        String level = ApiClient.preferences(context).getString("qualityLevel", "exhigh");
+        String entry = key(context, id, level);
+        SimpleCache storage = get(context);
+        if (complete(storage, entry)) { preserveTrack(context, id); return; }
+        if (context.getFilesDir().getUsableSpace() < 128L * 1024 * 1024) throw new java.io.IOException("可用空间不足 128MB，已停止");
+        if (cancelled.getAsBoolean()) throw new java.io.IOException("已停止");
+        Uri uri = ApiClient.resolveAudio(context, id, level);
+        if (cancelled.getAsBoolean() || !entry.equals(key(context, id, level))) throw new java.io.IOException("账号或接口已切换，已停止");
+        storage.applyContentMetadataMutations(entry, new ContentMetadataMutations().set(INFO, ApiClient.audioInfo(context, id).toString()));
+        DefaultHttpDataSource.Factory network = new DefaultHttpDataSource.Factory().setUserAgent("YesPlayMusic-Android")
+            .setDefaultRequestProperties(java.util.Collections.singletonMap("Referer", "https://music.163.com/"))
+            .setAllowCrossProtocolRedirects(true).setConnectTimeoutMs(12000).setReadTimeoutMs(15000);
+        CacheDataSource source = new CacheDataSource.Factory().setCache(storage).setUpstreamDataSourceFactory(network)
+            .setCacheKeyFactory(spec -> entry).setFlags(CacheDataSource.FLAG_BLOCK_ON_CACHE).createDataSource();
+        // Manual caches stay pinned. Never evict saved music to make this update fit.
+        synchronized (AudioCache.class) {
+            java.util.Set<String> pinned = new java.util.HashSet<>(ApiClient.preferences(context).getStringSet("preservedAudio", java.util.Collections.emptySet()));
+            pinned.add(entry); ApiClient.preferences(context).edit().putStringSet("preservedAudio", pinned).apply();
+        }
+        final androidx.media3.datasource.cache.CacheWriter[] writer = new androidx.media3.datasource.cache.CacheWriter[1];
+        final String[] failure = { "" };
+        long initial = storage.getCachedBytes(entry, 0, Long.MAX_VALUE);
+        writer[0] = new androidx.media3.datasource.cache.CacheWriter(source,
+            new androidx.media3.datasource.DataSpec.Builder().setUri(uri).setKey(entry).build(), null,
+            (length, bytes, newlyCached) -> {
+                if (cancelled.getAsBoolean() || !entry.equals(key(context, id, level))) failure[0] = "已停止";
+                else if (context.getFilesDir().getUsableSpace() < 128L * 1024 * 1024) failure[0] = "可用空间不足，已停止";
+                else if (length > 0 && storage.getCacheSpace() + Math.max(0, length - Math.max(initial, bytes)) > maximum(context)) failure[0] = "缓存容量不足，请调整容量后继续";
+                if (!failure[0].isEmpty()) writer[0].cancel();
+            });
+        manualWrites.incrementAndGet();
+        try { writer[0].cache(); }
+        catch (Exception error) { if (!failure[0].isEmpty()) throw new java.io.IOException(failure[0]); throw error; }
+        finally { manualWrites.decrementAndGet(); }
+        if (!failure[0].isEmpty()) throw new java.io.IOException(failure[0]);
+        if (!complete(storage, entry)) throw new java.io.IOException("音乐未完整缓存，已保留片段");
     }
 
     static DataSource.Factory dataSources(Context context, DefaultHttpDataSource.Factory network) {
@@ -175,7 +222,7 @@ final class AudioCache {
         @Override public void onSpanRemoved(Cache cache, CacheSpan span) { }
         @Override public void onSpanTouched(Cache cache, CacheSpan oldSpan, CacheSpan newSpan) { }
         void trim(Cache cache, long incoming) {
-            if (maximum == Long.MAX_VALUE || cache.getCacheSpace() <= maximum - incoming) return;
+            if (manualWrites.get() > 0 || maximum == Long.MAX_VALUE || cache.getCacheSpace() <= maximum - incoming) return;
             List<CacheSpan> spans = new ArrayList<>();
             for (String key : cache.getKeys()) spans.addAll(cache.getCachedSpans(key));
             spans.sort(Comparator.comparingLong(span -> span.lastTouchTimestamp));

@@ -99,7 +99,7 @@ final class ApiClient {
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(path.startsWith("/scrobble?") ? 45000 : 15000);
         try {
-            if (connection.getResponseCode() != 200) throw new IOException("音乐接口请求失败");
+            if (connection.getResponseCode() != 200) throw new IOException("音乐接口请求失败（HTTP " + connection.getResponseCode() + "）");
             return new JSONObject(new String(read(connection.getInputStream()), StandardCharsets.UTF_8));
         } finally { connection.disconnect(); }
     }
@@ -120,6 +120,10 @@ final class ApiClient {
         if (cookie.contains("MUSIC_U=")) {
             try {
                 JSONObject response = json(context, "/song/url/v1?id=" + Uri.encode(id) + "&level=" + Uri.encode(level));
+                int responseCode = response.optInt("code", 200);
+                String responseMessage = response.optString("message", response.optString("msg", ""));
+                if (responseCode != 200 || responseMessage.matches(".*(验证码|风控|访问频繁|操作频繁|安全验证|限流).*"))
+                    throw new IOException("音乐接口返回（API " + responseCode + "）：" + responseMessage);
                 JSONArray data = response.optJSONArray("data");
                 JSONObject track = data == null ? null : data.optJSONObject(0);
                 result = track == null ? "" : track.optString("url", "");

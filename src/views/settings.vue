@@ -151,7 +151,11 @@
         class="settings-panel"
         ><h3 class="panel-title">缓存</h3
         ><div class="settings-cards"
-          ><section v-if="isAndroid || isElectron" class="settings-card"
+          ><LibraryCacheSettings
+            v-if="isAndroid || isElectron"
+            @busy="manualCacheBusy = $event" /><section
+            v-if="isAndroid || isElectron"
+            class="settings-card"
             ><h4 class="card-heading">存储管理</h4
             ><div v-if="isElectron || isAndroid" class="item">
               <div class="left">
@@ -172,7 +176,10 @@
                 </div>
               </div>
               <div class="right">
-                <button :disabled="cacheClearing" @click="clearCache()">
+                <button
+                  :disabled="cacheClearing || manualCacheBusy"
+                  @click="clearCache()"
+                >
                   {{
                     cacheClearing ? '正在清除…' : $t('settings.clearSongsCache')
                   }}
@@ -195,7 +202,10 @@
                 >
               </div>
               <div class="right">
-                <button :disabled="artworkClearing" @click="clearArtworkCache">
+                <button
+                  :disabled="artworkClearing || manualCacheBusy"
+                  @click="clearArtworkCache"
+                >
                   {{ artworkClearing ? '正在清除…' : '清除图片缓存' }}
                 </button>
               </div>
@@ -1098,6 +1108,7 @@ import { isAndroid } from '@/utils/androidAudio';
 import pkg from '../../package.json';
 import PlayerButtonSettings from '@/components/PlayerButtonSettings.vue';
 import SettingsSync from '@/components/SettingsSync.vue';
+import LibraryCacheSettings from '@/components/LibraryCacheSettings.vue';
 
 const electron =
   process.env.IS_ELECTRON === true ? window.require('electron') : null;
@@ -1108,7 +1119,7 @@ const validShortcutCodes = ['=', '-', '~', '[', ']', ';', "'", ',', '.', '/'];
 
 export default {
   name: 'Settings',
-  components: { PlayerButtonSettings, SettingsSync },
+  components: { PlayerButtonSettings, SettingsSync, LibraryCacheSettings },
   data() {
     return {
       activeCategory: 'playback',
@@ -1131,6 +1142,7 @@ export default {
       artworkClearing: false,
       cacheStatsTimer: null,
       cacheClearing: false,
+      manualCacheBusy: false,
       allOutputDevices: [
         {
           deviceId: 'default',

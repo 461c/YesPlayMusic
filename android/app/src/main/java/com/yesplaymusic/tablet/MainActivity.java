@@ -396,6 +396,16 @@ public final class MainActivity extends Activity {
             ApiClient.preferences(MainActivity.this).edit().putBoolean("showSystemStatusBar", visible).apply();
             handler.post(() -> { applyStatusBarVisibility(); emitEnvironment(); });
         }
+        @JavascriptInterface public boolean hasLibraryArtwork(String url) { return ArtworkCache.get(MainActivity.this).hasSelected(url); }
+        @JavascriptInterface public String cacheLibraryMedia(String json) { return LibraryCacheTask.start(MainActivity.this, json); }
+        @JavascriptInterface public String getLibraryCacheTask(String id) { return LibraryCacheTask.status(id); }
+        @JavascriptInterface public void stopLibraryCacheTask(String id) { LibraryCacheTask.cancel(id); }
+        @JavascriptInterface public String getLibraryAudioStates(String json) {
+            JSONObject states = new JSONObject();
+            try { JSONArray ids = new JSONArray(json); for (int i = 0; i < Math.min(200, ids.length()); i++) states.put(ids.getString(i), AudioCache.state(MainActivity.this, ids.getString(i))); }
+            catch (Exception ignored) { }
+            return states.toString();
+        }
         @JavascriptInterface public int preserveCachedTrack(String id) { return AudioCache.preserveTrack(MainActivity.this, id); }
         @JavascriptInterface public void setArchiveMode(boolean enabled) {
             AudioCache.preserve(MainActivity.this, enabled);

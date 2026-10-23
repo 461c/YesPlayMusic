@@ -99,37 +99,73 @@ async function deleteExcessCache() {
   }
 }
 
-export function cacheTrackSource(trackInfo, url, bitRate, from = 'netease') {
+export function cacheTrackSource(
+  trackInfo,
+  url,
+  bitRate,
+  from = 'netease',
+  options = {}
+) {
   if (!process.env.IS_ELECTRON) return;
   const name = trackInfo.name;
   const artist =
     (trackInfo.ar && trackInfo.ar[0]?.name) ||
     (trackInfo.artists && trackInfo.artists[0]?.name) ||
     'Unknown';
-  let cover = trackInfo.al.picUrl;
+  let cover = trackInfo.al?.picUrl || trackInfo.album?.picUrl || '';
   if (cover.slice(0, 5) !== 'https') {
     cover = 'https' + cover.slice(4);
   }
-  axios.get(`${cover}?param=512y512`);
-  axios.get(`${cover}?param=224y224`);
-  axios.get(`${cover}?param=1024y1024`);
+  if (!options.manual && cover) {
+    axios.get(`${cover}?param=512y512`).catch(() => {});
+    axios.get(`${cover}?param=224y224`).catch(() => {});
+    axios.get(`${cover}?param=1024y1024`).catch(() => {});
+  }
   return axios
     .get(url, {
       responseType: 'arraybuffer',
+      signal: options.signal,
+      timeout: options.manual ? 180000 : 0,
     })
-    .then(response => {
-      db.trackSources.put({
+    .then(async response => {
+      if (options.current && !options.current())
+        throw new Error('账号已切换或任务已停止');
+      if (
+        !response.data?.byteLength ||
+        (options.expectedSize &&
+          response.data.byteLength !== options.expectedSize)
+      )
+        throw new Error('音乐缓存不完整，保留已有缓存');
+      const previousBytes =
+        (await db.trackSources.get(Number(trackInfo.id)))?.source?.byteLength ||
+        0;
+      if (options.manual) {
+        const used = (await countDBSize())?.bytes || 0;
+        const limit = Number(store.state.settings.cacheLimit) * 1024 * 1024;
+        if (limit && used - previousBytes + response.data.byteLength > limit)
+          throw new Error('缓存容量不足，请调整容量后继续');
+      }
+      await db.trackSources.put({
         id: trackInfo.id,
         source: response.data,
         bitRate,
+        requestedLevel: options.requestedLevel,
         from,
         name,
         artist,
         createTime: new Date().getTime(),
       });
       console.debug(`[debug][db.js] cached track 👉 ${name} by ${artist}`);
-      tracksCacheBytes += response.data.byteLength;
-      deleteExcessCache();
+      tracksCacheBytes += response.data.byteLength - previousBytes;
+      if (options.manual) {
+        const pinned = JSON.parse(
+          localStorage.getItem('preserved-audio') || '[]'
+        );
+        localStorage.setItem(
+          'preserved-audio',
+          JSON.stringify([...new Set([...pinned, String(trackInfo.id)])])
+        );
+      } else deleteExcessCache();
       return { trackID: trackInfo.id, source: response.data, bitRate };
     });
 }
@@ -191,7 +227,7 @@ export function getLyricFromCache(id) {
 }
 
 export function cacheAlbum(id, album) {
-  db.album.put({
+  return db.album.put({
     id: Number(id),
     album,
     updateTime: new Date().getTime(),

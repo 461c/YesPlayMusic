@@ -77,22 +77,28 @@ export function artworkBridge() {
       localStorage.removeItem('desktop-artwork-allowed');
     },
     lookup(address) {
-      const target = file(address);
-      if (!target || !fs.existsSync(target)) return address;
-      stats.hits++;
-      return pathToFileURL(target).href;
+      const exact = file(address);
+      if (!exact) return address;
+      const candidates = [exact];
+      const variant = new URL(address);
+      for (const size of [1024, 512, 224]) {
+        variant.searchParams.set('param', `${size}y${size}`);
+        candidates.push(file(variant.href));
+      }
+      for (const target of new Set(candidates)) {
+        if (target && fs.existsSync(target)) {
+          stats.hits++;
+          return pathToFileURL(target).href;
+        }
+      }
+      return address;
     },
-    remember(address) {
+    remember(address, strict = false) {
       const id = identity(address),
         target = file(address);
-      if (
-        !id ||
-        !allowed.has(id) ||
-        !target ||
-        fs.existsSync(target) ||
-        pending.has(id)
-      )
-        return;
+      if (!id || !allowed.has(id) || !target) return Promise.resolve(false);
+      if (fs.existsSync(target)) return Promise.resolve(true);
+      if (pending.has(target)) return pending.get(target);
       // Memorial/offline reads never start a new image download.
       if (
         JSON.parse(localStorage.getItem('settings') || '{}').archiveMode ||
@@ -113,10 +119,16 @@ export function artworkBridge() {
           if (epoch !== generation || bytes.length > 16777216) return;
           await fs.promises.writeFile(target, bytes);
           stats.downloads++;
+          return true;
         })
-        .catch(() => stats.failures++)
-        .finally(() => pending.delete(id));
-      pending.set(id, work);
+        .catch(error => {
+          stats.failures++;
+          if (strict) throw error;
+          return false;
+        })
+        .finally(() => pending.delete(target));
+      pending.set(target, work);
+      return work;
     },
     clearArtworkCache() {
       generation++;
