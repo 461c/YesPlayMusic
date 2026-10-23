@@ -235,6 +235,25 @@ assert(riskResponse({ message: '音乐接口请求失败（HTTP 403）' }));
   });
   assert.equal(peak, 1, 'Manual songs must cache strictly one at a time');
   assert.equal(songs, 2);
+  let cancelled = 0;
+  context.window.YesPlayMusicAndroid.cacheLibraryMedia = () => 'task';
+  context.window.YesPlayMusicAndroid.stopLibraryCacheTask = () => cancelled++;
+  context.window.YesPlayMusicAndroid.getLibraryCacheTask = () =>
+    JSON.stringify({ state: 'done' });
+  assert.equal(await manager.nativeTask({ kind: 'audio', id: '3' }), true);
+  assert.equal(manager.taskId, '');
+  context.window.YesPlayMusicAndroid.getLibraryCacheTask = () => {
+    manager.stopped = true;
+    return JSON.stringify({ state: 'running' });
+  };
+  await assert.rejects(manager.nativeTask({ kind: 'audio', id: '4' }), /停止/);
+  assert.equal(
+    cancelled,
+    1,
+    'Stopping a polling task must cancel its native writer'
+  );
+  assert.equal(manager.taskId, '');
+  manager.stopped = false;
   const oldMark = manager.marks[target.key].status;
   response = { code: 403, message: '访问频繁' };
   await assert.rejects(manager.api('/playlist/detail', { id: 1 }), /冷却/);

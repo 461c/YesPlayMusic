@@ -378,11 +378,7 @@ class LibraryCacheManager {
     this.taskId = native.cacheLibraryMedia(JSON.stringify(command));
     if (!this.taskId) throw new Error('本地缓存任务仍在结束，请稍后继续');
     try {
-      while (true) {
-        if (!this.current()) {
-          native.stopLibraryCacheTask(this.taskId);
-          throw new Error('任务已停止');
-        }
+      while (this.current()) {
         const result = JSON.parse(native.getLibraryCacheTask(this.taskId));
         if (result.state === 'done') return true;
         if (result.state === 'unavailable') return false;
@@ -390,6 +386,8 @@ class LibraryCacheManager {
           throw new Error(result.message || '缓存任务已停止');
         await sleep(300);
       }
+      native.stopLibraryCacheTask(this.taskId);
+      throw new Error('任务已停止');
     } finally {
       this.taskId = '';
     }
