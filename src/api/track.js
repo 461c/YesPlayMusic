@@ -44,6 +44,7 @@ export function getMP3(id) {
     });
 
   if (isAndroid) return getV1Url();
+  // Desktop and web prefer v1, with the legacy route as a fallback.
   if (store.state.settings?.useSongUrlV1Api === false) return getLegacyUrl();
 
   return getV1Url()
