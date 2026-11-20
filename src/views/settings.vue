@@ -87,6 +87,26 @@
                 </select>
               </div>
             </div>
+            <div v-if="!isAndroid" class="item">
+              <div class="left">
+                <div class="title">使用新版歌曲链接接口</div>
+                <div class="description">
+                  优先请求 /song/url/v1；请求失败时自动回退到旧接口。
+                </div>
+              </div>
+              <div class="right">
+                <div class="toggle">
+                  <input
+                    id="use-song-url-v1-api"
+                    v-model="useSongUrlV1Api"
+                    type="checkbox"
+                    name="use-song-url-v1-api"
+                    aria-label="使用新版歌曲链接接口"
+                  />
+                  <label for="use-song-url-v1-api"></label>
+                </div>
+              </div>
+            </div>
             <div v-if="isElectron" class="item">
               <div class="left">
                 <div class="title"> {{ $t('settings.deviceSelector') }} </div>
@@ -1376,6 +1396,17 @@ export default {
         if (this.isElectron) {
           ipcRenderer.send('updateTrayIcon', value);
         }
+      },
+    },
+    useSongUrlV1Api: {
+      get() {
+        return this.settings.useSongUrlV1Api !== false;
+      },
+      set(value) {
+        this.$store.commit('updateSettings', {
+          key: 'useSongUrlV1Api',
+          value,
+        });
       },
     },
     musicQuality: {

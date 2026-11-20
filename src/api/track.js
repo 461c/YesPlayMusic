@@ -22,30 +22,39 @@ import {
  * @param {string} id - 音乐的 id，例如 id=405998841,33894312
  */
 export function getMP3(id) {
-  if (isAndroid) {
-    return request({
+  const quality = store.state.settings?.musicQuality ?? '320000';
+  const getBr = () => {
+    // 当返回的 quality >= 400000时，就会优先返回 hi-res
+    return quality === 'flac' ? '350000' : quality;
+  };
+  const getLegacyUrl = () =>
+    request({
+      url: '/song/url',
+      method: 'get',
+      params: { id, br: getBr() },
+    });
+  const getV1Url = () =>
+    request({
       url: '/song/url/v1',
       method: 'get',
       params: {
         id,
-        level: musicQualityLevel(store.state.settings.musicQuality),
+        level: musicQualityLevel(quality),
       },
     });
-  }
-  const getBr = () => {
-    // 当返回的 quality >= 400000时，就会优先返回 hi-res
-    const quality = store.state.settings?.musicQuality ?? '320000';
-    return quality === 'flac' ? '350000' : quality;
-  };
 
-  return request({
-    url: '/song/url',
-    method: 'get',
-    params: {
-      id,
-      br: getBr(),
-    },
-  });
+  if (isAndroid) return getV1Url();
+  if (store.state.settings?.useSongUrlV1Api === false) return getLegacyUrl();
+
+  return getV1Url()
+    .then(result => {
+      if (result?.data?.[0]?.url) return result;
+      throw new Error('新版歌曲链接接口未返回可播放地址');
+    })
+    .catch(error => {
+      console.warn('新版歌曲链接接口失败，回退到旧接口：', error);
+      return getLegacyUrl();
+    });
 }
 
 /**
