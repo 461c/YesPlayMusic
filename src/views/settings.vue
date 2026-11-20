@@ -86,6 +86,7 @@
                   <option value="999000">Hi-Res</option>
                 </select>
               </div>
+            </div>
             <div v-if="!isAndroid" class="item">
               <div class="left">
                 <div class="title">使用新版歌曲链接接口</div>
