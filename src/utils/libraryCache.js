@@ -41,8 +41,8 @@ export function cacheTargets(state) {
       (String(item.creator?.userId) === uid && item.specialType === 5)
         ? 'likes'
         : String(item.creator?.userId) === uid
-        ? 'created'
-        : 'saved',
+          ? 'created'
+          : 'saved',
     name: item.name,
     cover: item.coverImgUrl,
     archiveStatus: item.archiveStatus,
@@ -178,6 +178,20 @@ class LibraryCacheManager {
     this.songTotal = 0;
     this.songChecked = 0;
     this.songIndex = 0;
+    this.currentTargetFraction = 0;
+    this.phaseLabel = '';
+    this.phaseProgress = 0;
+    this.phaseTotal = 0;
+    this.networkPending = false;
+    this.detailsLoaded = 0;
+    this.detailsTotal = 0;
+    this.imagesDone = 0;
+    this.imagesTotal = 0;
+    this.imagesCached = 0;
+    this.currentTargetImagesDone = 0;
+    this.currentTargetImagesTotal = 0;
+    this.currentTargetSongsDone = 0;
+    this.currentTargetMediaTotal = 0;
     this.currentSong = '';
     this.currentTargetKey = '';
     this.stage = '';
@@ -186,6 +200,7 @@ class LibraryCacheManager {
     this.downloadTotalBytes = 0;
     this.downloadSpeed = 0;
     this.speedSample = null;
+    this.activeDownloadKind = '';
     this.speedTimer = null;
     this.mode = '';
     this.failedItems = 0;
@@ -244,7 +259,7 @@ class LibraryCacheManager {
     if (this.taskId)
       window.YesPlayMusicAndroid?.pauseLibraryCacheTask?.(this.taskId);
     this.stage =
-      this.taskId || !['下载音乐', '缓存封面'].includes(this.stage)
+      this.taskId || !['下载音乐', '缓存封面', '下载封面'].includes(this.stage)
         ? '正在暂停'
         : '当前文件完成后暂停';
   }
@@ -271,11 +286,12 @@ class LibraryCacheManager {
     }
     this.guard();
   }
-  updateDownload(loaded, total = 0) {
+  updateDownload(loaded, total = 0, kind = this.activeDownloadKind) {
     const now = Date.now();
     const previous = this.speedSample;
     this.downloadedBytes = Math.max(0, Number(loaded) || 0);
     this.downloadTotalBytes = Math.max(0, Number(total) || 0);
+    this.activeDownloadKind = kind;
     if (
       previous &&
       now > previous.at &&
@@ -288,6 +304,21 @@ class LibraryCacheManager {
       );
     }
     this.speedSample = { at: now, bytes: this.downloadedBytes };
+    this.updateMediaProgress(
+      this.downloadTotalBytes
+        ? this.downloadedBytes / this.downloadTotalBytes
+        : 0
+    );
+  }
+  updateMediaProgress(activeFraction = 0) {
+    if (!this.currentTargetMediaTotal) return;
+    const done = this.currentTargetImagesDone + this.currentTargetSongsDone;
+    this.updateTargetProgress(
+      0.45 +
+        0.55 *
+          ((done + Math.min(0.99, Math.max(0, activeFraction))) /
+            this.currentTargetMediaTotal)
+    );
   }
   startSpeedMonitor() {
     clearTimeout(this.speedTimer);
@@ -297,6 +328,17 @@ class LibraryCacheManager {
       if (this.running) this.speedTimer = setTimeout(refresh, 500);
     };
     this.speedTimer = setTimeout(refresh, 500);
+  }
+  setPhase(label, total = 0, progress = 0) {
+    this.phaseLabel = label;
+    this.phaseTotal = Math.max(0, Number(total) || 0);
+    this.phaseProgress = Math.max(0, Number(progress) || 0);
+  }
+  updateTargetProgress(fraction) {
+    this.currentTargetFraction = Math.max(
+      this.currentTargetFraction,
+      Math.min(1, Number(fraction) || 0)
+    );
   }
   async mark(target, status, extra = {}) {
     this.guard();
@@ -322,13 +364,24 @@ class LibraryCacheManager {
       }
     );
     await this.waitIfPaused();
-    this.stage = '读取收藏内容';
-    const data = await request({
-      url,
-      params: { ...params, timestamp: Date.now() },
-      signal: this.controller.signal,
-      skipAuthRedirect: true,
-    });
+    const endpointLabels = {
+      '/playlist/detail': '读取歌单歌曲清单',
+      '/album': '读取专辑歌曲清单',
+      '/song/detail': '补齐歌曲信息',
+    };
+    this.stage = endpointLabels[url] || '请求音乐服务';
+    this.networkPending = true;
+    let data;
+    try {
+      data = await request({
+        url,
+        params: { ...params, timestamp: Date.now() },
+        signal: this.controller.signal,
+        skipAuthRedirect: true,
+      });
+    } finally {
+      this.networkPending = false;
+    }
     await this.waitIfPaused();
     this.guard();
     if (data?.code !== 200) {
@@ -353,11 +406,11 @@ class LibraryCacheManager {
     this.snapshots.set(target.key, { at: Date.now(), data });
     return data;
   }
-  async audioStates(ids) {
+  async audioStates(ids, onProgress = () => {}) {
     const native = window.YesPlayMusicAndroid;
     const states = {};
     if (native?.getLibraryAudioStates) {
-      for (let start = 0; start < ids.length; start += 200)
+      for (let start = 0; start < ids.length; start += 200) {
         Object.assign(
           states,
           JSON.parse(
@@ -366,7 +419,10 @@ class LibraryCacheManager {
             )
           )
         );
-    } else
+        onProgress(Math.min(start + 200, ids.length));
+      }
+    } else {
+      let checked = 0;
       for (const id of ids) {
         const cached = await getTrackSource(id);
         states[id] =
@@ -376,7 +432,9 @@ class LibraryCacheManager {
               musicQualityLevel(this.store.state.settings.musicQuality))
             ? 2
             : 0;
+        onProgress(++checked);
       }
+    }
     return states;
   }
   async preserve(target) {
@@ -406,9 +464,11 @@ class LibraryCacheManager {
   }
   async check(target) {
     this.stage = '读取收藏内容';
+    this.setPhase('读取收藏歌曲清单');
     this.snapshots.delete(target.key);
     const data = await this.snapshot(target),
       fresh = manifest(target, data);
+    this.updateTargetProgress(0.1);
     const old =
       target.type === 'album'
         ? await getAlbumFromCache(target.id)
@@ -419,12 +479,23 @@ class LibraryCacheManager {
     } catch (_) {
       /* First explicit cache request. */
     }
-    const states = await this.audioStates(fresh.ids);
     this.songTotal += fresh.ids.length;
-    this.songChecked += fresh.ids.length;
+    this.setPhase('检查音乐缓存', fresh.ids.length, 0);
+    this.stage = '检查音乐缓存';
+    const checkedBefore = this.songChecked;
+    const states = await this.audioStates(fresh.ids, checked => {
+      this.songChecked = checkedBefore + checked;
+      this.phaseProgress = checked;
+      this.updateTargetProgress(
+        0.1 + (fresh.ids.length ? (0.65 * checked) / fresh.ids.length : 0.65)
+      );
+    });
+    this.songChecked = checkedBefore + fresh.ids.length;
     this.songDone += fresh.ids.length;
     const cached = fresh.ids.filter(id => states[id] === 2).length;
     const last = this.marks[target.key];
+    this.stage = '读取本地歌曲信息';
+    this.setPhase('核对歌曲信息');
     const details = new Map(
       (await getSavedTrackDetails(fresh.ids)).map(song => [
         String(song.id),
@@ -434,15 +505,32 @@ class LibraryCacheManager {
     mapTrackPlayableStatus(fresh.songs, data.privileges || []).forEach(song =>
       details.set(String(song.id), song)
     );
-    const images = [
-      fresh.cover || target.cover,
-      ...[...details.values()].map(
-        song => song.al?.picUrl || song.album?.picUrl
-      ),
-    ].filter(Boolean);
-    const allImages =
-      details.size >= fresh.ids.length &&
-      images.every(url => this.hasPicture(url));
+    const imageUrls = new Set(
+      [
+        fresh.cover || target.cover,
+        ...[...details.values()].map(
+          song => song.al?.picUrl || song.album?.picUrl
+        ),
+      ].filter(Boolean)
+    );
+    this.imagesTotal += imageUrls.size;
+    this.setPhase('检查封面缓存', imageUrls.size, 0);
+    this.stage = '检查封面缓存';
+    let imageIndex = 0;
+    let allImages = true;
+    for (const url of imageUrls) {
+      const cached = this.hasPicture(url);
+      if (!cached) allImages = false;
+      imageIndex++;
+      this.imagesDone++;
+      if (cached) this.imagesCached++;
+      this.phaseProgress = imageIndex;
+      this.updateTargetProgress(
+        0.75 + (imageUrls.size ? (0.25 * imageIndex) / imageUrls.size : 0.25)
+      );
+    }
+    if (details.size < fresh.ids.length) allImages = false;
+    this.updateTargetProgress(1);
     const complete =
       same &&
       cached === fresh.ids.length &&
@@ -456,15 +544,20 @@ class LibraryCacheManager {
       reason: complete
         ? ''
         : same
-        ? '缓存待补齐'
-        : old
-        ? '内容有变化'
-        : '尚未缓存',
+          ? '缓存待补齐'
+          : old
+            ? '内容有变化'
+            : '尚未缓存',
     });
   }
   async nativeTask(command) {
     const native = window.YesPlayMusicAndroid;
     this.guard();
+    this.activeDownloadKind = command.kind === 'image' ? 'image' : 'audio';
+    this.downloadedBytes = 0;
+    this.downloadTotalBytes = 0;
+    this.downloadSpeed = 0;
+    this.speedSample = null;
     this.taskId = native.cacheLibraryMedia(JSON.stringify(command));
     if (!this.taskId) throw new Error('本地缓存任务仍在结束，请稍后继续');
     try {
@@ -473,8 +566,9 @@ class LibraryCacheManager {
         const result = JSON.parse(native.getLibraryCacheTask(this.taskId));
         if (result.phase) this.stage = result.phase;
         if (result.current) this.currentSong = result.current;
+        this.networkPending = Boolean(result.networkPending);
         if (result.bytes !== undefined)
-          this.updateDownload(result.bytes, result.totalBytes);
+          this.updateDownload(result.bytes, result.totalBytes, result.kind);
         if (result.state === 'done') return true;
         if (result.state === 'unavailable') return false;
         if (result.state !== 'running')
@@ -485,6 +579,7 @@ class LibraryCacheManager {
       throw new Error('任务已停止');
     } finally {
       this.taskId = '';
+      this.networkPending = false;
     }
   }
   hasPicture(url) {
@@ -502,10 +597,22 @@ class LibraryCacheManager {
   }
   async picture(url) {
     if (!url) return false;
+    this.stage = '检查封面缓存';
+    this.setPhase(
+      '检查封面缓存',
+      this.currentTargetImagesTotal,
+      this.currentTargetImagesDone
+    );
     if (this.hasPicture(url)) return true;
     const bridge = artworkBridge();
     bridge.allowLibraryArtwork(JSON.stringify([url]));
     this.stage = '缓存封面';
+    this.setPhase(
+      '缓存封面',
+      this.currentTargetImagesTotal,
+      this.currentTargetImagesDone
+    );
+    this.activeDownloadKind = 'image';
     if (window.YesPlayMusicAndroid) {
       await this.governor.before(() => this.current(), false);
       try {
@@ -519,19 +626,37 @@ class LibraryCacheManager {
     address.searchParams.set('param', '1024y1024');
     if (bridge.lookup(address.href) !== address.href) return true;
     await this.governor.before(() => this.current(), false);
+    const onDownloadProgress = event => {
+      this.stage = this.paused ? '当前文件完成后暂停' : '下载封面';
+      this.networkPending = false;
+      this.updateDownload(event.loaded, event.total, 'image');
+    };
+    this.stage = '下载封面';
+    this.updateDownload(0, 0);
+    this.networkPending = true;
     try {
-      return !!(await bridge.remember(address.href, true));
+      return !!(await bridge.remember(address.href, true, onDownloadProgress));
     } catch (_) {
       address.searchParams.set('param', '224y224');
+      this.stage = '下载封面';
+      this.networkPending = true;
+      this.updateDownload(0, 0, 'image');
       try {
-        return !!(await bridge.remember(address.href, true));
+        return !!(await bridge.remember(
+          address.href,
+          true,
+          onDownloadProgress
+        ));
       } catch (_) {
         return false;
       }
+    } finally {
+      this.networkPending = false;
     }
   }
   async song(track) {
     const native = window.YesPlayMusicAndroid;
+    this.activeDownloadKind = 'audio';
     await this.waitIfPaused();
     this.stage = '等待接口请求间隔';
     await this.governor.before(
@@ -544,15 +669,21 @@ class LibraryCacheManager {
     await this.waitIfPaused();
     this.stage = '请求歌曲音源';
     if (native) return this.nativeTask({ kind: 'audio', id: String(track.id) });
-    const response = await request({
-      url: '/song/url/v1',
-      params: {
-        id: track.id,
-        level: musicQualityLevel(this.store.state.settings.musicQuality),
-      },
-      signal: this.controller.signal,
-      skipAuthRedirect: true,
-    });
+    this.networkPending = true;
+    let response;
+    try {
+      response = await request({
+        url: '/song/url/v1',
+        params: {
+          id: track.id,
+          level: musicQualityLevel(this.store.state.settings.musicQuality),
+        },
+        signal: this.controller.signal,
+        skipAuthRedirect: true,
+      });
+    } finally {
+      this.networkPending = false;
+    }
     await this.waitIfPaused();
     this.guard();
     if (riskResponse(response))
@@ -579,13 +710,19 @@ class LibraryCacheManager {
     return true;
   }
   async update(target) {
+    this.stage = '读取收藏歌曲清单';
+    this.setPhase('读取歌单或专辑内容');
     const data = await this.snapshot(target),
       fresh = manifest(target, data);
     this.guard();
+    this.updateTargetProgress(0.1);
+    this.songTotal += fresh.ids.length;
     const previous =
       target.type === 'album'
         ? await getAlbumFromCache(target.id)
         : await getCachedPlaylist(target.id, this.scope);
+    this.stage = '读取本地歌曲信息';
+    this.setPhase('读取本地歌曲信息', fresh.ids.length, 0);
     const details = new Map(
       (await getSavedTrackDetails(fresh.ids)).map(song => [
         String(song.id),
@@ -596,6 +733,19 @@ class LibraryCacheManager {
       details.set(String(song.id), song)
     );
     const missing = fresh.ids.filter(id => !details.has(id));
+    this.detailsTotal += fresh.ids.length;
+    this.detailsLoaded += Math.min(fresh.ids.length, details.size);
+    this.phaseProgress = details.size;
+    this.updateTargetProgress(
+      0.1 + (fresh.ids.length ? (0.15 * details.size) / fresh.ids.length : 0.15)
+    );
+    this.stage = missing.length ? '补齐歌曲信息' : '歌曲信息已完整';
+    this.setPhase(
+      missing.length ? '补齐歌曲信息' : '歌曲信息已完整',
+      missing.length || fresh.ids.length,
+      missing.length ? 0 : details.size
+    );
+    let fetchedDetails = 0;
     for (let offset = 0; offset < missing.length; offset += 50) {
       const page = await this.api('/song/detail', {
         ids: missing.slice(offset, offset + 50).join(','),
@@ -605,7 +755,22 @@ class LibraryCacheManager {
       mapTrackPlayableStatus(page.songs, page.privileges || []).forEach(song =>
         details.set(String(song.id), song)
       );
+      const loaded = Math.min(
+        missing.length,
+        fetchedDetails + page.songs.length
+      );
+      fetchedDetails = loaded;
+      this.detailsLoaded = Math.min(
+        this.detailsTotal,
+        this.detailsLoaded + page.songs.length
+      );
+      this.phaseProgress = Math.min(offset + 50, missing.length);
+      this.updateTargetProgress(
+        0.25 + (missing.length ? (0.1 * loaded) / missing.length : 0.1)
+      );
     }
+    this.phaseProgress = missing.length || fresh.ids.length;
+    this.updateTargetProgress(0.35);
     const oldTracks =
       target.type === 'album'
         ? previous?.songs || []
@@ -620,7 +785,16 @@ class LibraryCacheManager {
       fresh.ids
     );
     this.guard();
-    for (const song of merged) await cacheTrackDetail(song, song.privilege);
+    this.stage = '保存歌曲信息';
+    this.setPhase('保存歌曲信息', merged.length, 0);
+    let savedDetails = 0;
+    for (const song of merged) {
+      await cacheTrackDetail(song, song.privilege);
+      this.phaseProgress = ++savedDetails;
+      this.updateTargetProgress(
+        0.35 + (merged.length ? (0.05 * savedDetails) / merged.length : 0.05)
+      );
+    }
     if (target.type === 'album') {
       data.songs = merged;
       await cacheAlbum(target.id, data);
@@ -632,18 +806,35 @@ class LibraryCacheManager {
     let images = 0,
       cached = 0,
       unavailable = fresh.ids.filter(id => !details.has(id)).length;
-    const imageUrls = new Set();
     const mergedById = new Map(merged.map(song => [String(song.id), song]));
+    const imageUrls = new Set(
+      [
+        fresh.cover || target.cover,
+        ...merged.map(song => song.al?.picUrl || song.album?.picUrl),
+      ].filter(Boolean)
+    );
+    this.imagesTotal += imageUrls.size;
+    this.currentTargetImagesDone = 0;
+    this.currentTargetImagesTotal = imageUrls.size;
+    this.currentTargetSongsDone = 0;
+    this.currentTargetMediaTotal = fresh.ids.length + imageUrls.size;
     const save = async () => {
       this.guard();
       if (target.type === 'album') await cacheAlbum(target.id, data);
       else await savePlaylistSnapshot(target.id, data, this.scope);
     };
+    const seenPictures = new Set();
     const picture = async url => {
-      if (!url || imageUrls.has(url)) return;
-      imageUrls.add(url);
+      if (!url || seenPictures.has(url)) return;
+      seenPictures.add(url);
       this.guard();
-      if (await this.picture(url)) images++;
+      const cachedImage = await this.picture(url);
+      if (cachedImage) images++;
+      this.currentTargetImagesDone++;
+      this.imagesDone++;
+      if (cachedImage) this.imagesCached++;
+      this.setPhase('处理封面', imageUrls.size, this.currentTargetImagesDone);
+      this.updateMediaProgress();
     };
     await this.mark(target, 'partial', {
       songs: fresh.ids.length,
@@ -653,9 +844,20 @@ class LibraryCacheManager {
       version: fresh.version,
       reason: '',
     });
-    this.songTotal += fresh.ids.length;
     this.songIndex = 0;
-    const states = await this.audioStates(fresh.ids);
+    this.stage = '检查音乐缓存';
+    this.setPhase('检查音乐缓存', fresh.ids.length, 0);
+    const checkedBefore = this.songChecked;
+    const states = await this.audioStates(fresh.ids, checked => {
+      this.songChecked = checkedBefore + checked;
+      this.phaseProgress = checked;
+      this.updateTargetProgress(
+        0.4 + (fresh.ids.length ? (0.05 * checked) / fresh.ids.length : 0.05)
+      );
+    });
+    this.songChecked = checkedBefore + fresh.ids.length;
+    this.phaseProgress = fresh.ids.length;
+    this.updateTargetProgress(0.45);
     if (window.YesPlayMusicAndroid)
       fresh.ids
         .filter(id => states[id] === 2)
@@ -673,6 +875,8 @@ class LibraryCacheManager {
     }
     try {
       await picture(fresh.cover || target.cover);
+      this.stage = '准备缓存歌曲';
+      this.setPhase('缓存歌曲', fresh.ids.length, 0);
       for (const id of fresh.ids) {
         this.guard();
         await this.waitIfPaused();
@@ -682,11 +886,16 @@ class LibraryCacheManager {
         const song = mergedById.get(id);
         if (!song) {
           this.songDone++;
+          this.currentTargetSongsDone++;
+          this.phaseProgress = this.currentTargetSongsDone;
+          this.updateMediaProgress();
           continue;
         }
         await picture(song.al?.picUrl || song.album?.picUrl);
-        if (states[id] === 2) cached++;
-        else if (await this.song(song)) cached++;
+        if (states[id] === 2) {
+          this.stage = '复用已缓存音乐';
+          cached++;
+        } else if (await this.song(song)) cached++;
         else {
           unavailable++;
           const preserved = await retainTracks([{ ...song, playable: false }]);
@@ -694,14 +903,19 @@ class LibraryCacheManager {
           await cacheTrackDetail(song, song.privilege);
         }
         this.songDone++;
+        this.currentTargetSongsDone++;
+        this.phaseProgress = this.currentTargetSongsDone;
+        this.updateMediaProgress();
         this.downloadSpeed = 0;
         this.downloadedBytes = 0;
         this.downloadTotalBytes = 0;
         this.speedSample = null;
+        this.activeDownloadKind = '';
         await this.mark(target, 'partial', {
           songs: fresh.ids.length,
           cached,
           images,
+          imagesTotal: imageUrls.size,
           unavailable,
           version: fresh.version,
         });
@@ -715,6 +929,7 @@ class LibraryCacheManager {
           songs: fresh.ids.length,
           cached,
           images,
+          imagesTotal: imageUrls.size,
           unavailable,
           version: fresh.version,
           reason: unavailable ? '部分歌曲不可用，已保留缓存' : '',
@@ -722,6 +937,7 @@ class LibraryCacheManager {
       );
       if (cached !== fresh.ids.length || images !== imageUrls.size)
         this.partialItems++;
+      this.updateTargetProgress(1);
     } finally {
       if (this.current()) await save();
     }
@@ -733,13 +949,48 @@ class LibraryCacheManager {
     this.starting = true;
     this.stopped = false;
     this.paused = false;
+    this.message = '';
+    this.mode = mode;
+    this.progress = 0;
+    this.total = 0;
+    this.songDone = 0;
+    this.songTotal = 0;
+    this.songChecked = 0;
+    this.imagesDone = 0;
+    this.imagesTotal = 0;
+    this.imagesCached = 0;
+    this.detailsLoaded = 0;
+    this.detailsTotal = 0;
+    this.songIndex = 0;
+    this.currentSong = '';
+    this.currentTargetKey = '';
+    this.currentTargetFraction = 0;
+    this.currentTargetImagesDone = 0;
+    this.currentTargetImagesTotal = 0;
+    this.currentTargetSongsDone = 0;
+    this.currentTargetMediaTotal = 0;
+    this.phaseLabel = '';
+    this.phaseProgress = 0;
+    this.phaseTotal = 0;
+    this.networkPending = false;
+    this.activeDownloadKind = '';
+    this.downloadedBytes = 0;
+    this.downloadTotalBytes = 0;
+    this.downloadSpeed = 0;
+    this.speedSample = null;
+    this.failedItems = 0;
+    this.unavailableItems = 0;
+    this.partialItems = 0;
+    this.stage = mode === 'check' ? '准备检查' : '准备缓存';
+    this.setPhase('读取本地收藏索引');
     try {
       await this.restore();
     } finally {
       this.starting = false;
     }
     if (this.stopped) {
-      this.message = '已停止，保留已完成的缓存';
+      this.message = '已取消，已完成缓存保留';
+      this.stage = '已取消';
       return;
     }
     if (!this.scope) {
@@ -767,23 +1018,8 @@ class LibraryCacheManager {
         target => mode === 'check' || needsCacheUpdate(this.marks[target.key])
       );
     this.running = true;
-    this.progress = 0;
     this.total = list.length;
-    this.songDone = 0;
-    this.songTotal = 0;
-    this.songChecked = 0;
-    this.songIndex = 0;
-    this.currentSong = '';
-    this.currentTargetKey = '';
     this.stage = mode === 'check' ? '准备检查' : '准备缓存';
-    this.mode = mode;
-    this.downloadedBytes = 0;
-    this.downloadTotalBytes = 0;
-    this.downloadSpeed = 0;
-    this.speedSample = null;
-    this.failedItems = 0;
-    this.unavailableItems = 0;
-    this.partialItems = 0;
     this.startSpeedMonitor();
     this.errors = 0;
     this.quality = this.store.state.settings.musicQuality;
@@ -799,6 +1035,11 @@ class LibraryCacheManager {
         await this.waitIfPaused();
         this.guard();
         this.currentTargetKey = target.key;
+        this.currentTargetFraction = 0;
+        this.currentTargetImagesDone = 0;
+        this.currentTargetImagesTotal = 0;
+        this.currentTargetSongsDone = 0;
+        this.currentTargetMediaTotal = 0;
         this.message = `${mode === 'check' ? '检查' : '缓存'}：${target.name}`;
         try {
           if (mode === 'check') await this.check(target);
@@ -830,7 +1071,9 @@ class LibraryCacheManager {
               '连续请求失败，已暂停 20 分钟；现有缓存全部保留'
             );
         }
+        this.updateTargetProgress(1);
         this.progress++;
+        this.currentTargetFraction = 0;
       }
       this.message = list.length
         ? `已完成 ${this.progress} 项${
@@ -851,6 +1094,7 @@ class LibraryCacheManager {
     } finally {
       this.running = false;
       this.controller = null;
+      this.networkPending = false;
       clearTimeout(this.speedTimer);
       this.speedTimer = null;
       if (this.scope !== libraryScope(this.store.state.data))

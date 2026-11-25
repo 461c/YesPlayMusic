@@ -30,6 +30,9 @@ final class ArtworkCache {
     private final ExecutorService downloads = Executors.newFixedThreadPool(2);
     private final Set<String> eligible = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<String, FutureTask<Boolean>> pending = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CopyOnWriteArrayList<java.util.function.BooleanSupplier>> checkpoints = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CopyOnWriteArrayList<java.util.function.BiConsumer<Long, Long>>> progressListeners = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CopyOnWriteArrayList<java.util.function.Consumer<Boolean>>> networkListeners = new ConcurrentHashMap<>();
     private final AtomicLong bytes = new AtomicLong(), count = new AtomicLong();
     private final AtomicLong hits = new AtomicLong(), network = new AtomicLong(), failures = new AtomicLong();
     private volatile long generation;
@@ -103,20 +106,44 @@ final class ArtworkCache {
         } catch (Exception ignored) { }
     }
     private FutureTask<Boolean> task(String address, int size) {
-        return task(address, size, () -> false, (bytes, total) -> { });
+        return task(address, size, () -> false, (bytes, total) -> { }, pending -> { });
     }
     private FutureTask<Boolean> task(String address, int size,
             java.util.function.BooleanSupplier checkpoint,
-            java.util.function.BiConsumer<Long, Long> progress) {
+            java.util.function.BiConsumer<Long, Long> progress,
+            java.util.function.Consumer<Boolean> networkPending) {
         String key = identity(address) + ":" + size;
         long epoch = generation;
+        checkpoints.computeIfAbsent(key, ignored -> new CopyOnWriteArrayList<>()).add(checkpoint);
+        progressListeners.computeIfAbsent(key, ignored -> new CopyOnWriteArrayList<>()).add(progress);
+        networkListeners.computeIfAbsent(key, ignored -> new CopyOnWriteArrayList<>()).add(networkPending);
         FutureTask<Boolean> candidate = new FutureTask<Boolean>(() -> {
             if (epoch != generation) return false;
-            boolean result = download(address, size, epoch, checkpoint, progress);
+            boolean result = download(address, size, epoch, () -> {
+                CopyOnWriteArrayList<java.util.function.BooleanSupplier> activeChecks = checkpoints.get(key);
+                if (activeChecks != null) {
+                    for (java.util.function.BooleanSupplier check : activeChecks)
+                        if (check.getAsBoolean()) return true;
+                }
+                return false;
+            },
+                (bytes, total) -> {
+                    CopyOnWriteArrayList<java.util.function.BiConsumer<Long, Long>> listeners = progressListeners.get(key);
+                    if (listeners != null) listeners.forEach(listener -> listener.accept(bytes, total));
+                },
+                pending -> {
+                    CopyOnWriteArrayList<java.util.function.Consumer<Boolean>> listeners = networkListeners.get(key);
+                    if (listeners != null) listeners.forEach(listener -> listener.accept(pending));
+                });
             if (!result && epoch == generation) failures.incrementAndGet();
             return result;
         }) {
-            @Override protected void done() { pending.remove(key, this); }
+            @Override protected void done() {
+                pending.remove(key, this);
+                checkpoints.remove(key);
+                progressListeners.remove(key);
+                networkListeners.remove(key);
+            }
         };
         FutureTask<Boolean> active = pending.putIfAbsent(key, candidate);
         return active == null ? candidate : active;
@@ -137,22 +164,26 @@ final class ArtworkCache {
         catch (Exception ignored) { return false; }
     }
     boolean cacheSelected(String url, java.util.function.BooleanSupplier checkpoint,
-            java.util.function.BiConsumer<Long, Long> progress) throws Exception {
+            java.util.function.BiConsumer<Long, Long> progress,
+            java.util.function.Consumer<Boolean> networkPending) throws Exception {
         String address = canonical(url);
         if (address == null) return false;
         if (existing(address, 1024) != null) return true;
         if (ApiClient.preferences(app).getBoolean("archiveMode", false)) return false;
         eligible.add(identity(address));
-        FutureTask<Boolean> selected = task(address, 1024, checkpoint, progress);
+        FutureTask<Boolean> selected = task(address, 1024, checkpoint, progress, networkPending);
         selected.run();
         if (selected.get(40, TimeUnit.SECONDS)) return true;
-        FutureTask<Boolean> thumbnail = task(address, 224, checkpoint, progress);
+        progress.accept(0L, 0L);
+        networkPending.accept(false);
+        FutureTask<Boolean> thumbnail = task(address, 224, checkpoint, progress, networkPending);
         thumbnail.run();
         return thumbnail.get(40, TimeUnit.SECONDS);
     }
     private boolean download(String address, int size, long epoch,
             java.util.function.BooleanSupplier checkpoint,
-            java.util.function.BiConsumer<Long, Long> progress) {
+            java.util.function.BiConsumer<Long, Long> progress,
+            java.util.function.Consumer<Boolean> networkPending) {
         HttpURLConnection connection = null;
         File temporary = null;
         try {
@@ -162,12 +193,14 @@ final class ArtworkCache {
             File target = file(address, size);
             String location = size == 2048 ? address : address + "?param=" + size + "y" + size;
             for (int redirect = 0; redirect <= 3; redirect++) {
+                networkPending.accept(true);
                 network.incrementAndGet();
                 connection = (HttpURLConnection) new URL(location).openConnection();
                 connection.setConnectTimeout(10000); connection.setReadTimeout(15000);
                 connection.setInstanceFollowRedirects(false);
                 connection.setRequestProperty("Referer", "https://music.163.com/");
                 int status = connection.getResponseCode();
+                networkPending.accept(false);
                 if (status == 200) break;
                 if (status < 300 || status > 399 || redirect == 3) return false;
                 String next = new URL(new URL(location), connection.getHeaderField("Location")).toString();
@@ -203,6 +236,7 @@ final class ArtworkCache {
             return true;
         } catch (Exception ignored) { return false; }
         finally {
+            networkPending.accept(false);
             if (connection != null) connection.disconnect();
             if (temporary != null) temporary.delete();
         }

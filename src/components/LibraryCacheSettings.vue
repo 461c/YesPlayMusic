@@ -34,21 +34,70 @@
           >当前歌曲：{{ manager.currentSong }}</span
         >
       </div>
+      <div class="task-metrics">
+        <span v-if="manager.songTotal">
+          {{ manager.mode === 'check' ? '已检查歌曲' : '已核对缓存状态' }}
+          <b>{{ manager.songChecked }}/{{ manager.songTotal }}</b>
+        </span>
+        <span v-if="manager.mode === 'update' && manager.detailsTotal">
+          歌曲信息 <b>{{ manager.detailsLoaded }}/{{ manager.detailsTotal }}</b>
+        </span>
+        <span v-if="manager.imagesTotal">
+          封面 <b>{{ manager.imagesDone }}/{{ manager.imagesTotal }}</b>
+          <small>已缓存 {{ manager.imagesCached }}</small>
+        </span>
+      </div>
       <div v-if="manager.total" class="task-progress-group">
         <div class="progress-labels">
           <span
-            >收藏项目 <b>{{ manager.progress }} / {{ manager.total }}</b></span
+            >全任务 <b>{{ manager.progress }} / {{ manager.total }} 项</b>
+            <small v-if="busy && manager.currentTargetKey"
+              >当前项
+              {{ Math.round(manager.currentTargetFraction * 100) }}%</small
+            ></span
           >
-          <span>{{ itemPercent }}%</span>
+          <span>{{ overallPercent }}%</span>
         </div>
         <div
           class="progress-track"
           role="progressbar"
-          :aria-valuenow="manager.progress"
+          :aria-valuenow="overallProgressValue"
           :aria-valuemax="manager.total"
-          aria-label="收藏项目进度"
+          aria-label="全任务进度"
         >
-          <span :style="{ width: itemPercent + '%' }"></span>
+          <span :style="{ width: overallPercent + '%' }"></span>
+        </div>
+      </div>
+      <div v-if="manager.phaseLabel" class="phase-progress-group">
+        <div class="progress-labels">
+          <span
+            >{{ manager.phaseLabel }}
+            <b v-if="manager.phaseTotal"
+              >{{ manager.phaseProgress }}/{{ manager.phaseTotal }}</b
+            >
+          </span>
+          <span v-if="manager.networkPending" class="request-pending"
+            >等待响应</span
+          >
+          <span v-else-if="manager.phaseTotal">{{ phasePercent }}%</span>
+        </div>
+        <div
+          v-if="manager.phaseTotal"
+          class="progress-track phase-track"
+          :class="{ 'is-waiting': manager.networkPending }"
+          role="progressbar"
+          :aria-valuenow="manager.phaseProgress"
+          :aria-valuemax="manager.phaseTotal"
+          aria-label="当前阶段进度"
+        >
+          <span :style="{ width: phasePercent + '%' }"></span>
+        </div>
+        <div
+          v-else-if="manager.networkPending"
+          class="progress-track phase-track indeterminate-track"
+          aria-label="正在等待网络响应"
+        >
+          <span></span>
         </div>
       </div>
       <div
@@ -85,7 +134,9 @@
         <div
           v-if="
             manager.mode === 'update' &&
-            ['下载音乐', '下载封面'].includes(manager.stage)
+            ['下载音乐', '下载封面', '当前文件完成后暂停'].includes(
+              manager.stage
+            )
           "
           class="download-progress"
         >
@@ -113,6 +164,13 @@
             aria-label="当前文件下载进度"
           >
             <span :style="{ width: downloadPercent + '%' }"></span>
+          </div>
+          <div
+            v-else
+            class="progress-track file-track indeterminate-track"
+            aria-label="正在接收文件，文件大小未知"
+          >
+            <span></span>
           </div>
         </div>
       </div>
@@ -248,9 +306,25 @@ export default {
     busy() {
       return this.manager.running || this.manager.starting;
     },
-    itemPercent() {
+    overallProgressValue() {
+      return Math.min(
+        this.manager.total,
+        this.manager.progress + this.manager.currentTargetFraction
+      );
+    },
+    overallPercent() {
       return this.manager.total
-        ? Math.round((this.manager.progress / this.manager.total) * 100)
+        ? Math.round((this.overallProgressValue / this.manager.total) * 100)
+        : 0;
+    },
+    phasePercent() {
+      return this.manager.phaseTotal
+        ? Math.min(
+            100,
+            Math.round(
+              (this.manager.phaseProgress / this.manager.phaseTotal) * 100
+            )
+          )
         : 0;
     },
     songPercent() {
@@ -260,7 +334,9 @@ export default {
           ? this.manager.songChecked
           : this.manager.songDone;
       const activeFraction =
-        this.manager.mode === 'update' && this.manager.downloadTotalBytes
+        this.manager.mode === 'update' &&
+        this.manager.downloadTotalBytes &&
+        this.manager.activeDownloadKind === 'audio'
           ? Math.min(
               0.99,
               this.manager.downloadedBytes / this.manager.downloadTotalBytes
@@ -286,7 +362,7 @@ export default {
     },
     taskStateLabel() {
       if (this.manager.paused) return '已暂停';
-      if (this.manager.stopped) return '正在取消';
+      if (this.manager.stopped && this.busy) return '正在取消';
       if (this.busy)
         return this.manager.mode === 'check' ? '正在检查' : '正在缓存';
       if (this.manager.stage === '已取消') return '任务已取消';
@@ -302,7 +378,7 @@ export default {
         'state-complete': !this.busy && this.manager.stage === '任务完成',
         'state-warning': !this.busy && this.manager.stage === '部分完成',
         'state-cancelled':
-          this.manager.stopped ||
+          (this.manager.stopped && this.busy) ||
           (!this.busy && this.manager.stage === '已取消'),
       };
     },
@@ -485,6 +561,38 @@ button:not(:disabled):hover,
   display: grid;
   gap: 6px;
 }
+.phase-progress-group {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(128, 128, 128, 0.14);
+}
+.task-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  span {
+    padding: 4px 8px;
+    border-radius: 7px;
+    background: rgba(128, 128, 128, 0.09);
+    font-size: 11px;
+    line-height: 1.4;
+    opacity: 0.8;
+  }
+  b {
+    margin-left: 3px;
+    color: var(--color-text);
+    font-weight: 600;
+  }
+  small {
+    margin-left: 5px;
+    opacity: 0.7;
+  }
+}
+.request-pending {
+  color: var(--color-primary);
+  font-size: 11px;
+}
 .song-progress-group {
   padding-top: 10px;
   border-top: 1px solid rgba(128, 128, 128, 0.14);
@@ -525,6 +633,31 @@ button:not(:disabled):hover,
 }
 .file-track {
   height: 4px;
+}
+.phase-track {
+  position: relative;
+  height: 5px;
+  background: rgba(128, 128, 128, 0.15);
+  span {
+    background: rgba(128, 128, 128, 0.68);
+  }
+}
+.phase-track.is-waiting::after {
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  opacity: 0.45;
+  content: '';
+  animation: cache-wait 1.15s ease-in-out infinite;
+}
+.indeterminate-track span {
+  width: 35%;
+  animation: cache-progress 1.15s ease-in-out infinite alternate;
+  background: var(--color-primary);
 }
 .download-progress {
   display: grid;
@@ -619,6 +752,26 @@ button:not(:disabled):hover,
 @keyframes cache-pulse {
   50% {
     box-shadow: 0 0 0 5px transparent;
+  }
+}
+@keyframes cache-progress {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(185%);
+  }
+}
+@keyframes cache-wait {
+  to {
+    left: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-indicator.state-active,
+  .phase-track.is-waiting::after,
+  .indeterminate-track span {
+    animation: none;
   }
 }
 @media (max-width: 600px) {

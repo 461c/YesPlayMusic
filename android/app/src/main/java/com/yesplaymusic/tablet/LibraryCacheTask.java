@@ -18,7 +18,9 @@ final class LibraryCacheTask {
         final AtomicBoolean stopped = new AtomicBoolean(false), paused = new AtomicBoolean(false);
         volatile String state = "running", message = "";
         volatile String phase = "准备缓存", current = "";
+        volatile String kind = "audio";
         volatile long bytes = 0, totalBytes = 0;
+        volatile boolean networkPending = false;
         volatile Thread thread;
     }
     static String start(Context context, String json) {
@@ -34,8 +36,9 @@ final class LibraryCacheTask {
             task.thread = Thread.currentThread();
             try {
                 JSONObject command = new JSONObject(json);
-                task.current = command.optString("id", "");
-                task.phase = "image".equals(command.optString("kind")) ? "下载封面" : "下载音乐";
+                task.kind = command.optString("kind", "audio");
+                task.current = "image".equals(task.kind) ? "封面" : command.optString("id", "");
+                task.phase = "image".equals(task.kind) ? "下载封面" : "请求歌曲音源";
                 java.util.function.BooleanSupplier cancelled = () -> task.stopped.get()
                     || !cookie.equals(ApiClient.preferences(app).getString("cookie", ""))
                     || !api.equals(ApiClient.baseUrl(app)) || ApiClient.preferences(app).getBoolean("archiveMode", false);
@@ -48,19 +51,19 @@ final class LibraryCacheTask {
                     return cancelled.getAsBoolean();
                 };
                 if (cancelled.getAsBoolean()) throw new java.io.IOException("已停止");
-                if ("image".equals(command.optString("kind"))) {
+                if ("image".equals(task.kind)) {
                     if (!ArtworkCache.get(app).cacheSelected(command.getString("url"), checkpoint, (bytes, total) -> {
                         task.bytes = bytes;
                         task.totalBytes = total;
                         task.phase = "下载封面";
-                    })) throw new java.io.IOException("图片缓存失败");
+                    }, pending -> task.networkPending = pending)) throw new java.io.IOException("图片缓存失败");
                 } else AudioCache.cacheSelected(app, command.getString("id"), () -> {
                     return checkpoint.getAsBoolean();
                 }, (bytes, total) -> {
                     task.bytes = bytes;
                     task.totalBytes = total;
                     task.phase = "下载音乐";
-                });
+                }, phase -> task.phase = phase, pending -> task.networkPending = pending);
                 task.state = cancelled.getAsBoolean() ? "cancelled" : "done";
             } catch (Exception error) {
                 task.message = error.getMessage() == null ? "缓存请求失败" : error.getMessage();
@@ -75,11 +78,13 @@ final class LibraryCacheTask {
             .put("message", task == null ? "任务已结束" : task.message)
             .put("phase", task == null ? "" : task.phase)
             .put("current", task == null ? "" : task.current)
+            .put("kind", task == null ? "" : task.kind)
             .put("bytes", task == null ? 0 : task.bytes)
-            .put("totalBytes", task == null ? 0 : task.totalBytes).toString(); }
+            .put("totalBytes", task == null ? 0 : task.totalBytes)
+            .put("networkPending", task != null && task.networkPending).toString(); }
         catch (Exception ignored) { return "{}"; }
     }
     static void cancel(String id) { Task task = tasks.get(id); if (task != null) { task.stopped.set(true); Thread thread = task.thread; if (thread != null) thread.interrupt(); } }
     static void pause(String id) { Task task = tasks.get(id); if (task != null) task.paused.set(true); }
-    static void resume(String id) { Task task = tasks.get(id); if (task != null) { task.paused.set(false); task.phase = "下载音乐"; } }
+    static void resume(String id) { Task task = tasks.get(id); if (task != null) { task.paused.set(false); task.phase = "image".equals(task.kind) ? "下载封面" : "下载音乐"; } }
 }

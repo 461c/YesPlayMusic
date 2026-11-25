@@ -95,16 +95,22 @@ final class AudioCache {
         return get(context).getCachedSpans(entry).isEmpty() ? 0 : complete(get(context), entry) ? 2 : 1;
     }
     static void cacheSelected(Context context, String id, java.util.function.BooleanSupplier cancelled,
-            java.util.function.BiConsumer<Long, Long> progress) throws Exception {
+            java.util.function.BiConsumer<Long, Long> progress,
+            java.util.function.Consumer<String> phase,
+            java.util.function.Consumer<Boolean> networkPending) throws Exception {
         if (!id.matches("\\d+")) throw new java.io.IOException("无效歌曲编号");
         if (ApiClient.preferences(context).getBoolean("archiveMode", false)) throw new java.io.IOException("纪念模式已停止更新");
         String level = ApiClient.preferences(context).getString("qualityLevel", "exhigh");
         String entry = key(context, id, level);
         SimpleCache storage = get(context);
-        if (complete(storage, entry)) { preserveTrack(context, id); return; }
+        if (complete(storage, entry)) { phase.accept("复用已缓存音乐"); preserveTrack(context, id); return; }
         if (context.getFilesDir().getUsableSpace() < 128L * 1024 * 1024) throw new java.io.IOException("可用空间不足 128MB，已停止");
         if (cancelled.getAsBoolean()) throw new java.io.IOException("已停止");
-        Uri uri = ApiClient.resolveAudio(context, id, level);
+        phase.accept("请求歌曲音源");
+        networkPending.accept(true);
+        Uri uri;
+        try { uri = ApiClient.resolveAudio(context, id, level); }
+        finally { networkPending.accept(false); }
         if (cancelled.getAsBoolean() || !entry.equals(key(context, id, level))) throw new java.io.IOException("账号或接口已切换，已停止");
         storage.applyContentMetadataMutations(entry, new ContentMetadataMutations().set(INFO, ApiClient.audioInfo(context, id).toString()));
         DefaultHttpDataSource.Factory network = new DefaultHttpDataSource.Factory().setUserAgent("YesPlayMusic-Android")
@@ -120,6 +126,7 @@ final class AudioCache {
         final androidx.media3.datasource.cache.CacheWriter[] writer = new androidx.media3.datasource.cache.CacheWriter[1];
         final String[] failure = { "" };
         long initial = storage.getCachedBytes(entry, 0, Long.MAX_VALUE);
+        phase.accept("下载音乐");
         writer[0] = new androidx.media3.datasource.cache.CacheWriter(source,
             new androidx.media3.datasource.DataSpec.Builder().setUri(uri).setKey(entry).build(), null,
             (length, bytes, newlyCached) -> {

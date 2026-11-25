@@ -21,6 +21,7 @@ export function artworkBridge() {
   }
   const allowed = new Set(Array.isArray(saved) ? saved : []);
   const pending = new Map();
+  const progressListeners = new Map();
   const stats = { hits: 0, downloads: 0, failures: 0 };
   let generation = 0;
   const identity = address => {
@@ -93,19 +94,27 @@ export function artworkBridge() {
       }
       return address;
     },
-    remember(address, strict = false) {
+    remember(address, strict = false, onDownloadProgress) {
       const id = identity(address),
         target = file(address);
       if (!id || !allowed.has(id) || !target) return Promise.resolve(false);
       if (fs.existsSync(target)) return Promise.resolve(true);
-      if (pending.has(target)) return pending.get(target);
+      if (pending.has(target)) {
+        if (onDownloadProgress)
+          progressListeners.get(target)?.add(onDownloadProgress);
+        return pending.get(target);
+      }
       // Memorial/offline reads never start a new image download.
       if (
         JSON.parse(localStorage.getItem('settings') || '{}').archiveMode ||
         navigator.onLine === false
       )
         return;
+      if (onDownloadProgress)
+        progressListeners.set(target, new Set([onDownloadProgress]));
       const epoch = generation;
+      const reportProgress = event =>
+        progressListeners.get(target)?.forEach(listener => listener(event));
       const work = fetch(address, { cache: 'force-cache' })
         .then(async response => {
           if (
@@ -115,7 +124,28 @@ export function artworkBridge() {
             throw new Error('image unavailable');
           if (Number(response.headers.get('content-length')) > 16777216)
             throw new Error('image too large');
-          const bytes = Buffer.from(await response.arrayBuffer());
+          let bytes;
+          const total = Number(response.headers.get('content-length')) || 0;
+          if (response.body?.getReader) {
+            const reader = response.body.getReader();
+            const chunks = [];
+            let loaded = 0;
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              loaded += value.byteLength;
+              if (loaded > 16777216) {
+                await reader.cancel();
+                throw new Error('image too large');
+              }
+              chunks.push(Buffer.from(value));
+              reportProgress({ loaded, total });
+            }
+            bytes = Buffer.concat(chunks, loaded);
+          } else {
+            bytes = Buffer.from(await response.arrayBuffer());
+            reportProgress({ loaded: bytes.length, total });
+          }
           if (epoch !== generation || bytes.length > 16777216) return;
           await fs.promises.writeFile(target, bytes);
           stats.downloads++;
@@ -126,7 +156,10 @@ export function artworkBridge() {
           if (strict) throw error;
           return false;
         })
-        .finally(() => pending.delete(target));
+        .finally(() => {
+          pending.delete(target);
+          progressListeners.delete(target);
+        });
       pending.set(target, work);
       return work;
     },
