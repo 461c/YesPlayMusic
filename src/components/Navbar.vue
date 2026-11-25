@@ -1,6 +1,9 @@
 <template>
   <div>
-    <nav :class="{ 'has-custom-titlebar': hasCustomTitlebar, scrolled }">
+    <nav
+      :class="{ 'has-custom-titlebar': hasCustomTitlebar, scrolled }"
+      @dblclick="scrollPageToTop"
+    >
       <Win32Titlebar v-if="enableWin32Titlebar" />
       <LinuxTitlebar v-if="enableLinuxTitlebar" />
       <div class="navigation-buttons">
@@ -101,6 +104,17 @@ export default {
     },
     toSettings() {
       this.$router.push({ name: 'settings' });
+    },
+    scrollPageToTop(event) {
+      const target = event.target instanceof Element ? event.target : null;
+      if (
+        target?.closest(
+          'a, button, input, img, [role="button"], .win32-titlebar, .linux-titlebar'
+        )
+      )
+        return;
+      event.preventDefault();
+      this.$parent.$refs.main?.scrollTo({ top: 0, behavior: 'smooth' });
     },
   },
 };

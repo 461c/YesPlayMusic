@@ -580,26 +580,35 @@ export default {
   top: 8px;
   display: flex;
   align-items: center;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
   border-radius: 8px;
   color: var(--color-text);
   background: var(--color-secondary-bg-for-transparent);
+  transition: width 0.14s ease, background-color 0.14s ease;
   -webkit-app-region: no-drag;
   button {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     padding: 0;
+    flex-shrink: 0;
     color: inherit;
     background: none;
     .svg-icon {
-      width: 16px;
-      height: 16px;
+      width: 15px;
+      height: 15px;
     }
+  }
+  > button:first-child .svg-icon {
+    opacity: 0.28;
   }
   .search-input {
     width: 0;
+    min-width: 0;
     overflow: hidden;
     transition: width 0.14s ease;
   }
@@ -610,45 +619,42 @@ export default {
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 15px;
+    font-size: 16px;
+    font-weight: 600;
     outline: none;
   }
   &.expanded {
-    background: var(--color-secondary-bg);
+    width: 200px;
+    background: var(--color-primary-bg-for-transparent);
+    > button:first-child {
+      color: var(--color-primary);
+      .svg-icon {
+        opacity: 1;
+      }
+    }
     .search-input {
-      width: 210px;
+      flex: 1;
+      width: auto;
     }
   }
   .search-close {
     font-size: 22px;
   }
 }
-@media (max-width: 600px) {
+[data-theme='dark'] .library-search.expanded > button:first-child {
+  color: var(--color-text);
+}
+@media (max-width: 650px) {
   .library-header h1 {
     font-size: 26px;
   }
-  .library-search.expanded .search-input {
-    width: min(190px, calc(100vw - 150px));
+  .library-search.expanded {
+    width: 170px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .library-search .search-input {
     transition: none;
-  }
-}
-</style>
-
-<style lang="scss" scoped>
-.liked-songs {
-  min-height: 190px;
-  .top {
-    padding-bottom: 16px;
-    img {
-      width: 76px;
-      height: 76px;
-      object-fit: cover;
-      border-radius: 10px;
-    }
   }
 }
 </style>

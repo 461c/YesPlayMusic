@@ -991,14 +991,19 @@ class LibraryCacheManager {
     if (this.stopped) {
       this.message = '已取消，已完成缓存保留';
       this.stage = '已取消';
+      this.setPhase(this.stage);
       return;
     }
     if (!this.scope) {
       this.message = '请先登录并打开一次“我的”';
+      this.stage = '未开始';
+      this.setPhase(this.message);
       return;
     }
     if (archiveMode() || navigator.onLine === false) {
       this.message = '离线或纪念模式下保留现有缓存，停止联网更新';
+      this.stage = '未开始';
+      this.setPhase(this.message);
       return;
     }
     if (
@@ -1006,10 +1011,14 @@ class LibraryCacheManager {
       !window.YesPlayMusicAndroid.cacheLibraryMedia
     ) {
       this.message = '请先安装新版安卓应用';
+      this.stage = '未开始';
+      this.setPhase(this.message);
       return;
     }
     if (requestedScope !== this.scope) {
       this.message = '账号已切换，请重新选择缓存内容';
+      this.stage = '未开始';
+      this.setPhase(this.message);
       return;
     }
     const list =
@@ -1040,6 +1049,8 @@ class LibraryCacheManager {
         this.currentTargetImagesTotal = 0;
         this.currentTargetSongsDone = 0;
         this.currentTargetMediaTotal = 0;
+        this.currentSong = '';
+        this.songIndex = 0;
         this.message = `${mode === 'check' ? '检查' : '缓存'}：${target.name}`;
         try {
           if (mode === 'check') await this.check(target);
@@ -1086,11 +1097,13 @@ class LibraryCacheManager {
         this.failedItems || this.unavailableItems || this.partialItems
           ? '部分完成'
           : '任务完成';
+      this.setPhase(this.stage, 1, 1);
     } catch (error) {
       this.message = this.stopped
         ? '已取消，已完成缓存保留'
         : error.message || '任务中断，现有缓存保留';
       this.stage = this.stopped ? '已取消' : '任务中断';
+      this.setPhase(this.stage);
     } finally {
       this.running = false;
       this.controller = null;

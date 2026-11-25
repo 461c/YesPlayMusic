@@ -1,10 +1,6 @@
 <template>
   <section class="settings-card settings-sync">
     <h4 class="card-heading">同步设置</h4>
-    <p
-      >手动导入或导出，云盘保留一份设置
-      MP3。包含已添加用户及其排序，不包含登录信息、歌曲和图片缓存。</p
-    >
     <div class="sync-actions">
       <button :disabled="busy !== ''" @click="sync('export')">{{
         busy === 'export' ? '正在导出…' : '导出到云盘'
@@ -116,10 +112,11 @@ export default {
 <style lang="scss" scoped>
 .settings-sync {
   color: var(--color-text);
-  p {
-    font-size: 13px;
-    line-height: 1.65;
-    opacity: 0.65;
+  p[role='status'] {
+    margin: 0 0 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0.7;
   }
 }
 .card-heading {
@@ -132,9 +129,13 @@ export default {
 .sync-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin: 16px 0;
+  margin: 0;
+  padding: 14px 0;
+  border-top: 1px solid rgba(128, 128, 128, 0.1);
   button {
+    flex: 1 1 150px;
     padding: 10px 14px;
     border: 1px solid rgba(128, 128, 128, 0.1);
     border-radius: 10px;

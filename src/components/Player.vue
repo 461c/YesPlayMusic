@@ -631,6 +631,9 @@ export default {
 }
 </style>
 <style>
+.player:not(.docked) .progress-bar:not(.nyancat) .vue-slider-rail {
+  background-color: transparent !important;
+}
 .player.docked .progress-bar .vue-slider {
   padding-left: 0 !important;
   padding-right: 0 !important;

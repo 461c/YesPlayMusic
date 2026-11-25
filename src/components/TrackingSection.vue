@@ -12,32 +12,6 @@
       <p v-if="error" role="status" class="muted">{{ error }}</p>
       <div v-if="payload" v-page-reveal>
         <template v-if="tab === 'profile'">
-          <div
-            v-if="profile.avatarUrl || backgroundSource"
-            class="profile-photos"
-          >
-            <button
-              v-if="backgroundSource"
-              class="profile-background avatar-fallback"
-              aria-label="查看背景照片"
-              @click="viewPhotos([backgroundSource], 0)"
-              ><img
-                v-image-fade
-                :src="backgroundSource | resizeImage(1024)"
-                alt=""
-                loading="lazy"
-            /></button>
-            <button
-              v-if="profile.avatarUrl"
-              class="profile-portrait"
-              aria-label="查看头像照片"
-              @click="viewPhotos([profile.avatarUrl], 0)"
-              ><img
-                v-image-fade
-                :src="profile.avatarUrl | resizeImage(224)"
-                alt="头像"
-            /></button>
-          </div>
           <div class="profile-identity"
             ><strong>{{ profile.nickname }}</strong
             ><span>ID {{ profile.userId || uid }}</span></div
@@ -80,6 +54,7 @@
             type="user"
             :items="displayPeople"
             :column-number="6"
+            :compact="displayPeople.length > 20"
             @open-user="$emit('open-user', $event)"
           />
         </template>
@@ -307,9 +282,6 @@ export default {
     },
     profile() {
       return this.payload?.profile || {};
-    },
-    backgroundSource() {
-      return this.profile.avatarUrl;
     },
     profileTags() {
       const tags = [
@@ -846,40 +818,6 @@ small {
 </style>
 
 <style lang="scss" scoped>
-.profile-photos {
-  position: relative;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-}
-.profile-background {
-  display: block;
-  width: 100%;
-  padding: 0;
-  overflow: hidden;
-  border-radius: 14px;
-  img {
-    display: block;
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-  }
-}
-.profile-portrait {
-  position: relative;
-  display: block;
-  width: 72px;
-  height: 72px;
-  padding: 0;
-  margin: -35px 0 0 16px;
-  border: 4px solid var(--color-body-bg, #fff);
-  border-radius: 50%;
-  overflow: hidden;
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
 .profile-identity {
   display: flex;
   flex-wrap: wrap;
@@ -1025,17 +963,6 @@ small {
 @media (max-width: 600px) {
   .event {
     padding: 16px;
-  }
-}
-</style>
-
-<style lang="scss" scoped>
-.profile-background.avatar-fallback {
-  overflow: hidden;
-  img {
-    filter: blur(9px);
-    transform: scale(1.18);
-    opacity: 0.72;
   }
 }
 </style>

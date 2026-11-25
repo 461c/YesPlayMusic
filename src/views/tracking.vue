@@ -698,18 +698,6 @@ select {
 .tracking-page .likes-preview {
   margin: 0;
 }
-.liked-songs {
-  min-height: 190px;
-  .top {
-    padding-bottom: 16px;
-    img {
-      width: 76px;
-      height: 76px;
-      object-fit: cover;
-      border-radius: 10px;
-    }
-  }
-}
 .liked-songs.unavailable {
   cursor: default;
 }
@@ -722,7 +710,8 @@ select {
   display: block;
   margin: 24px auto;
 }
-.tabs button {
+.tabs button.tab {
+  cursor: pointer !important;
   background: transparent;
   font: inherit;
   text-align: left;

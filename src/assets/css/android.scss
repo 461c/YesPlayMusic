@@ -396,9 +396,10 @@ body[data-platform='android'] {
     }
     .library-page .section-one {
       flex-direction: column;
+      gap: 16px;
     }
     .library-page .section-one .songs {
-      margin: 16px 0 0;
+      margin: 0;
       flex: none;
     }
     .library-page .liked-songs {

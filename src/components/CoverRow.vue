@@ -284,10 +284,21 @@ export default {
     padding: 0;
     background: transparent;
   }
+  .item.artist {
+    flex-direction: row;
+    text-align: left;
+  }
   .cover {
     flex: 0 0 64px;
     width: 64px;
     min-width: 64px;
+  }
+  .user-cover {
+    flex: 0 0 64px;
+    width: 64px;
+  }
+  .user-cover img {
+    border-radius: 50%;
   }
   .text {
     min-width: 0;
@@ -297,6 +308,7 @@ export default {
   .text .title {
     font-size: 15px;
     line-height: 1.5;
+    margin-top: 0;
     word-break: break-word;
   }
   .info {

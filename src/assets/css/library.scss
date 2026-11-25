@@ -25,11 +25,11 @@ h1 {
 
 .section-one {
   display: flex;
+  gap: 36px;
   margin-top: 24px;
   .songs {
     flex: 7;
     margin-top: 8px;
-    margin-left: 36px;
     overflow: hidden;
   }
 }
@@ -37,6 +37,7 @@ h1 {
 .liked-songs {
   flex: 3;
   margin-top: 8px;
+  min-height: 190px;
   cursor: pointer;
   border-radius: 16px;
   padding: 18px 24px;
@@ -95,9 +96,16 @@ h1 {
     flex: 1;
     display: flex;
     flex-wrap: wrap;
+    padding-bottom: 16px;
     font-size: 14px;
     opacity: 0.88;
     color: var(--color-primary);
+    img {
+      width: 76px;
+      height: 76px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
     p {
       margin-top: 2px;
     }

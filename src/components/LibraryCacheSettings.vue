@@ -36,15 +36,17 @@
       </div>
       <div class="task-metrics">
         <span v-if="manager.songTotal">
-          {{ manager.mode === 'check' ? '已检查歌曲' : '已核对缓存状态' }}
-          <b>{{ manager.songChecked }}/{{ manager.songTotal }}</b>
+          {{ manager.mode === 'check' ? '已检查歌曲' : '已核对缓存' }}
+          <b>{{ manager.songChecked }} 首</b>
+          <small>已读取清单 {{ manager.songTotal }} 首</small>
         </span>
         <span v-if="manager.mode === 'update' && manager.detailsTotal">
           歌曲信息 <b>{{ manager.detailsLoaded }}/{{ manager.detailsTotal }}</b>
+          <small>已读取清单</small>
         </span>
         <span v-if="manager.imagesTotal">
-          封面 <b>{{ manager.imagesDone }}/{{ manager.imagesTotal }}</b>
-          <small>已缓存 {{ manager.imagesCached }}</small>
+          封面 <b>{{ manager.imagesDone }}/{{ manager.imagesTotal }} 张</b>
+          <small>已缓存 {{ manager.imagesCached }} 张</small>
         </span>
       </div>
       <div v-if="manager.total" class="task-progress-group">
@@ -70,21 +72,42 @@
       </div>
       <div v-if="manager.phaseLabel" class="phase-progress-group">
         <div class="progress-labels">
-          <span
-            >{{ manager.phaseLabel }}
-            <b v-if="manager.phaseTotal"
+          <span>
+            {{
+              manager.paused ||
+              manager.networkPending ||
+              manager.stage === '等待接口请求间隔'
+                ? manager.stage
+                : manager.phaseLabel
+            }}
+            <b
+              v-if="
+                manager.phaseTotal &&
+                !manager.networkPending &&
+                manager.stage !== '等待接口请求间隔'
+              "
               >{{ manager.phaseProgress }}/{{ manager.phaseTotal }}</b
             >
           </span>
           <span v-if="manager.networkPending" class="request-pending"
-            >等待响应</span
+            >等待网络响应</span
           >
-          <span v-else-if="manager.phaseTotal">{{ phasePercent }}%</span>
+          <span
+            v-else-if="manager.stage === '等待接口请求间隔'"
+            class="request-pending"
+            >遵循请求间隔</span
+          >
+          <span v-else-if="manager.phaseTotal && !manager.paused"
+            >{{ phasePercent }}%</span
+          >
         </div>
         <div
-          v-if="manager.phaseTotal"
+          v-if="
+            manager.phaseTotal &&
+            !manager.networkPending &&
+            manager.stage !== '等待接口请求间隔'
+          "
           class="progress-track phase-track"
-          :class="{ 'is-waiting': manager.networkPending }"
           role="progressbar"
           :aria-valuenow="manager.phaseProgress"
           :aria-valuemax="manager.phaseTotal"
@@ -93,15 +116,25 @@
           <span :style="{ width: phasePercent + '%' }"></span>
         </div>
         <div
-          v-else-if="manager.networkPending"
+          v-else-if="
+            manager.networkPending ||
+            manager.stage === '等待接口请求间隔' ||
+            (busy && !manager.paused)
+          "
           class="progress-track phase-track indeterminate-track"
-          aria-label="正在等待网络响应"
+          :aria-label="
+            manager.networkPending
+              ? '正在等待网络响应'
+              : manager.stage === '等待接口请求间隔'
+              ? '正在等待接口请求间隔'
+              : '正在处理当前阶段'
+          "
         >
           <span></span>
         </div>
       </div>
       <div
-        v-if="manager.songTotal || manager.songChecked"
+        v-if="manager.mode === 'update' && manager.songTotal"
         class="task-progress-group song-progress-group"
       >
         <div class="progress-labels">
@@ -368,6 +401,7 @@ export default {
       if (this.manager.stage === '已取消') return '任务已取消';
       if (this.manager.stage === '任务完成') return '任务完成';
       if (this.manager.stage === '部分完成') return '部分完成';
+      if (this.manager.stage === '未开始') return '未开始';
       return '任务结束';
     },
     taskStateClass() {
@@ -443,20 +477,16 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
-.library-cache-settings {
-  padding: 22px 24px 12px;
-  color: var(--color-text);
-  background: var(--color-body-bg);
-  border-color: rgba(128, 128, 128, 0.14);
-}
 h4,
 h5,
 p {
   margin: 0;
 }
 h4 {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.4px;
+  opacity: 0.56;
 }
 h5 {
   font-size: 15px;
@@ -493,13 +523,14 @@ h5 {
   flex-wrap: wrap;
 }
 button {
-  border: 1px solid rgba(128, 128, 128, 0.16);
-  border-radius: 8px;
-  padding: 9px 11px;
+  border: 1px solid rgba(128, 128, 128, 0.1);
+  border-radius: 10px;
+  padding: 10px 14px;
   color: inherit;
   background: var(--color-secondary-bg);
   cursor: pointer;
   font-size: 13px;
+  font-weight: 550;
 }
 button:disabled {
   opacity: 0.45;
@@ -520,7 +551,7 @@ button:not(:disabled):hover,
   margin-top: 16px;
   padding: 14px 16px;
   border: 1px solid rgba(128, 128, 128, 0.16);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--color-secondary-bg);
 }
 .task-topline,
@@ -776,7 +807,7 @@ button:not(:disabled):hover,
 }
 @media (max-width: 600px) {
   .library-cache-settings {
-    padding: 18px 16px 8px;
+    padding: 18px 16px 4px;
   }
   .cache-header {
     display: grid;
