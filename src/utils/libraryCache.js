@@ -41,8 +41,8 @@ export function cacheTargets(state) {
       (String(item.creator?.userId) === uid && item.specialType === 5)
         ? 'likes'
         : String(item.creator?.userId) === uid
-          ? 'created'
-          : 'saved',
+        ? 'created'
+        : 'saved',
     name: item.name,
     cover: item.coverImgUrl,
     archiveStatus: item.archiveStatus,
@@ -544,10 +544,10 @@ class LibraryCacheManager {
       reason: complete
         ? ''
         : same
-          ? '缓存待补齐'
-          : old
-            ? '内容有变化'
-            : '尚未缓存',
+        ? '缓存待补齐'
+        : old
+        ? '内容有变化'
+        : '尚未缓存',
     });
   }
   async nativeTask(command) {
