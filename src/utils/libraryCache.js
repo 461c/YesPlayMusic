@@ -290,11 +290,13 @@ class LibraryCacheManager {
     this.speedSample = { at: now, bytes: this.downloadedBytes };
   }
   startSpeedMonitor() {
-    clearInterval(this.speedTimer);
-    this.speedTimer = setInterval(() => {
+    clearTimeout(this.speedTimer);
+    const refresh = () => {
       if (this.speedSample && Date.now() - this.speedSample.at > 1200)
         this.downloadSpeed = 0;
-    }, 500);
+      if (this.running) this.speedTimer = setTimeout(refresh, 500);
+    };
+    this.speedTimer = setTimeout(refresh, 500);
   }
   async mark(target, status, extra = {}) {
     this.guard();
@@ -849,7 +851,7 @@ class LibraryCacheManager {
     } finally {
       this.running = false;
       this.controller = null;
-      clearInterval(this.speedTimer);
+      clearTimeout(this.speedTimer);
       this.speedTimer = null;
       if (this.scope !== libraryScope(this.store.state.data))
         await this.restore();
