@@ -153,6 +153,7 @@ export class CacheGovernor {
         this.requests >= REQUESTS_PER_WINDOW ? this.since + BUDGET_WINDOW_MS : 0
       );
       if (now >= next) break;
+      this.onWait?.();
       await this.wait(Math.min(200, next - now));
     }
     this.requests++;
@@ -173,6 +174,23 @@ class LibraryCacheManager {
     this.message = '';
     this.progress = 0;
     this.total = 0;
+    this.songDone = 0;
+    this.songTotal = 0;
+    this.songChecked = 0;
+    this.songIndex = 0;
+    this.currentSong = '';
+    this.currentTargetKey = '';
+    this.stage = '';
+    this.paused = false;
+    this.downloadedBytes = 0;
+    this.downloadTotalBytes = 0;
+    this.downloadSpeed = 0;
+    this.speedSample = null;
+    this.speedTimer = null;
+    this.mode = '';
+    this.failedItems = 0;
+    this.unavailableItems = 0;
+    this.partialItems = 0;
     this.marks = {};
     this.taskId = '';
     this.controller = null;
@@ -214,10 +232,69 @@ class LibraryCacheManager {
   }
   stop() {
     this.stopped = true;
+    this.paused = false;
+    this.stage = '正在取消';
     this.controller?.abort();
     if (this.taskId)
       window.YesPlayMusicAndroid?.stopLibraryCacheTask?.(this.taskId);
-    this.message = '正在停止，保留已完成的缓存';
+    this.message = '正在取消，保留已完成的缓存';
+  }
+  pause() {
+    this.paused = true;
+    if (this.taskId)
+      window.YesPlayMusicAndroid?.pauseLibraryCacheTask?.(this.taskId);
+    this.stage =
+      this.taskId || !['下载音乐', '缓存封面'].includes(this.stage)
+        ? '正在暂停'
+        : '当前文件完成后暂停';
+  }
+  resume() {
+    this.paused = false;
+    if (this.taskId)
+      window.YesPlayMusicAndroid?.resumeLibraryCacheTask?.(this.taskId);
+    this.stage = '继续处理';
+  }
+  async waitIfPaused() {
+    while (this.paused && this.current()) {
+      this.stage = '已暂停';
+      await sleep(200);
+    }
+    this.guard();
+  }
+  async waitForRequestSlot(ms) {
+    let remaining = ms;
+    while (remaining > 0 && this.current()) {
+      await this.waitIfPaused();
+      const slice = Math.min(200, remaining);
+      await sleep(slice);
+      remaining -= slice;
+    }
+    this.guard();
+  }
+  updateDownload(loaded, total = 0) {
+    const now = Date.now();
+    const previous = this.speedSample;
+    this.downloadedBytes = Math.max(0, Number(loaded) || 0);
+    this.downloadTotalBytes = Math.max(0, Number(total) || 0);
+    if (
+      previous &&
+      now > previous.at &&
+      this.downloadedBytes >= previous.bytes
+    ) {
+      const instantaneous =
+        ((this.downloadedBytes - previous.bytes) * 1000) / (now - previous.at);
+      this.downloadSpeed = Math.round(
+        this.downloadSpeed * 0.35 + instantaneous * 0.65
+      );
+    }
+    this.speedSample = { at: now, bytes: this.downloadedBytes };
+  }
+  startSpeedMonitor() {
+    clearInterval(this.speedTimer);
+    this.speedTimer = setInterval(() => {
+      if (this.speedSample && Date.now() - this.speedSample.at > 1200)
+        this.downloadSpeed = 0;
+    }, 500);
   }
   async mark(target, status, extra = {}) {
     this.guard();
@@ -234,13 +311,23 @@ class LibraryCacheManager {
     await db.checks.put(JSON.parse(JSON.stringify(record)));
   }
   async api(url, params) {
-    await this.governor.before(() => this.current());
+    await this.waitIfPaused();
+    await this.governor.before(
+      () => this.current(),
+      true,
+      () => {
+        this.stage = '等待接口请求间隔';
+      }
+    );
+    await this.waitIfPaused();
+    this.stage = '读取收藏内容';
     const data = await request({
       url,
       params: { ...params, timestamp: Date.now() },
       signal: this.controller.signal,
       skipAuthRedirect: true,
     });
+    await this.waitIfPaused();
     this.guard();
     if (data?.code !== 200) {
       if (riskResponse(data))
@@ -316,6 +403,7 @@ class LibraryCacheManager {
     }
   }
   async check(target) {
+    this.stage = '读取收藏内容';
     this.snapshots.delete(target.key);
     const data = await this.snapshot(target),
       fresh = manifest(target, data);
@@ -330,6 +418,9 @@ class LibraryCacheManager {
       /* First explicit cache request. */
     }
     const states = await this.audioStates(fresh.ids);
+    this.songTotal += fresh.ids.length;
+    this.songChecked += fresh.ids.length;
+    this.songDone += fresh.ids.length;
     const cached = fresh.ids.filter(id => states[id] === 2).length;
     const last = this.marks[target.key];
     const details = new Map(
@@ -376,7 +467,12 @@ class LibraryCacheManager {
     if (!this.taskId) throw new Error('本地缓存任务仍在结束，请稍后继续');
     try {
       while (this.current()) {
+        await this.waitIfPaused();
         const result = JSON.parse(native.getLibraryCacheTask(this.taskId));
+        if (result.phase) this.stage = result.phase;
+        if (result.current) this.currentSong = result.current;
+        if (result.bytes !== undefined)
+          this.updateDownload(result.bytes, result.totalBytes);
         if (result.state === 'done') return true;
         if (result.state === 'unavailable') return false;
         if (result.state !== 'running')
@@ -407,6 +503,7 @@ class LibraryCacheManager {
     if (this.hasPicture(url)) return true;
     const bridge = artworkBridge();
     bridge.allowLibraryArtwork(JSON.stringify([url]));
+    this.stage = '缓存封面';
     if (window.YesPlayMusicAndroid) {
       await this.governor.before(() => this.current(), false);
       try {
@@ -433,7 +530,17 @@ class LibraryCacheManager {
   }
   async song(track) {
     const native = window.YesPlayMusicAndroid;
-    await this.governor.before(() => this.current());
+    await this.waitIfPaused();
+    this.stage = '等待接口请求间隔';
+    await this.governor.before(
+      () => this.current(),
+      true,
+      () => {
+        this.stage = '等待接口请求间隔';
+      }
+    );
+    await this.waitIfPaused();
+    this.stage = '请求歌曲音源';
     if (native) return this.nativeTask({ kind: 'audio', id: String(track.id) });
     const response = await request({
       url: '/song/url/v1',
@@ -444,6 +551,7 @@ class LibraryCacheManager {
       signal: this.controller.signal,
       skipAuthRedirect: true,
     });
+    await this.waitIfPaused();
     this.guard();
     if (riskResponse(response))
       this.governor.trip('音乐接口限制请求，已停止并进入冷却');
@@ -451,13 +559,21 @@ class LibraryCacheManager {
       throw new Error(response?.message || '音乐接口请求失败');
     const source = response?.data?.[0];
     if (!source?.url || source.freeTrialInfo) return false;
+    this.stage = '下载音乐';
+    this.updateDownload(0, Number(source.size) || 0);
     await cacheTrackSource(track, source.url, source.br, 'netease', {
       manual: true,
       current: () => this.current(),
       expectedSize: Number(source.size) || 0,
       requestedLevel: musicQualityLevel(this.store.state.settings.musicQuality),
       signal: this.controller.signal,
+      onDownloadProgress: event => {
+        this.stage = this.paused ? '当前文件完成后暂停' : '下载音乐';
+        this.updateDownload(event.loaded, event.total || source.size);
+      },
     });
+    await this.waitIfPaused();
+    this.stage = '写入音乐缓存';
     return true;
   }
   async update(target) {
@@ -535,6 +651,8 @@ class LibraryCacheManager {
       version: fresh.version,
       reason: '',
     });
+    this.songTotal += fresh.ids.length;
+    this.songIndex = 0;
     const states = await this.audioStates(fresh.ids);
     if (window.YesPlayMusicAndroid)
       fresh.ids
@@ -555,9 +673,15 @@ class LibraryCacheManager {
       await picture(fresh.cover || target.cover);
       for (const id of fresh.ids) {
         this.guard();
+        await this.waitIfPaused();
+        this.songIndex++;
+        this.currentSong = mergedById.get(id)?.name || id;
         this.message = `${target.name} · 音乐 ${cached}/${fresh.ids.length}`;
         const song = mergedById.get(id);
-        if (!song) continue;
+        if (!song) {
+          this.songDone++;
+          continue;
+        }
         await picture(song.al?.picUrl || song.album?.picUrl);
         if (states[id] === 2) cached++;
         else if (await this.song(song)) cached++;
@@ -567,6 +691,11 @@ class LibraryCacheManager {
           Object.assign(song, preserved[0]);
           await cacheTrackDetail(song, song.privilege);
         }
+        this.songDone++;
+        this.downloadSpeed = 0;
+        this.downloadedBytes = 0;
+        this.downloadTotalBytes = 0;
+        this.speedSample = null;
         await this.mark(target, 'partial', {
           songs: fresh.ids.length,
           cached,
@@ -589,6 +718,8 @@ class LibraryCacheManager {
           reason: unavailable ? '部分歌曲不可用，已保留缓存' : '',
         }
       );
+      if (cached !== fresh.ids.length || images !== imageUrls.size)
+        this.partialItems++;
     } finally {
       if (this.current()) await save();
     }
@@ -599,6 +730,7 @@ class LibraryCacheManager {
     const requestedScope = libraryScope(this.store.state.data);
     this.starting = true;
     this.stopped = false;
+    this.paused = false;
     try {
       await this.restore();
     } finally {
@@ -635,13 +767,36 @@ class LibraryCacheManager {
     this.running = true;
     this.progress = 0;
     this.total = list.length;
+    this.songDone = 0;
+    this.songTotal = 0;
+    this.songChecked = 0;
+    this.songIndex = 0;
+    this.currentSong = '';
+    this.currentTargetKey = '';
+    this.stage = mode === 'check' ? '准备检查' : '准备缓存';
+    this.mode = mode;
+    this.downloadedBytes = 0;
+    this.downloadTotalBytes = 0;
+    this.downloadSpeed = 0;
+    this.speedSample = null;
+    this.failedItems = 0;
+    this.unavailableItems = 0;
+    this.partialItems = 0;
+    this.startSpeedMonitor();
     this.errors = 0;
     this.quality = this.store.state.settings.musicQuality;
     this.controller = new AbortController();
-    this.governor = new CacheGovernor(this.scope);
+    this.governor = new CacheGovernor(this.scope, localStorage, ms =>
+      this.waitForRequestSlot(ms)
+    );
+    this.governor.onWait = () => {
+      this.stage = '等待接口请求间隔';
+    };
     try {
       for (const target of list) {
+        await this.waitIfPaused();
         this.guard();
+        this.currentTargetKey = target.key;
         this.message = `${mode === 'check' ? '检查' : '缓存'}：${target.name}`;
         try {
           if (mode === 'check') await this.check(target);
@@ -663,6 +818,8 @@ class LibraryCacheManager {
           error.unavailable =
             error.unavailable || Number(error?.response?.status) === 404;
           if (error.unavailable) await this.preserve(target);
+          if (error.unavailable) this.unavailableItems++;
+          else this.failedItems++;
           await this.mark(target, error.unavailable ? 'unavailable' : 'error', {
             reason: error.message,
           });
@@ -676,15 +833,24 @@ class LibraryCacheManager {
       this.message = list.length
         ? `已完成 ${this.progress} 项${
             mode === 'check' ? '检查，需更新的条目已标记' : '缓存任务'
-          }`
+          }${this.failedItems ? `，${this.failedItems} 项失败` : ''}${
+            this.unavailableItems ? `，${this.unavailableItems} 项不可见` : ''
+          }${this.partialItems ? `，${this.partialItems} 项部分缓存` : ''}`
         : '没有待处理项目';
+      this.stage =
+        this.failedItems || this.unavailableItems || this.partialItems
+          ? '部分完成'
+          : '任务完成';
     } catch (error) {
       this.message = this.stopped
-        ? '已停止，保留已完成的缓存'
+        ? '已取消，已完成缓存保留'
         : error.message || '任务中断，现有缓存保留';
+      this.stage = this.stopped ? '已取消' : '任务中断';
     } finally {
       this.running = false;
       this.controller = null;
+      clearInterval(this.speedTimer);
+      this.speedTimer = null;
       if (this.scope !== libraryScope(this.store.state.data))
         await this.restore();
     }

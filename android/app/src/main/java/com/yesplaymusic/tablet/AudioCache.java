@@ -94,7 +94,8 @@ final class AudioCache {
         String entry = key(context, id, ApiClient.preferences(context).getString("qualityLevel", "exhigh"));
         return get(context).getCachedSpans(entry).isEmpty() ? 0 : complete(get(context), entry) ? 2 : 1;
     }
-    static void cacheSelected(Context context, String id, java.util.function.BooleanSupplier cancelled) throws Exception {
+    static void cacheSelected(Context context, String id, java.util.function.BooleanSupplier cancelled,
+            java.util.function.BiConsumer<Long, Long> progress) throws Exception {
         if (!id.matches("\\d+")) throw new java.io.IOException("无效歌曲编号");
         if (ApiClient.preferences(context).getBoolean("archiveMode", false)) throw new java.io.IOException("纪念模式已停止更新");
         String level = ApiClient.preferences(context).getString("qualityLevel", "exhigh");
@@ -122,6 +123,7 @@ final class AudioCache {
         writer[0] = new androidx.media3.datasource.cache.CacheWriter(source,
             new androidx.media3.datasource.DataSpec.Builder().setUri(uri).setKey(entry).build(), null,
             (length, bytes, newlyCached) -> {
+                progress.accept(bytes, length);
                 if (cancelled.getAsBoolean() || !entry.equals(key(context, id, level))) failure[0] = "已停止";
                 else if (context.getFilesDir().getUsableSpace() < 128L * 1024 * 1024) failure[0] = "可用空间不足，已停止";
                 else if (length > 0 && storage.getCacheSpace() + Math.max(0, length - Math.max(initial, bytes)) > maximum(context)) failure[0] = "缓存容量不足，请调整容量后继续";

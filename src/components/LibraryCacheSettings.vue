@@ -3,9 +3,7 @@
     <header class="cache-header">
       <div>
         <h4>手动缓存收藏</h4>
-        <p class="cache-note"
-          >检查全部收藏后，可按当前音质补齐缺少的音乐和封面。</p
-        >
+        <p class="cache-note">检查本地收藏记录，按当前音质补齐音乐与封面。</p>
       </div>
       <div class="cache-actions">
         <button :disabled="busy || !targets.length" @click="run('check')"
@@ -20,22 +18,127 @@
       </div>
     </header>
 
-    <div v-if="busy || manager.message" class="cache-task">
-      <div class="task-details" role="status">
+    <div
+      v-if="busy || manager.message"
+      class="cache-task"
+      :class="{ 'task-paused': manager.paused }"
+    >
+      <div class="task-topline">
+        <span class="task-indicator" :class="taskStateClass"></span>
+        <strong>{{ taskStateLabel }}</strong>
+        <span class="task-phase">{{ manager.stage }}</span>
+      </div>
+      <div class="task-details" role="status" aria-live="polite">
         <span>{{ manager.message || '正在准备缓存任务' }}</span>
-        <small v-if="manager.running"
-          >已处理 {{ manager.progress }} / {{ manager.total }} 项</small
+        <span v-if="busy && manager.currentSong" class="task-current"
+          >当前歌曲：{{ manager.currentSong }}</span
         >
       </div>
-      <button v-if="busy" :disabled="manager.stopped" @click="manager.stop()"
-        >停止</button
+      <div v-if="manager.total" class="task-progress-group">
+        <div class="progress-labels">
+          <span
+            >收藏项目 <b>{{ manager.progress }} / {{ manager.total }}</b></span
+          >
+          <span>{{ itemPercent }}%</span>
+        </div>
+        <div
+          class="progress-track"
+          role="progressbar"
+          :aria-valuenow="manager.progress"
+          :aria-valuemax="manager.total"
+          aria-label="收藏项目进度"
+        >
+          <span :style="{ width: itemPercent + '%' }"></span>
+        </div>
+      </div>
+      <div
+        v-if="manager.songTotal || manager.songChecked"
+        class="task-progress-group song-progress-group"
       >
-      <progress
-        v-if="manager.running && manager.total"
-        :value="manager.progress"
-        :max="manager.total"
-        aria-label="收藏处理进度"
-      ></progress>
+        <div class="progress-labels">
+          <span
+            >{{ manager.mode === 'check' ? '已检查歌曲' : '已处理歌曲' }}
+            <b
+              >{{
+                manager.mode === 'check'
+                  ? manager.songChecked
+                  : manager.songDone
+              }}
+              / {{ manager.songTotal }}</b
+            ></span
+          >
+          <span v-if="manager.mode === 'update' && manager.currentSong"
+            >第 {{ manager.songIndex }} 首</span
+          >
+        </div>
+        <div
+          class="progress-track song-track"
+          role="progressbar"
+          :aria-valuenow="
+            manager.mode === 'check' ? manager.songChecked : manager.songDone
+          "
+          :aria-valuemax="manager.songTotal"
+          aria-label="歌曲处理进度"
+        >
+          <span :style="{ width: songPercent + '%' }"></span>
+        </div>
+        <div
+          v-if="
+            manager.mode === 'update' &&
+            ['下载音乐', '下载封面'].includes(manager.stage)
+          "
+          class="download-progress"
+        >
+          <div class="progress-labels">
+            <span
+              >{{ manager.stage }}
+              <b
+                >{{ formatBytes(manager.downloadedBytes)
+                }}<template v-if="manager.downloadTotalBytes">
+                  / {{ formatBytes(manager.downloadTotalBytes) }}</template
+                ><template v-else> · 总大小未知</template></b
+              ></span
+            >
+            <span
+              >{{ manager.downloadTotalBytes ? downloadPercent + '% · ' : ''
+              }}{{ formatSpeed(manager.downloadSpeed) }}</span
+            >
+          </div>
+          <div
+            v-if="manager.downloadTotalBytes"
+            class="progress-track file-track"
+            role="progressbar"
+            :aria-valuenow="manager.downloadedBytes"
+            :aria-valuemax="manager.downloadTotalBytes"
+            aria-label="当前文件下载进度"
+          >
+            <span :style="{ width: downloadPercent + '%' }"></span>
+          </div>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button v-if="busy && !manager.paused" @click="manager.pause()"
+          >暂停</button
+        >
+        <button
+          v-if="busy && manager.paused"
+          class="primary-action"
+          @click="manager.resume()"
+          >继续</button
+        >
+        <button
+          v-if="busy"
+          class="cancel-action"
+          :disabled="manager.stopped"
+          @click="manager.stop()"
+          >取消任务</button
+        >
+      </div>
+      <p v-if="busy" class="task-footnote">{{
+        manager.mode === 'check'
+          ? '检查只读取收藏与缓存状态，不下载歌曲。'
+          : '已完成的缓存会保留，取消后可从待更新项继续。'
+      }}</p>
     </div>
 
     <div class="cache-groups" role="group" aria-label="选择收藏分组">
@@ -49,8 +152,9 @@
       </button>
     </div>
     <div class="group-header">
-      <h5
-        >{{ groupTitle }} <small>共 {{ visible.length }} 项</small></h5
+      <div class="group-title"
+        ><h5>{{ groupTitle }}</h5
+        ><small>本地收藏 {{ visible.length }} 项</small></div
       >
       <div class="cache-actions">
         <button
@@ -70,6 +174,9 @@
         v-for="item in visible.slice(0, displayLimit)"
         :key="item.key"
         class="cache-entry"
+        :class="{
+          'cache-entry-active': busy && manager.currentTargetKey === item.key,
+        }"
       >
         <div class="cache-entry-text">
           <strong>{{ item.name || item.id }}</strong>
@@ -96,7 +203,7 @@
     <button
       v-if="visible.length > displayLimit"
       class="show-more"
-      @click="displayLimit += 30"
+      @click="displayLimit += 100"
       >显示更多（{{ displayLimit }}/{{ visible.length }}）</button
     >
   </section>
@@ -113,7 +220,7 @@ export default {
   data() {
     return {
       group: 'likes',
-      displayLimit: 30,
+      displayLimit: 100,
       groups: cacheGroups,
       manager: libraryCacheManager(this.$store),
     };
@@ -141,13 +248,71 @@ export default {
     busy() {
       return this.manager.running || this.manager.starting;
     },
+    itemPercent() {
+      return this.manager.total
+        ? Math.round((this.manager.progress / this.manager.total) * 100)
+        : 0;
+    },
+    songPercent() {
+      if (!this.manager.songTotal) return 0;
+      const completed =
+        this.manager.mode === 'check'
+          ? this.manager.songChecked
+          : this.manager.songDone;
+      const activeFraction =
+        this.manager.mode === 'update' && this.manager.downloadTotalBytes
+          ? Math.min(
+              0.99,
+              this.manager.downloadedBytes / this.manager.downloadTotalBytes
+            )
+          : 0;
+      return Math.min(
+        100,
+        Math.round(
+          ((completed + activeFraction) / this.manager.songTotal) * 100
+        )
+      );
+    },
+    downloadPercent() {
+      return this.manager.downloadTotalBytes
+        ? Math.min(
+            100,
+            Math.round(
+              (this.manager.downloadedBytes / this.manager.downloadTotalBytes) *
+                100
+            )
+          )
+        : 0;
+    },
+    taskStateLabel() {
+      if (this.manager.paused) return '已暂停';
+      if (this.manager.stopped) return '正在取消';
+      if (this.busy)
+        return this.manager.mode === 'check' ? '正在检查' : '正在缓存';
+      if (this.manager.stage === '已取消') return '任务已取消';
+      if (this.manager.stage === '任务完成') return '任务完成';
+      if (this.manager.stage === '部分完成') return '部分完成';
+      return '任务结束';
+    },
+    taskStateClass() {
+      return {
+        'state-active':
+          this.busy && !this.manager.paused && !this.manager.stopped,
+        'state-paused': this.manager.paused,
+        'state-complete': !this.busy && this.manager.stage === '任务完成',
+        'state-warning': !this.busy && this.manager.stage === '部分完成',
+        'state-cancelled':
+          this.manager.stopped ||
+          (!this.busy && this.manager.stage === '已取消'),
+      };
+    },
     account() {
       return String(this.$store.state.data.user?.userId || '');
     },
   },
   watch: {
     group() {
-      this.displayLimit = 30;
+      this.displayLimit = 100;
     },
     busy: {
       immediate: true,
@@ -189,12 +354,24 @@ export default {
           : ` · 音乐 ${mark.cached || 0}/${mark.songs}`;
       return label + count + (mark.reason ? ' · ' + mark.reason : '');
     },
+    formatBytes(value) {
+      const bytes = Number(value) || 0;
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    },
+    formatSpeed(value) {
+      return value > 0 ? `${this.formatBytes(value)}/s` : '测速中';
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
 .library-cache-settings {
+  padding: 22px 24px 12px;
   color: var(--color-text);
+  background: var(--color-body-bg);
+  border-color: rgba(128, 128, 128, 0.14);
 }
 h4,
 h5,
@@ -202,19 +379,18 @@ p {
   margin: 0;
 }
 h4 {
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 600;
 }
 h5 {
   font-size: 15px;
-  small {
-    margin-left: 4px;
-    font-size: 12px;
-    font-weight: normal;
-    opacity: 0.65;
-  }
+  font-weight: 600;
+}
+.group-title small {
+  font-size: 12px;
+  opacity: 0.6;
 }
 .cache-note,
-.task-details small,
 .cache-entry-text span {
   font-size: 12px;
   line-height: 1.6;
@@ -241,9 +417,9 @@ h5 {
   flex-wrap: wrap;
 }
 button {
-  border: 1px solid transparent;
+  border: 1px solid rgba(128, 128, 128, 0.16);
   border-radius: 8px;
-  padding: 9px 12px;
+  padding: 9px 11px;
   color: inherit;
   background: var(--color-secondary-bg);
   cursor: pointer;
@@ -264,49 +440,154 @@ button:not(:disabled):hover,
 }
 .cache-task {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin-top: 16px;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(128, 128, 128, 0.16);
+  border-radius: 12px;
   background: var(--color-secondary-bg);
-  progress {
-    grid-column: 1 / -1;
-    width: 100%;
-    height: 5px;
-    accent-color: var(--color-primary);
+}
+.task-topline,
+.task-actions,
+.progress-labels {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.task-topline {
+  font-size: 13px;
+}
+.task-phase {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.68;
+}
+.task-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e59a31;
+}
+.task-indicator.state-active {
+  background: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
+  animation: cache-pulse 1.5s ease-in-out infinite;
+}
+.task-indicator.state-complete {
+  background: #32a36a;
+}
+.task-indicator.state-cancelled,
+.task-indicator.state-paused,
+.task-indicator.state-warning {
+  background: #e59a31;
+}
+.task-progress-group {
+  display: grid;
+  gap: 6px;
+}
+.song-progress-group {
+  padding-top: 10px;
+  border-top: 1px solid rgba(128, 128, 128, 0.14);
+}
+.progress-labels {
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.78;
+  b {
+    font-weight: 600;
+    color: var(--color-text);
   }
-  button {
-    border-color: rgba(128, 128, 128, 0.35);
+  span:last-child {
+    flex-shrink: 0;
   }
 }
-.task-details {
-  font-size: 13px;
-  overflow-wrap: anywhere;
-  small {
+.progress-track {
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.2);
+  span {
     display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-primary);
+    transition: width 180ms ease-out;
   }
+}
+.song-track {
+  height: 5px;
+  span {
+    background: rgba(128, 128, 128, 0.8);
+  }
+}
+.file-track {
+  height: 4px;
+}
+.download-progress {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(128, 128, 128, 0.08);
+}
+.task-actions {
+  justify-content: flex-end;
+}
+.cancel-action {
+  color: var(--color-text);
+  opacity: 0.72;
+}
+.task-footnote {
+  margin: -6px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.58;
+}
+.task-result {
+  font-weight: 550;
+}
+.task-details {
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.task-current {
+  opacity: 0.68;
 }
 .cache-groups {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
-  margin: 18px 0;
-  padding-top: 16px;
-  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  margin: 16px 0 12px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--color-secondary-bg);
+  button {
+    border-color: transparent;
+    background: transparent;
+  }
   small {
     opacity: 0.75;
   }
 }
 .cache-entries {
-  margin: 8px 0;
+  margin: 8px 0 0;
   padding: 0;
   list-style: none;
 }
 .cache-entry {
-  padding: 10px 0;
+  gap: 14px;
+  padding: 11px 0;
   border-top: 1px solid rgba(128, 128, 128, 0.14);
+  transition: background-color 160ms ease;
+}
+.cache-entry-active {
+  background: var(--color-primary-bg);
 }
 .cache-entry-text {
   flex: 1;
@@ -330,17 +611,56 @@ button:not(:disabled):hover,
 .show-more {
   margin: 12px 0;
 }
+.show-more {
+  width: 100%;
+  background: transparent;
+  border-color: rgba(128, 128, 128, 0.16);
+}
+@keyframes cache-pulse {
+  50% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
 @media (max-width: 600px) {
+  .library-cache-settings {
+    padding: 18px 16px 8px;
+  }
   .cache-header {
     display: grid;
   }
+  .cache-header .cache-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cache-header button {
+    padding-inline: 7px;
+  }
+  .group-header {
+    align-items: flex-start;
+  }
+  .group-header .cache-actions {
+    width: 100%;
+  }
+  .group-header .cache-actions button {
+    flex: 1;
+  }
   .cache-groups button {
     padding: 9px 2px;
+  }
+  .cache-task {
+    padding: 12px;
+  }
+  .task-phase {
+    text-align: right;
   }
 }
 @media (max-width: 360px) {
   .cache-groups {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .progress-labels {
+    align-items: flex-start;
+    font-size: 11px;
   }
 }
 </style>

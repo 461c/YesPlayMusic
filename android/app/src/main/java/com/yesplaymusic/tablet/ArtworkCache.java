@@ -103,11 +103,16 @@ final class ArtworkCache {
         } catch (Exception ignored) { }
     }
     private FutureTask<Boolean> task(String address, int size) {
+        return task(address, size, () -> false, (bytes, total) -> { });
+    }
+    private FutureTask<Boolean> task(String address, int size,
+            java.util.function.BooleanSupplier checkpoint,
+            java.util.function.BiConsumer<Long, Long> progress) {
         String key = identity(address) + ":" + size;
         long epoch = generation;
         FutureTask<Boolean> candidate = new FutureTask<Boolean>(() -> {
             if (epoch != generation) return false;
-            boolean result = download(address, size, epoch);
+            boolean result = download(address, size, epoch, checkpoint, progress);
             if (!result && epoch == generation) failures.incrementAndGet();
             return result;
         }) {
@@ -131,20 +136,23 @@ final class ArtworkCache {
         try { String address = canonical(url); return address != null && (existing(address, 1024) != null || existing(address, 224) != null); }
         catch (Exception ignored) { return false; }
     }
-    boolean cacheSelected(String url) throws Exception {
+    boolean cacheSelected(String url, java.util.function.BooleanSupplier checkpoint,
+            java.util.function.BiConsumer<Long, Long> progress) throws Exception {
         String address = canonical(url);
         if (address == null) return false;
         if (existing(address, 1024) != null) return true;
         if (ApiClient.preferences(app).getBoolean("archiveMode", false)) return false;
         eligible.add(identity(address));
-        FutureTask<Boolean> selected = task(address, 1024);
+        FutureTask<Boolean> selected = task(address, 1024, checkpoint, progress);
         selected.run();
         if (selected.get(40, TimeUnit.SECONDS)) return true;
-        FutureTask<Boolean> thumbnail = task(address, 224);
+        FutureTask<Boolean> thumbnail = task(address, 224, checkpoint, progress);
         thumbnail.run();
         return thumbnail.get(40, TimeUnit.SECONDS);
     }
-    private boolean download(String address, int size, long epoch) {
+    private boolean download(String address, int size, long epoch,
+            java.util.function.BooleanSupplier checkpoint,
+            java.util.function.BiConsumer<Long, Long> progress) {
         HttpURLConnection connection = null;
         File temporary = null;
         try {
@@ -179,7 +187,9 @@ final class ArtworkCache {
                 output.writeUTF(mime);
                 byte[] buffer = new byte[16384]; int length;
                 while ((length = input.read(buffer)) != -1) {
+                    if (checkpoint.getAsBoolean()) return false;
                     if (epoch != generation || (sizeRead += length) > 16L * 1024 * 1024) return false;
+                    progress.accept(sizeRead, expected);
                     output.write(buffer, 0, length);
                 }
             }

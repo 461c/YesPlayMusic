@@ -126,6 +126,7 @@ export function cacheTrackSource(
       responseType: 'arraybuffer',
       signal: options.signal,
       timeout: options.manual ? 180000 : 0,
+      onDownloadProgress: options.onDownloadProgress,
     })
     .then(async response => {
       if (options.current && !options.current())
