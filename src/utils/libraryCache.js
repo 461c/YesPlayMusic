@@ -109,27 +109,27 @@ export function riskResponse(error) {
   );
 }
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const API_INTERVAL_MS = 500;
+const BUDGET_WINDOW_MS = 60000;
+const REQUESTS_PER_WINDOW = 100;
+
+export function needsCacheUpdate(mark) {
+  return Boolean(mark && mark.status !== 'cached');
+}
+
 export class CacheGovernor {
-  constructor(
-    scope,
-    storage = localStorage,
-    wait = sleep,
-    random = Math.random
-  ) {
+  constructor(scope, storage = localStorage, wait = sleep) {
     this.key = 'library-cache-cooldown:' + scope;
     this.storage = storage;
     this.wait = wait;
-    this.random = random;
     let budget = {};
     try {
       budget = JSON.parse(storage.getItem(this.key + ':budget') || '{}');
     } catch (_) {
       /* Optional storage. */
     }
-    this.since = budget.since || Date.now();
-    this.requests =
-      Date.now() - this.since < 20 * 60000 ? Number(budget.requests) || 0 : 0;
-    if (!this.requests) this.since = Date.now();
+    this.since = Number(budget.since) || Date.now();
+    this.requests = Number(budget.requests) || 0;
     this.last = Number(storage.getItem(this.key + ':last')) || 0;
   }
   trip(message) {
@@ -137,35 +137,30 @@ export class CacheGovernor {
     throw new Error(message);
   }
   async before(current, accountRequest = true) {
-    if (!current()) throw new Error('任务已停止');
-    if (Number(this.storage.getItem(this.key)) > Date.now())
-      throw new Error('更新已冷却暂停，请稍后再手动继续');
-    if (accountRequest && this.requests >= 100)
-      this.trip('已达到本次 100 次请求上限，暂停 20 分钟；已完成的缓存会保留');
-    const delay = this.last
-      ? Math.max(
-          0,
-          this.last +
-            (accountRequest ? 1800 : 500) +
-            this.random() * (accountRequest ? 2200 : 500) -
-            Date.now()
-        ) +
-        (accountRequest && this.requests && this.requests % 20 === 0 ? 8000 : 0)
-      : 0;
-    // Short waits let Stop/account changes take effect immediately between requests.
-    for (let left = delay; left > 0; left -= 200) {
+    for (;;) {
       if (!current()) throw new Error('任务已停止');
-      await this.wait(Math.min(200, left));
-    }
-    if (!current()) throw new Error('任务已停止');
-    if (accountRequest) {
-      this.requests++;
-      this.storage.setItem(
-        this.key + ':budget',
-        JSON.stringify({ since: this.since, requests: this.requests })
+      const now = Date.now();
+      if (Number(this.storage.getItem(this.key)) > now)
+        throw new Error('更新已冷却暂停，请稍后再手动继续');
+      // Artwork comes from the CDN and does not consume an account API slot.
+      if (!accountRequest) return;
+      if (now - this.since >= BUDGET_WINDOW_MS) {
+        this.since = now;
+        this.requests = 0;
+      }
+      const next = Math.max(
+        this.last + API_INTERVAL_MS,
+        this.requests >= REQUESTS_PER_WINDOW ? this.since + BUDGET_WINDOW_MS : 0
       );
+      if (now >= next) break;
+      await this.wait(Math.min(200, next - now));
     }
+    this.requests++;
     this.last = Date.now();
+    this.storage.setItem(
+      this.key + ':budget',
+      JSON.stringify({ since: this.since, requests: this.requests })
+    );
     this.storage.setItem(this.key + ':last', String(this.last));
   }
 }
@@ -355,22 +350,24 @@ class LibraryCacheManager {
     const allImages =
       details.size >= fresh.ids.length &&
       images.every(url => this.hasPicture(url));
-    await this.mark(
-      target,
+    const complete =
       same &&
-        cached === fresh.ids.length &&
-        allImages &&
-        last?.status === 'cached' &&
-        last.version === fresh.version
-        ? 'cached'
-        : 'update',
-      {
-        songs: fresh.ids.length,
-        cached,
-        version: fresh.version,
-        reason: same ? '缓存待补齐' : old ? '内容有变化' : '尚未缓存',
-      }
-    );
+      cached === fresh.ids.length &&
+      allImages &&
+      last?.status === 'cached' &&
+      last.version === fresh.version;
+    await this.mark(target, complete ? 'cached' : 'update', {
+      songs: fresh.ids.length,
+      cached,
+      version: fresh.version,
+      reason: complete
+        ? ''
+        : same
+        ? '缓存待补齐'
+        : old
+        ? '内容有变化'
+        : '尚未缓存',
+    });
   }
   async nativeTask(command) {
     const native = window.YesPlayMusicAndroid;
@@ -601,10 +598,15 @@ class LibraryCacheManager {
     if (this.running || this.starting) return;
     const requestedScope = libraryScope(this.store.state.data);
     this.starting = true;
+    this.stopped = false;
     try {
       await this.restore();
     } finally {
       this.starting = false;
+    }
+    if (this.stopped) {
+      this.message = '已停止，保留已完成的缓存';
+      return;
     }
     if (!this.scope) {
       this.message = '请先登录并打开一次“我的”';
@@ -628,11 +630,9 @@ class LibraryCacheManager {
     const list =
       targets ||
       this.targets().filter(
-        target =>
-          mode === 'check' || this.marks[target.key]?.status !== 'cached'
+        target => mode === 'check' || needsCacheUpdate(this.marks[target.key])
       );
     this.running = true;
-    this.stopped = false;
     this.progress = 0;
     this.total = list.length;
     this.errors = 0;

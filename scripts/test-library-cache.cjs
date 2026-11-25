@@ -140,48 +140,69 @@ assert(riskResponse({ code: -462 }));
 assert(riskResponse({ message: '音乐接口请求失败（HTTP 403）' }));
 (async () => {
   const scope = 'test';
-  const governor = new CacheGovernor(
-    scope,
-    storage,
-    async ms => {
-      now += ms;
-    },
-    () => 0
-  );
+  const wait = async ms => {
+    now += ms;
+  };
+  const governor = new CacheGovernor(scope, storage, wait);
   await governor.before(() => true);
   const first = now;
+  now += 300;
+  await governor.before(() => true, false);
+  assert.equal(now - first, 300, 'Artwork starts immediately');
+  assert.equal(governor.requests, 1);
   await governor.before(() => true);
-  assert(now - first >= 1800);
+  assert.equal(now - first, 500, 'Artwork must not postpone the next API slot');
   await assert.rejects(
     governor.before(() => false),
     /停止/
   );
+  const resumed = new CacheGovernor(scope, storage, wait);
   assert.equal(
-    new CacheGovernor(scope, storage).requests,
+    resumed.requests,
     2,
-    'Restarting a task must not reset the request budget'
+    'Restarting must retain the request budget'
   );
-  governor.requests = 100;
-  await assert.rejects(
-    governor.before(() => true),
-    /上限/
+  for (let i = 2; i < 100; i++) await resumed.before(() => true);
+  assert.equal(
+    now - first,
+    49500,
+    '100 fast API calls use only the minimum spacing'
   );
+  let current = true;
+  const waiting = new CacheGovernor(scope, storage, async ms => {
+    now += ms;
+    current = false;
+  });
   await assert.rejects(
-    new CacheGovernor(scope, storage).before(() => true),
+    waiting.before(() => current),
+    /停止/
+  );
+  assert.equal(
+    waiting.requests,
+    100,
+    'Cancellation cannot consume an API slot'
+  );
+  const next = new CacheGovernor(scope, storage, wait);
+  await next.before(() => true);
+  assert.equal(now - first, 60000, 'Budget replenishes within the running job');
+  assert.equal(next.requests, 1);
+  assert.throws(() => next.trip('接口限流'), /限流/);
+  const cooling = new CacheGovernor(scope, storage, wait);
+  await assert.rejects(
+    cooling.before(() => true),
     /冷却/
   );
+  await assert.rejects(
+    cooling.before(() => true, false),
+    /冷却/
+  );
+  now += 20 * 60000;
+  await cooling.before(() => true);
   const store = { state, dispatch: async () => {} };
   const manager = libraryCacheManager(store);
   manager.scope = '1';
   manager.controller = new AbortController();
-  manager.governor = new CacheGovernor(
-    'metadata',
-    storage,
-    async ms => {
-      now += ms;
-    },
-    () => 0
-  );
+  manager.governor = new CacheGovernor('metadata', storage, wait);
   await manager.check(target);
   assert.equal(manager.marks[target.key].status, 'update');
   assert.equal(
@@ -261,6 +282,21 @@ assert(riskResponse({ message: '音乐接口请求失败（HTTP 403）' }));
     manager.marks[target.key].status,
     oldMark,
     'Blocked API must not erase the previous mark or cached content'
+  );
+  const updated = [];
+  manager.update = async item => updated.push(item.key);
+  manager.marks = {
+    'playlist:10': { status: 'cached' },
+    'playlist:11': { status: 'update' },
+    'album:20': { status: 'partial' },
+  };
+  await manager.run('update');
+  assert.deepStrictEqual(updated, ['playlist:11', 'album:20']);
+  await manager.run('update', [cacheTargets(state)[2]]);
+  assert.equal(
+    updated[2],
+    'playlist:12',
+    'Explicit selections can cache unchecked items'
   );
   console.log(
     'Manual library cache: grouping, tombstones, serial pacing, cancellation, persisted budget/cooldown, per-item checks and preservation passed'
