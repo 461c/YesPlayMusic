@@ -1193,7 +1193,6 @@ export default {
       customCssLoading: false,
       artworkCache: { size: '0 B', count: 0, pending: 0 },
       artworkClearing: false,
-      cacheStatsTimer: null,
       cacheClearing: false,
       cacheManager: libraryCacheManager(this.$store),
       allOutputDevices: [
@@ -1840,15 +1839,7 @@ export default {
     },
   },
   created() {
-    this.refreshArtworkStats();
     if (process.env.IS_ELECTRON) this.getAllOutputDevices();
-  },
-  beforeDestroy() {
-    clearInterval(this.cacheStatsTimer);
-  },
-  deactivated() {
-    clearInterval(this.cacheStatsTimer);
-    this.cacheStatsTimer = null;
   },
   activated() {
     this.selectCategory(this.activeCategory);
@@ -1857,15 +1848,7 @@ export default {
   methods: {
     selectCategory(key) {
       this.activeCategory = key;
-      clearInterval(this.cacheStatsTimer);
-      this.cacheStatsTimer = null;
-      if (key === 'cache') {
-        this.refreshArtworkStats();
-        this.cacheStatsTimer = setInterval(
-          () => this.refreshArtworkStats(),
-          3000
-        );
-      }
+      if (key === 'cache') this.refreshArtworkStats();
     },
     categoryKey(event, key) {
       const index = this.categories.findIndex(item => item.key === key);

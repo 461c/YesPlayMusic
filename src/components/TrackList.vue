@@ -67,6 +67,7 @@
         :key="itemKey === 'id' ? track.id : `${track.id}${index}`"
         :track-prop="track"
         :track-no="index + 1"
+        :liked-song-ids="likedSongIds"
         :highlight-playing-track="highlightPlayingTrack"
         :offline="offline"
         :cached-track-ids="cachedTrackIds"
@@ -168,8 +169,11 @@ export default {
   },
   computed: {
     ...mapState(['liked', 'player']),
+    likedSongIds() {
+      return new Set((this.liked.songs || []).map(id => String(id)));
+    },
     isRightClickedTrackLiked() {
-      return this.liked.songs.includes(this.rightClickedTrack?.id);
+      return this.likedSongIds.has(String(this.rightClickedTrack?.id));
     },
     rightClickedTrackComputed() {
       return this.type === 'cloudDisk'

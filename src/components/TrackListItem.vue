@@ -117,6 +117,7 @@ export default {
   props: {
     trackProp: Object,
     trackNo: Number,
+    likedSongIds: { type: Set, default: () => new Set() },
     highlightPlayingTrack: {
       type: Boolean,
       default: true,
@@ -192,7 +193,7 @@ export default {
       return this.type === 'playlist';
     },
     isLiked() {
-      return this.$parent.liked.songs.includes(this.track?.id);
+      return this.likedSongIds.has(String(this.track?.id));
     },
     isCached() {
       return this.cachedTrackIds.includes(String(this.track?.id));

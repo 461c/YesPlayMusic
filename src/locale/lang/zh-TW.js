@@ -644,8 +644,8 @@ export default {
   contextMenu: {
     play: '播放',
     addToQueue: '新增至佇列',
-    saveToMyLikedSongs: '新增至我喜歡的音樂',
-    removeFromMyLikedSongs: '從喜歡的音樂中刪除',
+    saveToMyLikedSongs: '新增至我喜歡',
+    removeFromMyLikedSongs: '從我喜歡中移除',
     saveToLibrary: '新增至音樂庫',
     removeFromLibrary: '從音樂庫刪除',
     addToPlaylist: '新增至歌單',

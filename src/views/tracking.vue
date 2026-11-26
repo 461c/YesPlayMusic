@@ -130,7 +130,8 @@
             <div class="songs">
               <TrackingSection
                 v-if="likedPlaylist(items)"
-                :refresh-on-open="true"
+                :refresh-on-open="false"
+                :max-age="300000"
                 :uid="selected"
                 :scope="scope"
                 :cache-enabled="isSavedUser"

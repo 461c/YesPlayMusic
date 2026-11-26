@@ -29,7 +29,9 @@ export function readTrackingSection(uid, section, cursor = {}) {
     params: {
       uid,
       limit: 30,
-      ...(section === 'likes' ? { n: 50 } : {}),
+      // The profile preview displays 12 songs; avoid fetching and retaining
+      // the extra 38 song records that are never rendered.
+      ...(section === 'likes' ? { n: 12 } : {}),
       ...cursor,
       ...(item.type === undefined ? {} : { type: item.type }),
     },

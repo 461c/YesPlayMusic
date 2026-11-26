@@ -675,8 +675,8 @@ export default {
   contextMenu: {
     play: 'Play',
     addToQueue: 'Add to queue',
-    saveToMyLikedSongs: 'Save to my Liked Songs',
-    removeFromMyLikedSongs: 'Remove from my Liked Songs',
+    saveToMyLikedSongs: 'Add to My Likes',
+    removeFromMyLikedSongs: 'Remove from My Likes',
     saveToLibrary: 'Save to library',
     removeFromLibrary: 'Remove from library',
     addToPlaylist: 'Add to playlist',

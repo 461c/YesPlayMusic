@@ -648,8 +648,8 @@ export default {
   contextMenu: {
     play: '播放',
     addToQueue: '添加到队列',
-    saveToMyLikedSongs: '添加到我喜欢的音乐',
-    removeFromMyLikedSongs: '从喜欢的音乐中删除',
+    saveToMyLikedSongs: '添加到我喜欢',
+    removeFromMyLikedSongs: '从我喜欢中移除',
     saveToLibrary: '保存到音乐库',
     removeFromLibrary: '从音乐库删除',
     addToPlaylist: '添加到歌单',
