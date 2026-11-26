@@ -1,6 +1,6 @@
 <template>
   <div v-page-reveal class="tracking-page library-page">
-    <header>
+    <header class="library-header">
       <h1
         ><LibraryAvatarMenu
           :avatar="managing ? ownUser.avatarUrl : selectedUser.avatar"
@@ -598,16 +598,6 @@ export default {
   color: var(--color-text);
   padding-bottom: 32px;
 }
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-header h1 {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
 .tracking-avatar {
   width: 44px;
   height: 44px;
@@ -717,13 +707,6 @@ select {
   text-align: left;
 }
 @media (max-width: 600px) {
-  header {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  header h1 {
-    font-size: 26px;
-  }
   select {
     max-width: 155px;
   }

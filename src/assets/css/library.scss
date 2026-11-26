@@ -9,6 +9,26 @@
   }
 }
 
+.library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  h1 {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .page-search {
+    flex: none;
+  }
+}
+@media (max-width: 600px) {
+  .library-header h1 {
+    font-size: 26px;
+  }
+}
 h1 {
   font-size: 42px;
   color: var(--color-text);

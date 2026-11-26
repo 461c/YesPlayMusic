@@ -420,6 +420,10 @@ class LibraryCacheManager {
           )
         );
         onProgress(Math.min(start + 200, ids.length));
+        if (start + 200 < ids.length) {
+          await sleep(0);
+          await this.waitIfPaused();
+        }
       }
     } else {
       let checked = 0;
@@ -525,6 +529,10 @@ class LibraryCacheManager {
       this.imagesDone++;
       if (cached) this.imagesCached++;
       this.phaseProgress = imageIndex;
+      if (imageIndex % 32 === 0) {
+        await sleep(0);
+        await this.waitIfPaused();
+      }
       this.updateTargetProgress(
         0.75 + (imageUrls.size ? (0.25 * imageIndex) / imageUrls.size : 0.25)
       );
@@ -876,7 +884,7 @@ class LibraryCacheManager {
     try {
       await picture(fresh.cover || target.cover);
       this.stage = '准备缓存歌曲';
-      this.setPhase('缓存歌曲', fresh.ids.length, 0);
+
       for (const id of fresh.ids) {
         this.guard();
         await this.waitIfPaused();
@@ -884,6 +892,12 @@ class LibraryCacheManager {
         this.currentSong = mergedById.get(id)?.name || id;
         this.message = `${target.name} · 音乐 ${cached}/${fresh.ids.length}`;
         const song = mergedById.get(id);
+        if (song) await picture(song.al?.picUrl || song.album?.picUrl);
+        this.setPhase(
+          '缓存歌曲',
+          fresh.ids.length,
+          this.currentTargetSongsDone
+        );
         if (!song) {
           this.songDone++;
           this.currentTargetSongsDone++;
@@ -891,7 +905,6 @@ class LibraryCacheManager {
           this.updateMediaProgress();
           continue;
         }
-        await picture(song.al?.picUrl || song.album?.picUrl);
         if (states[id] === 2) {
           this.stage = '复用已缓存音乐';
           cached++;

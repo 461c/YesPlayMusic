@@ -302,7 +302,7 @@ import { getLyric, getCloudLyric } from '@/api/track';
 import { lyricParser, copyLyric, parseLyric } from '@/utils/lyrics';
 import ButtonIcon from '@/components/ButtonIcon.vue';
 import * as Vibrant from 'node-vibrant/dist/vibrant.worker.min.js';
-import Color from 'color';
+import { coverGradient } from '@/utils/coverGradient';
 import { isAccountLoggedIn } from '@/utils/auth';
 import { hasListSource, getListSourcePath } from '@/utils/playList';
 import locale from '@/locale';
@@ -689,75 +689,15 @@ export default {
         this.currentTrack?.id === track.id &&
         this.currentTrack?.al?.picUrl === coverUrl;
       this.background = '';
-      Vibrant.from(coverUrl + '?param=256y256', { colorCount: 8 })
+      const extractor = Vibrant.from(coverUrl + '?param=256y256')
+        .maxColorCount(64)
+        .quality(2)
+        .build();
+      extractor
         .getPalette()
-        .then(palette => {
-          if (!isCurrentCover()) return;
-          const swatches = [
-            'Vibrant',
-            'DarkVibrant',
-            'Muted',
-            'DarkMuted',
-            'LightVibrant',
-            'LightMuted',
-          ]
-            .map(name => {
-              const swatch = palette[name];
-              if (!Array.isArray(swatch?._rgb)) return null;
-              const [red, green, blue] = swatch._rgb.map(Number);
-              const max = Math.max(red, green, blue);
-              const min = Math.min(red, green, blue);
-              const delta = max - min;
-              let hue = 0;
-              if (delta) {
-                if (max === red) hue = 60 * (((green - blue) / delta) % 6);
-                else if (max === green) hue = 60 * ((blue - red) / delta + 2);
-                else hue = 60 * ((red - green) / delta + 4);
-              }
-              return {
-                color: Color.rgb(red, green, blue),
-                hue: (hue + 360) % 360,
-                saturation: max ? (delta / max) * 100 : 0,
-                population: Number(swatch.population) || 0,
-              };
-            })
-            .filter(Boolean);
-          if (!swatches.length) return;
-
-          const hueDistance = (first, second) => {
-            const distance = Math.abs(first.hue - second.hue);
-            return Math.min(distance, 360 - distance);
-          };
-          const populationScore = swatch =>
-            Math.log1p(swatch.population) + (swatch.saturation / 100) * 0.45;
-          const primary = swatches.reduce((best, swatch) =>
-            populationScore(swatch) > populationScore(best) ? swatch : best
-          );
-          const chooseAccent = (excluded, reference) =>
-            swatches
-              .filter(swatch => !excluded.includes(swatch))
-              .reduce((best, swatch) => {
-                if (!best) return swatch;
-                const score = candidate =>
-                  populationScore(candidate) * 0.35 +
-                  (hueDistance(reference, candidate) / 180) * 1.4 +
-                  (candidate.saturation / 100) * 0.6;
-                return score(swatch) > score(best) ? swatch : best;
-              }, null);
-          const secondary = chooseAccent([primary], primary) || primary;
-          const accentSwatch = chooseAccent([primary, secondary], secondary);
-          const accentColor = accentSwatch?.color || primary.color.rotate(28);
-          const tone = (color, amount) =>
-            color.darken(amount).saturate(0.16).rgb().string();
-          const base = tone(primary.color, 0.3);
-          const middle = tone(secondary.color, 0.36);
-          const end = tone(accentColor, 0.42);
-          const glow = accentColor
-            .darken(0.32)
-            .saturate(0.18)
-            .alpha(0.42)
-            .string();
-          this.background = `radial-gradient(ellipse at 14% 12%, ${glow} 0%, transparent 48%), linear-gradient(132deg, ${base} 0%, ${middle} 56%, ${end} 100%)`;
+        .then(() => {
+          if (isCurrentCover())
+            this.background = coverGradient(extractor.result.colors);
         })
         .catch(() => {
           if (isCurrentCover()) this.background = '';

@@ -7,29 +7,16 @@
           :label="data.user.nickname || '音乐库'"
         />{{ data.user.nickname }}
       </h1>
-      <div class="library-search" :class="{ expanded: searchOpen }">
-        <button
+      <label class="page-search">
+        <svg-icon icon-class="search" />
+        <input
+          v-model="searchInput"
+          type="search"
           aria-label="搜索我的收藏"
-          :aria-expanded="searchOpen"
-          @click="toggleSearch"
-          ><svg-icon icon-class="search"
-        /></button>
-        <div class="search-input"
-          ><input
-            ref="librarySearch"
-            v-model="searchInput"
-            aria-label="搜索我的收藏"
-            placeholder="搜索我的收藏"
-            @keydown.esc="closeSearch"
-        /></div>
-        <button
-          v-if="searchOpen"
-          class="search-close"
-          aria-label="关闭搜索"
-          @click="closeSearch"
-          >×</button
-        >
-      </div>
+          placeholder="搜索我的收藏"
+          @keydown.esc="closeSearch"
+        />
+      </label>
     </header>
     <div v-if="offline" class="offline-note">
       {{
@@ -325,7 +312,6 @@ export default {
   },
   data() {
     return {
-      searchOpen: false,
       searchInput: '',
       searchQuery: '',
       searchTimer: null,
@@ -407,17 +393,10 @@ export default {
     dailyTask();
   },
   methods: {
-    toggleSearch() {
-      this.searchOpen = !this.searchOpen;
-      if (this.searchOpen)
-        this.$nextTick(() => this.$refs.librarySearch.focus());
-      else this.closeSearch();
-    },
     closeSearch() {
       clearTimeout(this.searchTimer);
       this.searchInput = '';
       this.searchQuery = '';
-      this.searchOpen = false;
     },
     ...mapActions(['showToast']),
     ...mapMutations(['updateModal', 'updateData']),
@@ -567,96 +546,7 @@ export default {
 .library-page {
   position: relative;
 }
-.library-header {
-  position: relative;
-  min-height: 48px;
-  h1 {
-    padding-right: 48px;
-  }
-}
-.library-search {
-  position: absolute;
-  right: 0;
-  top: 8px;
-  display: flex;
-  align-items: center;
-  width: 32px;
-  height: 32px;
-  overflow: hidden;
-  border-radius: 8px;
-  color: var(--color-text);
-  background: var(--color-secondary-bg-for-transparent);
-  transition: width 0.14s ease, background-color 0.14s ease;
-  -webkit-app-region: no-drag;
-  button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    flex-shrink: 0;
-    color: inherit;
-    background: none;
-    .svg-icon {
-      width: 15px;
-      height: 15px;
-    }
-  }
-  > button:first-child .svg-icon {
-    opacity: 0.28;
-  }
-  .search-input {
-    width: 0;
-    min-width: 0;
-    overflow: hidden;
-    transition: width 0.14s ease;
-  }
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    border: none;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: 16px;
-    font-weight: 600;
-    outline: none;
-  }
-  &.expanded {
-    width: 200px;
-    background: var(--color-primary-bg-for-transparent);
-    > button:first-child {
-      color: var(--color-primary);
-      .svg-icon {
-        opacity: 1;
-      }
-    }
-    .search-input {
-      flex: 1;
-      width: auto;
-    }
-  }
-  .search-close {
-    font-size: 22px;
-  }
-}
-[data-theme='dark'] .library-search.expanded > button:first-child {
-  color: var(--color-text);
-}
-@media (max-width: 650px) {
-  .library-header h1 {
-    font-size: 26px;
-  }
-  .library-search.expanded {
-    width: 170px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .library-search .search-input {
-    transition: none;
-  }
-}
+@import '~@/assets/css/pageSearch.scss';
 </style>
 
 <style lang="scss" scoped>

@@ -1,28 +1,22 @@
 <template>
   <form class="explore-search" role="search" @submit.prevent="doSearch">
-    <div class="search-box">
-      <div class="container" :class="{ active: inputFocus }">
-        <svg-icon icon-class="search" />
-        <div class="input">
-          <input
-            ref="searchInput"
-            v-model="keywords"
-            type="search"
-            :placeholder="inputFocus ? '' : $t('nav.search')"
-            aria-label="搜索音乐"
-            @focus="inputFocus = true"
-            @blur="inputFocus = false"
-          />
-        </div>
-      </div>
-    </div>
+    <label class="page-search">
+      <svg-icon icon-class="search" />
+      <input
+        ref="searchInput"
+        v-model="keywords"
+        type="search"
+        :placeholder="$t('nav.search')"
+        aria-label="搜索音乐"
+      />
+    </label>
   </form>
 </template>
 <script>
 export default {
   name: 'ExploreSearch',
   data() {
-    return { keywords: '', inputFocus: false };
+    return { keywords: '' };
   },
   mounted() {
     this.$root.$on('focus-explore-search', this.focus);
@@ -52,68 +46,8 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
+@import '~@/assets/css/pageSearch.scss';
 .explore-search {
   margin: 0;
-}
-.search-box {
-  display: flex;
-  justify-content: flex-end;
-  -webkit-app-region: no-drag;
-
-  .container {
-    display: flex;
-    align-items: center;
-    height: 32px;
-    background: var(--color-secondary-bg-for-transparent);
-    border-radius: 8px;
-    width: 200px;
-  }
-
-  .svg-icon {
-    height: 15px;
-    width: 15px;
-    color: var(--color-text);
-    opacity: 0.28;
-    margin: {
-      left: 8px;
-      right: 4px;
-    }
-  }
-
-  input {
-    font-size: 16px;
-    border: none;
-    background: transparent;
-    width: 96%;
-    font-weight: 600;
-    margin-top: -1px;
-    color: var(--color-text);
-  }
-
-  .active {
-    background: var(--color-primary-bg-for-transparent);
-    input,
-    .svg-icon {
-      opacity: 1;
-      color: var(--color-primary);
-    }
-  }
-}
-
-[data-theme='dark'] {
-  .search-box {
-    .active {
-      input,
-      .svg-icon {
-        color: var(--color-text);
-      }
-    }
-  }
-}
-
-@media (max-width: 650px) {
-  .search-box .container {
-    width: 170px;
-  }
 }
 </style>
