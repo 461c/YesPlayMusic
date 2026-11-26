@@ -9,6 +9,7 @@ import Player from '@/utils/Player';
 import {
   updateAndroidCache,
   updateAndroidConcurrentPlayback,
+  updateAndroidAudioRequest,
   updateAndroidLyrics,
   updateAndroidQuality,
 } from '@/utils/androidEnvironment';
@@ -98,6 +99,15 @@ store.watch(
 store.watch(state => state.settings.musicQuality, updateAndroidQuality, {
   immediate: true,
 });
+store.watch(
+  state => JSON.stringify([
+    state.settings.enableRealIP,
+    state.settings.realIP,
+    state.settings.proxyConfig,
+  ]),
+  () => updateAndroidAudioRequest(store.state.settings),
+  { immediate: true }
+);
 store.watch(
   state => state.settings.allowConcurrentPlayback,
   updateAndroidConcurrentPlayback,

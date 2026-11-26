@@ -460,6 +460,11 @@ public final class MainActivity extends Activity {
             ApiClient.setCookie(MainActivity.this, cookie);
         }
         @JavascriptInterface public void setMusicQuality(String quality) { ApiClient.setQuality(MainActivity.this, quality); }
+        @JavascriptInterface public void setAudioRequestConfig(String realIP, String proxy) {
+            ApiClient.preferences(MainActivity.this).edit()
+                .putString("audioRealIP", realIP == null ? "" : realIP.trim())
+                .putString("audioProxy", proxy == null ? "" : proxy.trim()).apply();
+        }
         @JavascriptInterface public void setConcurrentPlayback(boolean enabled) {
             ApiClient.preferences(MainActivity.this).edit().putBoolean("allowConcurrentPlayback", enabled).apply();
         }

@@ -25,7 +25,7 @@ import org.junit.runner.RunWith;
 public class ColdPlaybackTest {
     private static final String PLAYER = "document.querySelector('#app').__vue__.$store.state.player";
     private Context app;
-    private String previousApi, previousCookie;
+    private String previousApi, previousCookie, previousRealIP, previousProxy;
     private boolean remote, archive;
 
     @Before public void rememberSettings() {
@@ -34,11 +34,14 @@ public class ColdPlaybackTest {
         previousApi = settings.getString("apiUrl", "");
         remote = settings.getBoolean("useRemoteApi", false);
         previousCookie = settings.getString("cookie", "");
+        previousRealIP = settings.getString("audioRealIP", "");
+        previousProxy = settings.getString("audioProxy", "");
         archive = settings.getBoolean("archiveMode", false);
         AudioCache.preserve(app, false);
     }
     @After public void restoreSettings() {
-        ApiClient.preferences(app).edit().putString("apiUrl", previousApi).putBoolean("useRemoteApi", remote).apply();
+        ApiClient.preferences(app).edit().putString("apiUrl", previousApi).putBoolean("useRemoteApi", remote)
+            .putString("audioRealIP", previousRealIP).putString("audioProxy", previousProxy).apply();
         ApiClient.setCookie(app, previousCookie);
         AudioCache.preserve(app, archive);
     }
@@ -97,11 +100,14 @@ public class ColdPlaybackTest {
     @Test public void legacyEndpointKeepsCredentialsAndHonorsPlaybackRestrictions() throws Exception {
         String cookie = "MUSIC_U=playback-fixture;";
         List<String> requests = Collections.synchronizedList(new ArrayList<>());
+        ApiClient.preferences(app).edit().putString("audioRealIP", "211.161.244.70")
+            .putString("audioProxy", "HTTPS://proxy.example:443").apply();
         try (SystemMediaTest.Fixture fixture = new SystemMediaTest.Fixture((request, origin) -> {
             String id = request.getQueryParameter("id");
             boolean legacy = "/song/url".equals(request.getPath());
-            requests.add(id + ":" + request.getQueryParameter("cookie") + ":"
-                + request.getQueryParameter(legacy ? "br" : "level"));
+            requests.add(request.getPath() + ":" + id + ":" + request.getQueryParameter("cookie") + ":"
+                + request.getQueryParameter(legacy ? "br" : "level") + ":"
+                + request.getQueryParameter("realIP") + ":" + request.getQueryParameter("proxy"));
             if ("92".equals(id)) return result(new JSONObject().put("id", id).put("url", origin + "/trial.wav")
                 .put("freeTrialInfo", new JSONObject().put("end", 30)));
             if ("93".equals(id)) return new JSONObject().put("code", 429);
@@ -114,8 +120,10 @@ public class ColdPlaybackTest {
                 try { ApiClient.resolveAudio(app, id, "higher"); fail("Restricted response must not produce a source"); }
                 catch (IOException expected) { }
             }
-            assertEquals(java.util.Arrays.asList("91:" + cookie + ":192000",
-                "92:" + cookie + ":192000", "93:" + cookie + ":192000"), requests);
+            assertEquals(java.util.Arrays.asList(
+                "/song/url:91:" + cookie + ":192000:211.161.244.70:HTTPS://proxy.example:443",
+                "/song/url:92:" + cookie + ":192000:211.161.244.70:HTTPS://proxy.example:443",
+                "/song/url:93:" + cookie + ":192000:211.161.244.70:HTTPS://proxy.example:443"), requests);
         }
     }
 }

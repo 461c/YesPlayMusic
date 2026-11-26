@@ -98,11 +98,16 @@ final class ApiClient {
         }
     }
     static JSONObject json(Context context, String path, String cookie, String api) throws Exception {
-        String separator = path.contains("?") ? "&" : "?";
         if (preferences(context).getBoolean("archiveMode", false)) throw new IOException("纪念模式：停止接口更新");
         String base = "local".equals(api)
             ? LocalApi.ensureStarted(context).get(45, java.util.concurrent.TimeUnit.SECONDS) : api;
-        URL url = new URL(base + path + separator + "cookie=" + Uri.encode(cookie));
+        Uri.Builder requestUri = Uri.parse(base + path).buildUpon();
+        requestUri.appendQueryParameter("cookie", cookie);
+        String realIP = preferences(context).getString("audioRealIP", "");
+        String proxy = preferences(context).getString("audioProxy", "");
+        if (!realIP.isEmpty()) requestUri.appendQueryParameter("realIP", realIP);
+        if (!proxy.isEmpty()) requestUri.appendQueryParameter("proxy", proxy);
+        URL url = new URL(requestUri.build().toString());
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(path.startsWith("/scrobble?") ? 45000 : 15000);
