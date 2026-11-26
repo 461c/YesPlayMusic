@@ -68,7 +68,7 @@ export default {
   },
   data() {
     return {
-      langs: ['zh-CN', 'zh-TW', 'en', 'tr'],
+      langs: ['zh-CN', 'zh-TW', 'en'],
       enableWin32Titlebar: false,
       enableLinuxTitlebar: false,
     };

@@ -11,12 +11,12 @@
           "
         />{{
           managing
-            ? '管理'
+            ? $t('tracking.manage')
             : selectedUser.alias || selectedUser.name || selected
         }}</h1
       >
       <div v-if="visiting && !managing" class="header-actions"
-        ><button @click="backUser">返回</button></div
+        ><button @click="backUser">{{ $t('tracking.back') }}</button></div
       >
     </header>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
@@ -24,13 +24,11 @@
       v-if="selected && !managing && isSavedUser"
       class="visit-diff"
       aria-live="polite"
-      aria-label="与上次查看的变化"
+      :aria-label="$t('tracking.compare')"
     >
-      <strong>较上次查看</strong>
+      <strong>{{ $t('tracking.compare') }}</strong>
       <span v-if="!visitBaselineReady" class="visit-message">{{
-        visitReadDelayed
-          ? '本地比较记录读取较慢，页面仍可浏览'
-          : '正在读取上次查看记录…'
+        $t('tracking.readingLocal')
       }}</span>
       <span
         v-else-if="
@@ -39,7 +37,7 @@
           !visitBaseline.events?.initialized
         "
         class="visit-message"
-        >首次记录，下次打开时显示变化</span
+        >{{ $t('tracking.firstVisit') }}</span
       >
       <template v-else>
         <span
@@ -55,12 +53,12 @@
           class="visit-change"
           >{{ change }}</span
         >
-        <span v-if="newEventIds.length" class="visit-change"
-          >本页新增动态 {{ newEventIds.length }}</span
-        >
-        <span v-if="visitHasError" class="visit-message" role="status"
-          >部分内容未成功刷新</span
-        >
+        <span v-if="newEventIds.length" class="visit-change">{{
+          $t('tracking.newEvents', { count: newEventIds.length })
+        }}</span>
+        <span v-if="visitHasError" class="visit-message" role="status">{{
+          $t('tracking.partialRefresh')
+        }}</span>
         <span
           v-else-if="
             visitStatus.profile === 'success' &&
@@ -71,14 +69,14 @@
             profileChanges.length ||
             profileTextChanges.length ||
             newEventIds.length
-              ? '已更新本页内容'
-              : '本次未发现变化'
+              ? $t('tracking.updated')
+              : $t('tracking.noChanges')
           }}</span
         >
-        <span v-else class="visit-message">正在更新资料和动态…</span>
-        <time v-if="visitBaseline.viewedAt" class="visit-date"
-          >上次查看 {{ date(visitBaseline.viewedAt) }}</time
-        >
+        <span v-else class="visit-message">{{ $t('tracking.updating') }}</span>
+        <time v-if="visitBaseline.viewedAt" class="visit-date">{{
+          $t('tracking.lastViewed', { date: date(visitBaseline.viewedAt) })
+        }}</time>
       </template>
     </section>
     <div v-if="managing" key="management" v-page-reveal>
@@ -86,24 +84,26 @@
         ><input
           v-model="inputId"
           inputmode="numeric"
-          aria-label="用户 ID"
-          placeholder="用户 ID"
-        /><button :disabled="!ready">添加</button></form
+          :aria-label="$t('tracking.userId')"
+          :placeholder="$t('tracking.userId')"
+        /><button :disabled="!ready">{{ $t('tracking.add') }}</button></form
       >
       <div v-for="(user, index) in users" :key="user.id" class="managed-user">
         <template v-if="editing === user.id">
           <form class="edit-user" @submit.prevent="saveEdit(user.id)"
             ><input
               v-model="editId"
-              aria-label="修改用户 ID"
+              :aria-label="$t('tracking.userId')"
               inputmode="numeric"
-              placeholder="用户 ID"
+              :placeholder="$t('tracking.userId')"
             /><input
               v-model="editAlias"
-              aria-label="备注"
-              placeholder="备注"
-            /><button>保存</button
-            ><button type="button" @click="editing = ''">取消</button></form
+              :aria-label="$t('tracking.note')"
+              :placeholder="$t('tracking.note')"
+            /><button>{{ $t('tracking.save') }}</button
+            ><button type="button" @click="editing = ''">{{
+              $t('tracking.cancel')
+            }}</button></form
           >
         </template>
         <template v-else>
@@ -119,14 +119,17 @@
             ></div
           >
           <div class="person-actions"
-            ><button @click="edit(user)">修改</button
-            ><button :disabled="index === 0" @click="move(index, -1)"
-              >上移</button
+            ><button @click="edit(user)">{{ $t('tracking.edit') }}</button
+            ><button :disabled="index === 0" @click="move(index, -1)">{{
+              $t('tracking.moveUp')
+            }}</button
             ><button
               :disabled="index === users.length - 1"
               @click="move(index, 1)"
-              >下移</button
-            ><button @click="remove(user.id)">删除</button></div
+              >{{ $t('tracking.moveDown') }}</button
+            ><button @click="remove(user.id)">{{
+              $t('tracking.delete')
+            }}</button></div
           >
         </template>
       </div>
@@ -141,8 +144,9 @@
         :scope="scope"
         :cache-enabled="isSavedUser"
         section="playlists"
-        title="歌单"
+        :title="$t('library.playlists')"
         class="tracking-collection"
+        @section-result="recordSection"
         @notice="notice = $event"
       >
         <template #default="{ items, loading, error, more, load }">
@@ -159,25 +163,35 @@
                   :src="likedPlaylist(items).coverImgUrl | resizeImage(224)"
                   alt=""
                 />
-                <p v-else>{{ loading ? '加载中…' : '喜欢的音乐暂不可见' }}</p>
+                <p v-else>{{
+                  loading
+                    ? $t('tracking.loading')
+                    : $t('tracking.likedUnavailable')
+                }}</p>
               </div>
               <div class="bottom">
                 <div class="titles">
-                  <div class="title">喜欢的音乐</div>
-                  <div v-if="likedPlaylist(items)" class="sub-title"
-                    >{{ likedPlaylist(items).trackCount }} 首歌曲</div
-                  >
+                  <div class="title">{{ $t('tracking.likedMusic') }}</div>
+                  <div v-if="likedPlaylist(items)" class="sub-title">{{
+                    $t('tracking.songCount', {
+                      count: likedPlaylist(items).trackCount,
+                    })
+                  }}</div>
                 </div>
                 <button
                   v-if="likedPlaylist(items)"
                   class="preview-toggle"
                   :aria-expanded="likesExpanded"
                   @click.stop="likesExpanded = !likesExpanded"
-                  >{{ likesExpanded ? '收起歌曲' : '查看歌曲' }}</button
+                  >{{
+                    likesExpanded
+                      ? $t('tracking.collapseSongs')
+                      : $t('tracking.showSongs')
+                  }}</button
                 >
                 <button
                   v-if="likedPlaylist(items)"
-                  aria-label="播放喜欢的音乐"
+                  :aria-label="$t('tracking.playLiked')"
                   @click.stop="playLikes(items)"
                   ><svg-icon icon-class="play"
                 /></button>
@@ -192,7 +206,7 @@
                 :cache-enabled="isSavedUser"
                 ref="likes"
                 section="likes"
-                title="喜欢的音乐"
+                :title="$t('tracking.likedMusic')"
                 :playlist-id="Number(likedPlaylist(items).id)"
                 class="likes-preview"
               >
@@ -213,7 +227,9 @@
                     dbclick-track-func="playPlaylistByID"
                   />
                   <p v-else class="muted">{{
-                    likesLoading ? '加载中…' : likesError || '暂无可见歌曲'
+                    likesLoading
+                      ? $t('tracking.loading')
+                      : likesError || $t('tracking.noVisibleSongs')
                   }}</p>
                 </template>
               </TrackingSection>
@@ -221,9 +237,13 @@
           </div>
           <div class="section-two">
             <div class="tabs-row">
-              <div class="tabs" role="tablist" aria-label="内容分组">
+              <div
+                class="tabs"
+                role="tablist"
+                :aria-label="$t('tracking.contentGroups')"
+              >
                 <button
-                  v-for="item in groups"
+                  v-for="item in visibleGroups"
                   :key="item.key"
                   class="tab"
                   role="tab"
@@ -234,6 +254,9 @@
                 >
               </div>
             </div>
+            <p v-if="!visibleGroups.length" class="muted">{{
+              $t('tracking.noContent')
+            }}</p>
             <div :key="group" v-page-reveal>
               <div v-if="group === 'activity'" class="activity-columns">
                 <div class="profile-column">
@@ -244,7 +267,8 @@
                     :cache-enabled="isSavedUser"
                     ref="profile"
                     section="profile"
-                    title="资料"
+                    @section-result="recordSection"
+                    :title="$t('tracking.profile')"
                     @profile="updateProfile"
                     @notice="notice = $event"
                     @visit-observed="observeVisit"
@@ -254,7 +278,11 @@
                     class="person-refresh"
                     :disabled="!selected || refreshing"
                     @click="refreshCurrent"
-                    >{{ refreshing ? '刷新中…' : '刷新' }}</button
+                    >{{
+                      refreshing
+                        ? $t('tracking.refreshing')
+                        : $t('tracking.refresh')
+                    }}</button
                   >
                 </div>
                 <TrackingSection
@@ -264,7 +292,8 @@
                   :cache-enabled="isSavedUser"
                   ref="events"
                   section="events"
-                  title="动态"
+                  @section-result="recordSection"
+                  :title="$t('tracking.activity')"
                   @notice="notice = $event"
                   @visit-observed="observeVisit"
                   @visit-status="updateVisitStatus"
@@ -283,14 +312,14 @@
                 <p
                   v-if="!loading && !error && !groupPlaylists(items).length"
                   class="muted"
-                  >暂无内容</p
+                  >{{ $t('tracking.noContent') }}</p
                 >
                 <button
                   v-if="more"
                   :disabled="loading"
                   class="load-more"
                   @click="load(false, true)"
-                  >加载更多</button
+                  >{{ $t('tracking.loadMore') }}</button
                 >
               </template>
               <TrackingSection
@@ -300,23 +329,30 @@
                 :scope="scope"
                 :cache-enabled="isSavedUser"
                 ref="people"
+                @section-result="recordSection"
                 :section="group === 'fans' ? 'fans' : 'follows'"
-                :title="group === 'fans' ? '粉丝' : '关注'"
+                :title="
+                  group === 'fans'
+                    ? $t('tracking.fans')
+                    : $t('tracking.follows')
+                "
                 @open-user="openUser"
                 @notice="notice = $event"
               />
               <template v-else-if="group === 'listening'">
                 <button
+                  v-if="sectionVisibility.week !== false"
                   class="playHistory-button"
                   :class="{ 'playHistory-button--selected': rank === 'week' }"
                   @click="rank = 'week'"
-                  >最近一周</button
+                  >{{ $t('tracking.latestWeek') }}</button
                 >
                 <button
+                  v-if="sectionVisibility.all !== false"
                   class="playHistory-button"
                   :class="{ 'playHistory-button--selected': rank === 'all' }"
                   @click="rank = 'all'"
-                  >所有时间</button
+                  >{{ $t('tracking.allTime') }}</button
                 >
                 <TrackingSection
                   :refresh-on-open="true"
@@ -324,8 +360,9 @@
                   :scope="scope"
                   :cache-enabled="isSavedUser"
                   ref="ranking"
+                  @section-result="recordSection"
                   :section="rank"
-                  title="听歌排行"
+                  :title="$t('tracking.ranking')"
                   @notice="notice = $event"
                 />
               </template>
@@ -337,7 +374,7 @@
         v-else-if="ready && !selected"
         class="empty-add"
         @click="$router.push({ name: 'libraryPeople' })"
-        >添加用户</button
+        >{{ $t('tracking.addUser') }}</button
       >
     </template>
   </div>
@@ -388,19 +425,27 @@ export default {
       editAlias: '',
       group: 'activity',
       rank: 'week',
+      sectionVisibility: {},
       scopeGeneration: 0,
       listWrites: Promise.resolve(),
-      groups: [
-        { key: 'activity', title: '动态' },
-        { key: 'listening', title: '排行' },
-        { key: 'follows', title: '关注' },
-        { key: 'fans', title: '粉丝' },
-        { key: 'created', title: '创建' },
-        { key: 'saved', title: '收藏' },
-      ],
     };
   },
   computed: {
+    groups() {
+      return [
+        { key: 'activity', title: this.$t('tracking.activity') },
+        { key: 'listening', title: this.$t('tracking.ranking') },
+        { key: 'follows', title: this.$t('tracking.follows') },
+        { key: 'fans', title: this.$t('tracking.fans') },
+        { key: 'created', title: this.$t('tracking.created') },
+        { key: 'saved', title: this.$t('tracking.saved') },
+      ];
+    },
+    visibleGroups() {
+      return this.groups.filter(
+        item => this.sectionVisibility[item.key] !== false
+      );
+    },
     ownUser() {
       return this.$store.state.data.user || {};
     },
@@ -422,11 +467,14 @@ export default {
         after = this.visitDraft?.profile;
       if (!before || !after) return [];
       return [
-        { key: 'followeds', label: '粉丝' },
-        { key: 'follows', label: '关注' },
-        { key: 'playlistCount', label: '歌单' },
-        { key: 'playlistBeSubscribedCount', label: '收藏' },
-        { key: 'eventCount', label: '动态' },
+        { key: 'followeds', label: this.$t('tracking.stats.followers') },
+        { key: 'follows', label: this.$t('tracking.stats.following') },
+        { key: 'playlistCount', label: this.$t('tracking.stats.playlists') },
+        {
+          key: 'playlistBeSubscribedCount',
+          label: this.$t('tracking.stats.collections'),
+        },
+        { key: 'eventCount', label: this.$t('tracking.stats.events') },
       ]
         .map(({ key, label }) => ({
           label,
@@ -448,8 +496,8 @@ export default {
         after = this.visitDraft?.profile;
       if (!before || !after) return [];
       return [
-        ['nickname', '昵称已更改'],
-        ['signature', '签名已更改'],
+        ['nickname', this.$t('tracking.changes.nickname')],
+        ['signature', this.$t('tracking.changes.signature')],
       ]
         .filter(([key]) => {
           const oldValue = before[key],
@@ -470,6 +518,13 @@ export default {
     },
   },
   watch: {
+    selected() {
+      this.sectionVisibility = {};
+    },
+    visibleGroups(groups) {
+      if (!groups.some(item => item.key === this.group))
+        this.group = groups[0]?.key || '';
+    },
     scope: {
       immediate: true,
       handler() {
@@ -498,7 +553,42 @@ export default {
     this.scopeGeneration++;
   },
   methods: {
+    recordSection({ uid, scope, section, data }) {
+      if (uid !== this.selected || scope !== this.scope) return;
+      const visibility = { ...this.sectionVisibility };
+      if (section === 'profile' && data) {
+        const profile = data.profile || {};
+        if (profile.follows === 0) visibility.follows = false;
+        if (profile.followeds === 0) visibility.fans = false;
+        if (data.peopleCanSeeMyPlayRecord === false)
+          visibility.listening = false;
+      } else if (section === 'playlists') {
+        for (const key of ['created', 'saved'])
+          visibility[key] = Boolean(
+            data?.more || this.groupPlaylists(data?.playlist || [], key).length
+          );
+      } else if (section === 'events') {
+        visibility.activity = Boolean(data?.events?.length);
+      } else if (section === 'week' || section === 'all') {
+        visibility[section] = Boolean(
+          data?.[section + 'Data']?.some(row => row.song?.id)
+        );
+        visibility.listening =
+          visibility.week !== false || visibility.all !== false;
+        if (!visibility[section])
+          this.rank = section === 'week' ? 'all' : 'week';
+      } else if (section === 'follows' || section === 'fans') {
+        visibility[section] = Boolean(
+          data?.[section === 'fans' ? 'followeds' : 'follow']?.length
+        );
+      }
+      this.sectionVisibility = visibility;
+    },
+    date(value) {
+      return value ? new Date(value).toLocaleString(this.$i18n.locale) : '';
+    },
     syncRoute() {
+      this.sectionVisibility = {};
       if (!this.$route) return;
       this.managing = this.$route.name === 'libraryPeople';
       const id = normalizeTrackingId(this.$route.params.uid);
@@ -590,12 +680,12 @@ export default {
           Number(item.specialType) === 5
       );
     },
-    groupPlaylists(items) {
+    groupPlaylists(items, group = this.group) {
       const likes = this.likedPlaylist(items);
       return items.filter(
         item =>
           item !== likes &&
-          (this.group === 'created'
+          (group === 'created'
             ? String(item.creator?.userId) === this.selected
             : String(item.creator?.userId) !== this.selected)
       );
@@ -766,7 +856,8 @@ export default {
         .catch(() => {})
         .then(() => saveTrackingList(scope, users))
         .catch(() => {
-          if (scope === this.scope) this.notice = '列表保存失败';
+          if (scope === this.scope)
+            this.notice = this.$t('tracking.saveFailed');
         });
     },
     selectUser(id, navigate = true) {
@@ -792,11 +883,11 @@ export default {
       if (!this.ready) return;
       const id = normalizeTrackingId(this.inputId);
       if (!id) {
-        this.notice = '请输入有效的用户 ID';
+        this.notice = this.$t('tracking.invalidUserId');
         return;
       }
       if (this.users.some(user => user.id === id)) {
-        this.notice = '此用户已添加';
+        this.notice = this.$t('tracking.alreadyAdded');
         return;
       }
       this.users.push({ id, name: '', avatar: '', alias: '' });
@@ -813,11 +904,11 @@ export default {
     saveEdit(oldId) {
       const id = normalizeTrackingId(this.editId);
       if (!id) {
-        this.notice = '请输入有效的用户 ID';
+        this.notice = this.$t('tracking.invalidUserId');
         return;
       }
       if (this.users.some(user => user.id === id && user.id !== oldId)) {
-        this.notice = '此用户已添加';
+        this.notice = this.$t('tracking.alreadyAdded');
         return;
       }
       const index = this.users.findIndex(user => user.id === oldId);
@@ -982,12 +1073,6 @@ select {
 .load-more {
   display: block;
   margin: 24px auto;
-}
-.tabs button.tab {
-  cursor: pointer !important;
-  background: transparent;
-  font: inherit;
-  text-align: left;
 }
 @media (max-width: 600px) {
   select {

@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import Dexie from 'dexie';
+import locale from '@/locale';
 import request from '@/utils/request';
 import {
   libraryScope,
@@ -23,6 +24,99 @@ import { archiveMode } from './archiveMode';
 const db = new Dexie('yesplaymusic-library-cache-checks');
 db.version(1).stores({ checks: '&key,scope' });
 const managers = new WeakMap();
+const cacheStageKeys = {
+  检查音乐缓存: 'checkingAudio',
+  读取本地歌曲信息: 'readingLocalTracks',
+  检查封面缓存: 'checkingArtwork',
+  缓存封面: 'cachingArtwork',
+  下载封面: 'downloadingArtwork',
+  等待接口请求间隔: 'waitingApi',
+  请求歌曲音源: 'requestingAudio',
+  下载音乐: 'downloadingAudio',
+  写入音乐缓存: 'writingAudio',
+  读取收藏内容: 'readingCollections',
+  读取歌单或专辑内容: 'readingCollectionTracks',
+  读取收藏歌曲清单: 'readingCollectionTracks',
+  读取歌单歌曲清单: 'readingPlaylistTracks',
+  读取专辑歌曲清单: 'readingAlbumTracks',
+  核对歌曲信息: 'checkingTrackInfo',
+  补齐歌曲信息: 'fillingTrackInfo',
+  歌曲信息已完整: 'trackInfoComplete',
+  保存歌曲信息: 'savingTrackInfo',
+  处理封面: 'processingArtwork',
+  缓存歌曲: 'preparingTracks',
+  准备缓存歌曲: 'preparingTracks',
+  复用已缓存音乐: 'reusingAudio',
+  准备检查: 'preparingCheck',
+  准备缓存: 'preparingCache',
+  读取本地收藏索引: 'readingLocalIndex',
+  正在取消: 'cancelling',
+  当前文件完成后暂停: 'pausedAfterFile',
+  正在暂停: 'paused',
+  已暂停: 'paused',
+  继续处理: 'resuming',
+  已取消: 'stopped',
+  未开始: 'notStarted',
+  部分完成: 'partiallyComplete',
+  任务完成: 'complete',
+  任务中断: 'interrupted',
+  请求音乐服务: 'requestingMusicService',
+};
+const cacheMessageKeys = {
+  没有待处理项目: 'noItems',
+  '更新已冷却暂停，请稍后再手动继续': 'cooldownWait',
+  '任务已停止、账号或音质已切换，或已进入纪念模式': 'guardStopped',
+  '已取消，已完成缓存保留': 'cancelledKept',
+  '正在取消，保留已完成的缓存': 'cancellingAndKeeping',
+  '请先登录并打开一次“我的”': 'loginFirst',
+  '离线或纪念模式下保留现有缓存，停止联网更新': 'offlineKept',
+  请先安装新版安卓应用: 'androidUpdate',
+  '账号已切换，请重新选择缓存内容': 'accountChanged',
+  '接口要求验证、登录或限制请求，已停止并进入冷却': 'cooldown',
+  '音乐接口限制请求，已停止并进入冷却': 'requestLimited',
+  '连续请求失败，已暂停 20 分钟；现有缓存全部保留': 'repeatedFailure',
+  '本地缓存任务仍在结束，请稍后继续': 'taskStopping',
+  缓存任务已停止: 'taskStopped',
+  任务已停止: 'taskCancelled',
+  '收藏内容不完整，保留旧缓存': 'collectionIncomplete',
+  '专辑内容不完整，保留旧缓存': 'albumIncomplete',
+  '歌单内容不完整，保留旧缓存': 'playlistIncomplete',
+  '内容不可见，保留缓存': 'contentUnavailable',
+  '歌曲内容不完整，已保留旧缓存': 'collectionIncomplete',
+  图片缓存失败: 'imageFailed',
+  音乐接口请求失败: 'requestFailed',
+  '部分歌曲不可用，已保留缓存': 'partialTracksUnavailable',
+  缓存待补齐: 'cachedNeedsUpdate',
+  内容有变化: 'contentChanged',
+  尚未缓存: 'notCached',
+};
+function cacheTranslation(key, fallback, values) {
+  if (typeof locale === 'undefined') return fallback;
+  const translation = locale.t('cacheManager.' + key, values || {});
+  return translation === 'cacheManager.' + key ? fallback : translation;
+}
+export function localizeCacheText(value) {
+  if (!value) return value;
+  const stageKey = cacheStageKeys[value];
+  if (stageKey) return cacheTranslation('stage.' + stageKey, value);
+  const messageKey = cacheMessageKeys[value];
+  if (messageKey) return cacheTranslation('message.' + messageKey, value);
+  const progress = value.match(/^(.+) · 音乐 (\d+)\/(\d+)$/);
+  if (progress)
+    return cacheTranslation('message.targetProgress', value, {
+      name: progress[1],
+      cached: progress[2],
+      total: progress[3],
+    });
+  const target = value.match(/^(检查|缓存)：(.+)$/);
+  if (target)
+    return cacheTranslation(
+      'message.' + (target[1] === '检查' ? 'checkingTarget' : 'cachingTarget'),
+      value,
+      { name: target[2] }
+    );
+  return value;
+}
 export const cacheGroups = [
   { key: 'likes', title: '我喜欢' },
   { key: 'created', title: '创建' },
@@ -1100,13 +1194,45 @@ class LibraryCacheManager {
         this.progress++;
         this.currentTargetFraction = 0;
       }
+      const summary = [];
+      if (list.length) {
+        summary.push(
+          cacheTranslation(
+            mode === 'check'
+              ? 'message.completeCheck'
+              : 'message.completeCache',
+            `已完成 ${this.progress} 项${
+              mode === 'check' ? '检查，需更新的条目已标记' : '缓存任务'
+            }`,
+            { count: this.progress }
+          )
+        );
+        if (this.failedItems)
+          summary.push(
+            cacheTranslation('message.failed', `${this.failedItems} 项失败`, {
+              count: this.failedItems,
+            })
+          );
+        if (this.unavailableItems)
+          summary.push(
+            cacheTranslation(
+              'message.unavailable',
+              `${this.unavailableItems} 项不可见`,
+              { count: this.unavailableItems }
+            )
+          );
+        if (this.partialItems)
+          summary.push(
+            cacheTranslation(
+              'message.partial',
+              `${this.partialItems} 项部分缓存`,
+              { count: this.partialItems }
+            )
+          );
+      }
       this.message = list.length
-        ? `已完成 ${this.progress} 项${
-            mode === 'check' ? '检查，需更新的条目已标记' : '缓存任务'
-          }${this.failedItems ? `，${this.failedItems} 项失败` : ''}${
-            this.unavailableItems ? `，${this.unavailableItems} 项不可见` : ''
-          }${this.partialItems ? `，${this.partialItems} 项部分缓存` : ''}`
-        : '没有待处理项目';
+        ? summary.join(' · ')
+        : cacheTranslation('message.noItems', '没有待处理项目');
       this.stage =
         this.failedItems || this.unavailableItems || this.partialItems
           ? '部分完成'

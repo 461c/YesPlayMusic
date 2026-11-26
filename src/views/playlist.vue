@@ -193,8 +193,8 @@
     <div v-if="offline" class="offline-note">
       {{
         tracks.length
-          ? '正在显示本地保存的歌单内容，未保存的内容需联网加载。'
-          : '此歌单尚无本地内容，请联网打开一次。'
+          ? $t('offlineCache.localPlaylist')
+          : $t('offlineCache.noLocalPlaylist')
       }}
     </div>
     <div ref="loadMoreTrigger" class="load-more">
@@ -212,7 +212,7 @@
       :close="toggleFullDescription"
       :show-footer="false"
       :click-outside-hide="true"
-      title="歌单介绍"
+      :title="$t('playlist.description')"
       >{{ playlist.description }}</Modal
     >
 
@@ -230,13 +230,13 @@
         v-if="playlist.creator.userId === data.user.userId"
         class="item"
         @click="editPlaylist"
-        >编辑歌单信息</div
+        >{{ $t('playlist.editInfo') }}</div
       >
       <div
         v-if="playlist.creator.userId === data.user.userId"
         class="item"
         @click="deletePlaylist"
-        >删除歌单</div
+        >{{ $t('playlist.deletePlaylist') }}</div
       >
     </ContextMenu>
   </div>
@@ -527,7 +527,7 @@ export default {
           this.cachedTrackIds.includes(String(id))
         );
       if (!trackIDs.length) {
-        this.showToast('这个歌单没有已缓存的歌曲');
+        this.showToast(this.$t('offlineCache.noCachedTracks'));
         return;
       }
       this.$store.state.player.playCollection(
@@ -550,7 +550,9 @@ export default {
           this.playlist.subscribed = !this.playlist.subscribed;
           if (toast === true)
             this.showToast(
-              this.playlist.subscribed ? '已保存到音乐库' : '已从音乐库删除'
+              this.playlist.subscribed
+                ? this.$t('playlist.savedToLibrary')
+                : this.$t('playlist.removedFromLibrary')
             );
         }
         getPlaylistDetail(this.id, true).then(data => {
@@ -644,20 +646,24 @@ export default {
         this.showToast(locale.t('toast.needToLogin'));
         return;
       }
-      let confirmation = confirm(`确定要删除歌单 ${this.playlist.name}？`);
+      let confirmation = confirm(
+        this.$t('playlist.deleteConfirm', { name: this.playlist.name })
+      );
       if (confirmation === true) {
         deletePlaylist(this.playlist.id).then(data => {
           if (data.code === 200) {
-            nativeAlert(`已删除歌单 ${this.playlist.name}`);
+            nativeAlert(
+              `${this.$t('playlist.deleted')}: ${this.playlist.name}`
+            );
             this.$router.go(-1);
           } else {
-            nativeAlert('发生错误');
+            nativeAlert(this.$t('playlist.genericError'));
           }
         });
       }
     },
     editPlaylist() {
-      nativeAlert('此功能开发中');
+      nativeAlert(this.$t('playlist.inDevelopment'));
     },
     searchInPlaylist() {
       this.displaySearchInPlaylist =

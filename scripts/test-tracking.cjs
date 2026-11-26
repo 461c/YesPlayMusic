@@ -115,6 +115,8 @@ function instance(component, props = {}) {
     cacheEnabled: true,
     $store: { state: { player: {} } },
     $emit() {},
+    $t: key => key,
+    $i18n: { locale: 'zh-CN' },
     $set(array, index, value) {
       array.splice(index, 1, value);
     },

@@ -35,9 +35,11 @@ export function readTrackingSection(uid, section, cursor = {}) {
     },
   }).then(data => {
     if (!data || (data.code !== undefined && data.code !== 200)) {
-      throw new Error(
+      const error = new Error(
         data?.message || data?.msg || '当前内容不可见或接口暂不可用'
       );
+      error.code = data?.code;
+      throw error;
     }
     const listKey = {
       playlists: 'playlist',

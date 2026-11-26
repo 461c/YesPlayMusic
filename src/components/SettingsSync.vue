@@ -1,12 +1,16 @@
 <template>
   <section class="settings-card settings-sync">
-    <h4 class="card-heading">同步设置</h4>
+    <h4 class="card-heading">{{ $t('settings.sync.title') }}</h4>
     <div class="sync-actions">
       <button :disabled="busy !== ''" @click="sync('export')">{{
-        busy === 'export' ? '正在导出…' : '导出到云盘'
+        busy === 'export'
+          ? $t('settings.sync.exporting')
+          : $t('settings.sync.export')
       }}</button>
       <button :disabled="busy !== ''" @click="sync('import')">{{
-        busy === 'import' ? '正在导入…' : '从云盘导入'
+        busy === 'import'
+          ? $t('settings.sync.importing')
+          : $t('settings.sync.import')
       }}</button>
     </div>
     <p v-if="message" role="status">{{ message }}</p>
@@ -31,15 +35,15 @@ export default {
     async sync(operation) {
       if (this.busy) return;
       if (!isAccountLoggedIn()) {
-        this.message = '请先登录网易云账号';
+        this.message = this.$t('settings.sync.loginRequired');
         return;
       }
       if (archiveMode()) {
-        this.message = '请先关闭纪念模式';
+        this.message = this.$t('settings.sync.archiveMode');
         return;
       }
       if (window.YesPlayMusicAndroid?.getApiUrl?.()) {
-        this.message = '设置同步需要使用内置音乐接口';
+        this.message = this.$t('settings.sync.builtInApiRequired');
         return;
       }
       const account = String(this.$store.state.data.user?.userId || '');
@@ -61,8 +65,9 @@ export default {
           skipAuthRedirect: true,
         });
         if (account !== String(this.$store.state.data.user?.userId || ''))
-          throw new Error('账号已切换，本次结果未应用');
-        if (result.code !== 200) throw new Error(result.message || '同步失败');
+          throw new Error(this.$t('settings.sync.accountChanged'));
+        if (result.code !== 200)
+          throw new Error(result.message || this.$t('settings.sync.failed'));
         if (operation === 'import') {
           const imported = result.snapshot?.settings;
           if (
@@ -70,7 +75,7 @@ export default {
             typeof imported !== 'object' ||
             Array.isArray(imported)
           )
-            throw new Error('设置备份格式无效');
+            throw new Error(this.$t('settings.sync.invalidBackup'));
           // Only existing setting names may be applied. Account/player/library data is never imported.
           for (const key of Object.keys(settings)) {
             if (
@@ -95,13 +100,12 @@ export default {
             });
             await saveTrackingList(scope, users);
           }
-          this.message = '设置已导入，正在重新加载…';
+          this.message = this.$t('settings.sync.imported');
           window.location.reload();
         } else
-          this.message =
-            result.warning || '设置已导出并校验，云盘保留最新一份备份';
+          this.message = result.warning || this.$t('settings.sync.exported');
       } catch (error) {
-        this.message = error.message || '设置同步失败，请重试';
+        this.message = error.message || this.$t('settings.sync.failedRetry');
       } finally {
         this.busy = '';
       }
@@ -124,7 +128,8 @@ export default {
   padding-bottom: 12px;
   font-size: 13px;
   font-weight: 600;
-  opacity: 0.56;
+  letter-spacing: 0.4px;
+  opacity: 0.66;
 }
 .sync-actions {
   display: flex;
@@ -148,6 +153,10 @@ export default {
   button:hover {
     color: var(--color-primary);
     background: var(--color-primary-bg);
+  }
+  button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
   button:disabled {
     opacity: 0.4;

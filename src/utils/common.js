@@ -442,9 +442,7 @@ export function bytesToSize(bytes) {
   let megaBytes = marker * marker;
   let gigaBytes = marker * marker * marker;
 
-  let lang = store.state.settings.lang;
-
-  if (bytes < kiloBytes) return bytes + (lang === 'en' ? ' Bytes' : '字节');
+  if (bytes < kiloBytes) return bytes + ' B';
   else if (bytes < megaBytes)
     return (bytes / kiloBytes).toFixed(decimal) + ' KB';
   else if (bytes < gigaBytes)

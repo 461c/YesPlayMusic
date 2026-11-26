@@ -1,7 +1,8 @@
 <template>
   <div class="settings-page" @click="clickOutside"
     ><div class="container"
-      ><header class="settings-heading"><h1>设置</h1></header
+      ><header class="settings-heading"
+        ><h1>{{ $t('settings.settings') }}</h1></header
       ><div v-if="showUserInfo" class="user">
         <div class="left">
           <img
@@ -20,7 +21,9 @@
                   src="data:image/png;base64,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"
                   loading="lazy"
                 />
-                <span class="text">黑胶VIP</span>
+                <span class="text">{{
+                  $t('settings.page.blackVinylVip')
+                }}</span>
               </span>
               <span v-else class="text">{{ data.user.signature }}</span>
             </div>
@@ -35,7 +38,10 @@
       </div>
       <div v-else class="user login-entry"
         ><button @click="toLogin">{{ $t('login.login') }}</button></div
-      ><nav class="settings-tabs" role="tablist" aria-label="设置分类"
+      ><nav
+        class="settings-tabs"
+        role="tablist"
+        :aria-label="$t('settings.page.categories')"
         ><button
           v-for="category in categories"
           :id="'settings-tab-' + category.key"
@@ -59,10 +65,9 @@
         aria-labelledby="settings-tab-playback"
         tabindex="0"
         class="settings-panel"
-        ><h3 class="panel-title">播放</h3
         ><div class="settings-cards"
           ><section class="settings-card"
-            ><h4 class="card-heading">音源与输出</h4
+            ><h4 class="card-heading">{{ $t('settings.page.sourceOutput') }}</h4
             ><div class="item">
               <div class="left">
                 <div class="title">
@@ -89,7 +94,7 @@
             </div>
             <div v-if="!isAndroid" class="item">
               <div class="left">
-                <div class="title">新版歌曲接口</div>
+                <div class="title">{{ $t('settings.useSongUrlV1Api') }}</div>
               </div>
               <div class="right">
                 <div class="toggle">
@@ -98,7 +103,7 @@
                     v-model="useSongUrlV1Api"
                     type="checkbox"
                     name="use-song-url-v1-api"
-                    aria-label="使用新版歌曲接口"
+                    :aria-label="$t('settings.useSongUrlV1Api')"
                   />
                   <label for="use-song-url-v1-api"></label>
                 </div>
@@ -123,10 +128,9 @@
             </div>
             <div v-if="isAndroid" class="item">
               <div class="left">
-                <div class="title">允许与其他应用同时播放</div>
-                <div class="description">
-                  开启后允许同时发声，关闭则恢复常规播放行为。
-                </div>
+                <div class="title">{{
+                  $t('settings.page.concurrentPlayback')
+                }}</div>
               </div>
               <div class="right">
                 <div class="toggle">
@@ -135,20 +139,26 @@
                     v-model="allowConcurrentPlayback"
                     type="checkbox"
                     name="allow-concurrent-playback"
-                    aria-label="允许与其他应用同时播放"
+                    :aria-label="$t('settings.page.concurrentPlayback')"
                   />
                   <label for="allow-concurrent-playback"></label>
                 </div>
               </div> </div></section
           ><section class="settings-card"
-            ><h4 class="card-heading">播放控制</h4
+            ><h4 class="card-heading">{{
+              $t('settings.page.playbackControls')
+            }}</h4
             ><PlayerButtonSettings /></section
           ><section class="settings-card" v-if="isAndroid"
-            ><h4 class="card-heading">播放信息</h4
+            ><h4 class="card-heading">{{ $t('settings.page.playbackInfo') }}</h4
             ><div v-if="isAndroid" class="item android-current-quality">
               <div class="left">
-                <div class="title">当前播放音质</div>
-                <div class="description">所选音质在下次加载音源时生效。</div>
+                <div class="title">{{
+                  $t('settings.page.currentQuality')
+                }}</div>
+                <div class="description">{{
+                  $t('settings.page.qualityNextLoad')
+                }}</div>
               </div>
               <div class="right">
                 <div>{{ androidQualityInfo }}</div>
@@ -166,15 +176,18 @@
         aria-labelledby="settings-tab-cache"
         tabindex="0"
         class="settings-panel"
-        ><h3 class="panel-title">缓存</h3
         ><div class="settings-cards"
           ><section v-if="isAndroid || isElectron" class="settings-card"
-            ><h4 class="card-heading">存储管理</h4
+            ><h4 class="card-heading">{{
+              $t('settings.cachePanel.storage')
+            }}</h4
             ><div v-if="isElectron || isAndroid" class="item">
               <div class="left">
-                <div v-if="isAndroid" class="title"
-                  >已使用 {{ tracksCache.size }}</div
-                >
+                <div v-if="isAndroid" class="title">{{
+                  $t('settings.cachePanel.usedStorage', {
+                    size: tracksCache.size,
+                  })
+                }}</div>
                 <div v-else class="title">
                   {{
                     $t('settings.cacheCount', {
@@ -184,8 +197,12 @@
                   }}</div
                 >
                 <div v-if="isAndroid" class="description">
-                  完整音源 {{ tracksCache.length }} 项，部分缓存
-                  {{ tracksCache.partial }} 项。
+                  {{
+                    $t('settings.cachePanel.trackCacheSummary', {
+                      full: tracksCache.length,
+                      partial: tracksCache.partial,
+                    })
+                  }}
                 </div>
               </div>
               <div class="right">
@@ -194,23 +211,34 @@
                   @click="clearCache()"
                 >
                   {{
-                    cacheClearing ? '正在清除…' : $t('settings.clearSongsCache')
+                    cacheClearing
+                      ? $t('settings.cachePanel.clearing')
+                      : $t('settings.clearSongsCache')
                   }}
                 </button>
               </div>
             </div>
             <div v-if="isAndroid || isElectron" class="item">
               <div class="left">
-                <div class="title"
-                  >歌单图片缓存：{{ artworkCache.count }} 张 ·
-                  {{ artworkCache.size }}</div
-                >
+                <div class="title">{{
+                  $t('settings.cachePanel.artworkTitle', {
+                    count: artworkCache.count,
+                    size: artworkCache.size,
+                  })
+                }}</div>
                 <div class="description"
-                  >保存收藏内容及已打开歌单的图片，按需缓存，不遍历下载歌曲封面。<details
-                    ><summary>本次缓存统计</summary>本地命中
-                    {{ artworkCache.hits || 0 }} 次，下载
-                    {{ artworkCache.downloads || 0 }} 次，失败
-                    {{ artworkCache.failures || 0 }} 次。</details
+                  >{{ $t('settings.cachePanel.artworkDescription')
+                  }}<details
+                    ><summary>{{
+                      $t('settings.cachePanel.artworkStats')
+                    }}</summary
+                    >{{
+                      $t('settings.cachePanel.artworkStatsSummary', {
+                        hits: artworkCache.hits || 0,
+                        downloads: artworkCache.downloads || 0,
+                        failures: artworkCache.failures || 0,
+                      })
+                    }}</details
                   ></div
                 >
               </div>
@@ -219,19 +247,25 @@
                   :disabled="artworkClearing || manualCacheBusy"
                   @click="clearArtworkCache"
                 >
-                  {{ artworkClearing ? '正在清除…' : '清除图片缓存' }}
+                  {{
+                    artworkClearing
+                      ? $t('settings.cachePanel.clearing')
+                      : $t('settings.cachePanel.clearArtwork')
+                  }}
                 </button>
               </div>
             </div></section
           ><section class="settings-card" v-if="isAndroid || isElectron"
-            ><h4 class="card-heading">自动缓存</h4
+            ><h4 class="card-heading">{{
+              $t('settings.cachePanel.automatic')
+            }}</h4
             ><div v-if="isElectron || isAndroid" class="item">
               <div class="left">
                 <div class="title">
                   {{ $t('settings.automaticallyCacheSongs') }}
                 </div>
                 <div v-if="isAndroid" class="description">
-                  播放时自动保存歌曲片段。关闭后保留已有缓存。
+                  {{ $t('settings.cachePanel.automaticDescription') }}
                 </div>
               </div>
               <div class="right">
@@ -264,13 +298,17 @@
               </div>
             </div></section
           ><section class="settings-card"
-            ><h4 class="card-heading">保留与纪念</h4
+            ><h4 class="card-heading">{{
+              $t('settings.cachePanel.retention')
+            }}</h4
             ><div class="item">
               <div class="left"
-                ><div class="title">纪念模式</div>
-                <div class="description"
-                  >停止接口更新，只浏览已保存的内容。保留条目、图片与歌曲缓存，暂停自动淘汰；只有已缓存的音频可以离线播放。</div
-                ></div
+                ><div class="title">{{
+                  $t('settings.cachePanel.archiveMode')
+                }}</div>
+                <div class="description">{{
+                  $t('settings.cachePanel.archiveDescription')
+                }}</div></div
               >
               <div class="right"
                 ><div class="toggle"
@@ -288,10 +326,11 @@
         aria-labelledby="settings-tab-appearance"
         tabindex="0"
         class="settings-panel"
-        ><h3 class="panel-title">外观</h3
         ><div class="settings-cards"
           ><section class="settings-card"
-            ><h4 class="card-heading">主题与语言</h4
+            ><h4 class="card-heading">{{
+              $t('settings.page.themeLanguage')
+            }}</h4
             ><div class="item">
               <div class="left">
                 <div class="title"> {{ $t('settings.appearance.text') }} </div>
@@ -328,13 +367,27 @@
                   <option value="forest">
                     {{ $t('settings.themeColor.forest') }}
                   </option>
-                  <option value="yellow">黄色</option>
-                  <option value="red">红色</option>
-                  <option value="purple">紫色</option>
-                  <option value="navy">深蓝</option>
-                  <option value="sky">天蓝</option>
-                  <option value="monochrome">黑白</option>
-                  <option value="orange">橙色</option>
+                  <option value="yellow">{{
+                    $t('settings.themeColor.yellow')
+                  }}</option>
+                  <option value="red">{{
+                    $t('settings.themeColor.red')
+                  }}</option>
+                  <option value="purple">{{
+                    $t('settings.themeColor.purple')
+                  }}</option>
+                  <option value="navy">{{
+                    $t('settings.themeColor.navy')
+                  }}</option>
+                  <option value="sky">{{
+                    $t('settings.themeColor.sky')
+                  }}</option>
+                  <option value="monochrome">{{
+                    $t('settings.themeColor.monochrome')
+                  }}</option>
+                  <option value="orange">{{
+                    $t('settings.themeColor.orange')
+                  }}</option>
                 </select>
               </div>
             </div>
@@ -345,7 +398,6 @@
               <div class="right">
                 <select v-model="lang">
                   <option value="en">English</option>
-                  <option value="tr">Türkçe</option>
                   <option value="zh-CN">简体中文</option>
                   <option value="zh-TW">繁體中文</option>
                 </select>
@@ -353,13 +405,13 @@
             </div></section
           >
           <section class="settings-card"
-            ><h4 class="card-heading">界面</h4
+            ><h4 class="card-heading">{{ $t('settings.page.interface') }}</h4
             ><div v-if="isAndroid" class="item"
               ><div class="left"
-                ><div class="title">显示系统时间栏</div
-                ><div class="description"
-                  >控制顶部系统时间、电量等状态信息。</div
-                ></div
+                ><div class="title">{{ $t('settings.page.statusBar') }}</div
+                ><div class="description">{{
+                  $t('settings.page.statusBarHint')
+                }}</div></div
               ><div class="right"
                 ><div class="toggle"
                   ><input
@@ -371,8 +423,12 @@
             ></div>
             <div class="item"
               ><div class="left"
-                ><div class="title">悬浮播放栏</div
-                ><div class="description">关闭后播放栏贴合屏幕底部。</div></div
+                ><div class="title">{{
+                  $t('settings.page.floatingPlayer')
+                }}</div
+                ><div class="description">{{
+                  $t('settings.page.floatingPlayerHint')
+                }}</div></div
               ><div class="right"
                 ><div class="toggle"
                   ><input
@@ -383,7 +439,10 @@
                   ></label></div></div
             ></div>
             <div class="item"
-              ><div class="left"><div class="title">显示播放量</div></div
+              ><div class="left"
+                ><div class="title">{{
+                  $t('settings.page.playCounts')
+                }}</div></div
               ><div class="right"
                 ><div class="toggle"
                   ><input
@@ -394,7 +453,10 @@
                   ></label></div></div
             ></div>
             <div class="item"
-              ><div class="left"><div class="title">显示封面播放按钮</div></div
+              ><div class="left"
+                ><div class="title">{{
+                  $t('settings.page.coverPlayButton')
+                }}</div></div
               ><div class="right"
                 ><div class="toggle"
                   ><input
@@ -406,7 +468,7 @@
             ></div>
             <div class="item">
               <div class="left">
-                <div class="title">显示歌曲副标题</div>
+                <div class="title">{{ $t('settings.page.songSubtitle') }}</div>
               </div>
               <div class="right">
                 <div class="toggle">
@@ -421,7 +483,7 @@
               </div> </div
           ></section>
           <section class="settings-card"
-            ><h4 class="card-heading">歌词</h4
+            ><h4 class="card-heading">{{ $t('settings.page.lyrics') }}</h4
             ><div class="item">
               <div class="left">
                 <div class="title">
@@ -477,7 +539,9 @@
                   <option :value="true">
                     {{ $t('settings.lyricsBackground.on') }}
                   </option>
-                  <option value="blur"> 模糊封面 </option>
+                  <option value="blur">{{
+                    $t('settings.page.blurCover')
+                  }}</option>
                   <option value="dynamic">
                     {{ $t('settings.lyricsBackground.dynamic') }}
                   </option>
@@ -495,42 +559,55 @@
         aria-labelledby="settings-tab-other"
         tabindex="0"
         class="settings-panel"
-        ><h3 class="panel-title">其它</h3
         ><div class="settings-cards"
           ><SettingsSync v-if="isAndroid || isElectron" /><section
             class="settings-card"
             v-if="isAndroid"
-            ><h4 class="card-heading">系统播控</h4
+            ><h4 class="card-heading">{{
+              $t('settings.page.systemControl')
+            }}</h4
             ><div v-if="isAndroid" class="item media-diagnostic"
               ><div class="left"
-                ><div class="title">系统播控诊断</div
-                ><div class="description">播控异常时复制此信息排查。</div></div
+                ><div class="title">{{
+                  $t('settings.page.mediaDiagnostics')
+                }}</div
+                ><div class="description">{{
+                  $t('settings.page.mediaDiagnosticsHint')
+                }}</div></div
               ><div class="right"
-                ><button @click="copyMediaDiagnostic">复制诊断</button></div
+                ><button @click="copyMediaDiagnostic">{{
+                  $t('settings.page.copyDiagnostics')
+                }}</button></div
               ><textarea
                 v-if="mediaDiagnostic"
                 ref="mediaDiagnostic"
                 :value="mediaDiagnostic"
                 readonly
-                aria-label="系统播控诊断"
+                :aria-label="$t('settings.page.diagnosticsLabel')"
               ></textarea></div></section
           ><section class="settings-card"
-            ><h4 class="card-heading">应用连接</h4
+            ><h4 class="card-heading">{{
+              $t('settings.page.appConnections')
+            }}</h4
             ><div class="item">
               <div class="left">
                 <div class="title">
                   {{
                     isLastfmConnected
-                      ? `已连接到 Last.fm (${lastfm.name})`
-                      : '连接 Last.fm '
+                      ? $t('settings.page.connectedLastfm', {
+                          name: lastfm.name,
+                        })
+                      : $t('settings.page.connectLastfm')
                   }}</div
                 >
               </div>
               <div class="right">
                 <button v-if="isLastfmConnected" @click="lastfmDisconnect()"
-                  >断开连接
+                  >{{ $t('settings.page.disconnect') }}
                 </button>
-                <button v-else @click="lastfmConnect()"> 授权连接 </button>
+                <button v-else @click="lastfmConnect()">{{
+                  $t('settings.page.authorize')
+                }}</button>
               </div>
             </div>
             <div v-if="isElectron" class="item">
@@ -580,10 +657,10 @@
                 </div>
               </div> </div></section
           ><section class="settings-card"
-            ><h4 class="card-heading">使用偏好</h4>
+            ><h4 class="card-heading">{{ $t('settings.page.preferences') }}</h4>
             <div class="item">
               <div class="left">
-                <div class="title">倒序播放按钮</div>
+                <div class="title">{{ $t('settings.enableReversedMode') }}</div>
               </div>
               <div class="right">
                 <div class="toggle">
@@ -599,7 +676,7 @@
             </div>
             <div class="item">
               <div class="left">
-                <div class="title">彩虹猫进度条</div>
+                <div class="title">{{ $t('settings.page.nyanProgress') }}</div>
               </div>
               <div class="right">
                 <div class="toggle">
@@ -613,7 +690,9 @@
                 </div>
               </div> </div></section
           ><section class="settings-card" v-if="isElectron"
-            ><h4 class="card-heading">桌面与快捷键</h4
+            ><h4 class="card-heading">{{
+              $t('settings.page.desktopShortcuts')
+            }}</h4
             ><div v-if="isElectron" class="item">
               <div class="left">
                 <div class="title"> {{ $t('settings.trayIcon.text') }} </div>
@@ -671,7 +750,7 @@
               </div>
             </div>
             <div v-if="isElectron">
-              <h4>快捷键</h4>
+              <h4>{{ $t('settings.page.shortcuts') }}</h4>
               <div class="item">
                 <div class="left">
                   <div class="title">
@@ -697,16 +776,20 @@
                 @keydown="handleShortcutKeydown"
               >
                 <div class="row row-head">
-                  <div class="col">功能</div>
-                  <div class="col">快捷键</div>
-                  <div class="col">全局快捷键</div>
+                  <div class="col">{{ $t('settings.page.function') }}</div>
+                  <div class="col">{{ $t('settings.page.shortcut') }}</div>
+                  <div class="col">{{
+                    $t('settings.page.globalShortcut')
+                  }}</div>
                 </div>
                 <div
                   v-for="shortcut in settings.shortcuts"
                   :key="shortcut.id"
                   class="row"
                 >
-                  <div class="col">{{ shortcut.name }}</div>
+                  <div class="col">{{
+                    $t('settings.page.shortcutNames.' + shortcut.id)
+                  }}</div>
                   <div class="col">
                     <div
                       class="keyboard-input"
@@ -753,12 +836,12 @@
                 <button
                   class="restore-default-shortcut"
                   @click="restoreDefaultShortcuts"
-                  >恢复默认快捷键</button
+                  >{{ $t('settings.page.restoreShortcuts') }}</button
                 >
               </div>
             </div></section
           ><section class="settings-card"
-            ><h4 class="card-heading">自定义样式</h4
+            ><h4 class="card-heading">{{ $t('settings.page.customStyles') }}</h4
             ><div class="item custom-css-item">
               <div class="left">
                 <div class="title">{{ $t('settings.customCss.text') }}</div>
@@ -809,10 +892,12 @@
               </form>
             </div></section
           ><section class="settings-card" v-if="isAndroid"
-            ><h4 class="card-heading">音乐接口</h4
+            ><h4 class="card-heading">{{ $t('settings.page.musicApi') }}</h4
             ><div v-if="isAndroid" class="item android-api-address">
               <div class="left">
-                <div class="title">音乐接口地址</div>
+                <div class="title">{{
+                  $t('settings.page.musicApiAddress')
+                }}</div>
               </div>
               <form class="right" @submit.prevent="saveAndroidApi">
                 <input
@@ -828,7 +913,9 @@
               </form>
             </div></section
           ><section class="settings-card" v-if="isElectron"
-            ><h4 class="card-heading">高级网络配置</h4
+            ><h4 class="card-heading">{{
+              $t('settings.page.advancedNetwork')
+            }}</h4
             ><section v-if="isElectron" class="unm-configuration">
               <h4>UnblockNeteaseMusic</h4>
               <div class="item">
@@ -861,22 +948,20 @@
                     {{ $t('settings.unm.audioSource.title') }}
                   </div>
                   <div class="description">
-                    音源的具体代号
                     <a
                       href="https://github.com/UnblockNeteaseMusic/server-rust/blob/main/README.md#支援的所有引擎"
                       target="_blank"
                     >
-                      可以点此到 UNM 的说明页面查询。 </a
-                    ><br />
-                    多个音源请用 <code>,</code> 逗号分隔。<br />
-                    留空则使用 UNM 内置的默认值。
+                      {{ $t('settings.page.audioSourceGuide') }}
+                    </a>
+                    · {{ $t('settings.page.audioSourceDesc') }}
                   </div>
                 </div>
                 <div class="right">
                   <input
                     v-model="unmSource"
                     class="text-input margin-right-0"
-                    placeholder="例 bilibili, kuwo"
+                    :placeholder="$t('settings.page.audioSourceExample')"
                   />
                 </div>
               </div>
@@ -1003,16 +1088,24 @@
               </div>
             </section>
             <div v-if="isElectron">
-              <h4>代理</h4>
+              <h4>{{ $t('settings.page.proxy') }}</h4>
               <div class="item">
                 <div class="left">
-                  <div class="title"> 代理协议 </div>
+                  <div class="title">{{
+                    $t('settings.page.proxyProtocol')
+                  }}</div>
                 </div>
                 <div class="right">
                   <select v-model="proxyProtocol">
-                    <option value="noProxy"> 关闭代理 </option>
-                    <option value="HTTP"> HTTP 代理 </option>
-                    <option value="HTTPS"> HTTPS 代理 </option>
+                    <option value="noProxy">{{
+                      $t('settings.page.proxyOff')
+                    }}</option>
+                    <option value="HTTP">{{
+                      $t('settings.page.httpProxy')
+                    }}</option>
+                    <option value="HTTPS">{{
+                      $t('settings.page.httpsProxy')
+                    }}</option>
                     <!-- <option value="SOCKS"> SOCKS 代理 </option> -->
                   </select>
                 </div>
@@ -1024,25 +1117,29 @@
                 <input
                   v-model="proxyServer"
                   class="text-input"
-                  placeholder="服务器地址"
+                  :placeholder="$t('settings.page.serverAddress')"
                   :disabled="proxyProtocol === 'noProxy'"
                 /><input
                   v-model="proxyPort"
                   class="text-input"
-                  placeholder="端口"
+                  :placeholder="$t('settings.page.port')"
                   type="number"
                   min="1"
                   max="65535"
                   :disabled="proxyProtocol === 'noProxy'"
                 />
-                <button @click="sendProxyConfig">更新代理</button>
+                <button @click="sendProxyConfig">{{
+                  $t('settings.page.updateProxy')
+                }}</button>
               </div>
             </div>
             <div v-if="isElectron">
-              <h4>请求出口 IP</h4>
+              <h4>{{ $t('settings.page.requestIp') }}</h4>
               <div class="item">
                 <div class="left">
-                  <div class="title">自定义请求出口 IP</div>
+                  <div class="title">{{
+                    $t('settings.page.customRequestIp')
+                  }}</div>
                 </div>
                 <div class="right">
                   <div class="toggle">
@@ -1060,13 +1157,13 @@
                 <input
                   v-model="realIP"
                   class="text-input"
-                  placeholder="IP地址"
+                  :placeholder="$t('settings.page.ipAddress')"
                   :disabled="!enableRealIP"
                 />
               </div> </div></section></div></section
       ><div class="footer">
         <p class="author"
-          >MADE BY
+          >{{ $t('settings.page.madeBy') }}
           <a
             href="https://github.com/qier222"
             target="_blank"
@@ -1075,28 +1172,28 @@
           ></p
         >
         <p class="author"
-          >本构建由
+          >{{ $t('settings.page.forkMaintained') }}
           <a
             href="https://kuanzzz.pages.dev"
             target="_blank"
             rel="noopener noreferrer"
             >kuanzzz.pages.dev</a
           >
-          修改；原软件归原作者所有，修改内容遵循项目原有开源许可。
+          · {{ $t('settings.page.licenseNote') }}
         </p>
         <p class="repository-links">
           <a
             href="https://github.com/qier222/YesPlayMusic"
             target="_blank"
             rel="noopener noreferrer"
-            >主软件仓库</a
+            >{{ $t('settings.page.upstreamRepository') }}</a
           >
           <span> · </span>
           <a
             href="https://github.com/461c/YesPlayMusic"
             target="_blank"
             rel="noopener noreferrer"
-            >本构建仓库</a
+            >{{ $t('settings.page.forkRepository') }}</a
           >
         </p>
         <p class="version">v{{ version }}</p>
@@ -1136,22 +1233,16 @@ export default {
   data() {
     return {
       activeCategory: 'playback',
-      categories: [
-        { key: 'playback', title: '播放', caption: '音质与控制' },
-        { key: 'cache', title: '缓存', caption: '歌曲与图片' },
-        { key: 'appearance', title: '外观', caption: '主题与界面' },
-        { key: 'other', title: '其它', caption: '连接与高级' },
-      ],
       mediaDiagnostic: '',
       androidApiInput: isAndroid ? window.YesPlayMusicAndroid.getApiUrl() : '',
       customCssInput: this.$store.state.settings.customCssUrl || '',
       customCssLoading: false,
       tracksCache: {
-        size: '0KB',
+        size: '0 B',
         length: 0,
         partial: 0,
       },
-      artworkCache: { size: '0KB', count: 0, pending: 0 },
+      artworkCache: { size: '0 B', count: 0, pending: 0 },
       artworkClearing: false,
       cacheStatsTimer: null,
       cacheClearing: false,
@@ -1171,6 +1262,30 @@ export default {
     };
   },
   computed: {
+    categories() {
+      return [
+        {
+          key: 'playback',
+          title: this.$t('settings.playback'),
+          caption: this.$t('settings.playbackCaption'),
+        },
+        {
+          key: 'cache',
+          title: this.$t('settings.cache'),
+          caption: this.$t('settings.cacheCaption'),
+        },
+        {
+          key: 'appearance',
+          title: this.$t('settings.appearanceSection'),
+          caption: this.$t('settings.appearanceCaption'),
+        },
+        {
+          key: 'other',
+          title: this.$t('settings.other'),
+          caption: this.$t('settings.otherCaption'),
+        },
+      ];
+    },
     manualCacheBusy() {
       return this.cacheManager.running || this.cacheManager.starting;
     },
@@ -1224,7 +1339,9 @@ export default {
     androidQualityInfo() {
       const info = this.androidAudioInfo;
       if (!info)
-        return this.player.playing ? '正在读取当前音源信息…' : '暂无播放信息';
+        return this.player.playing
+          ? this.$t('settings.page.loadingPlaybackInfo')
+          : this.$t('settings.page.noPlaybackInfo');
       const formats = {
         'audio/mpeg': 'MP3',
         'audio/flac': 'FLAC',
@@ -1233,31 +1350,38 @@ export default {
         'audio/raw': 'PCM',
       };
       const parts = [
-        formats[info.mime] || info.sourceFormat?.toUpperCase() || '格式未知',
+        formats[info.mime] ||
+          info.sourceFormat?.toUpperCase() ||
+          this.$t('settings.page.unknownFormat'),
       ];
       if (info.bitrate > 0)
         parts.push(`${Math.round(info.bitrate / 1000)} kbps`);
       if (info.sampleRate > 0) parts.push(`${info.sampleRate / 1000} kHz`);
       if (info.bitDepth > 0) parts.push(`${info.bitDepth}-bit`);
-      if (info.channels > 0) parts.push(`${info.channels} 声道`);
+      if (info.channels > 0)
+        parts.push(`${info.channels} ${this.$t('settings.page.channels')}`);
       return parts.join(' · ');
     },
     androidQualityNote() {
       const info = this.androidAudioInfo;
       if (!info) return '';
-      if (info.guest) return '未登录，当前使用公开音源。';
+      if (info.guest) return this.$t('settings.page.guestSourceNote');
       const levels = {
-        standard: '标准',
-        higher: '较高',
-        exhigh: '极高',
-        lossless: '无损',
-        hires: 'Hi-Res',
+        standard: this.$t('settings.page.qualityLevels.standard'),
+        higher: this.$t('settings.page.qualityLevels.higher'),
+        exhigh: this.$t('settings.page.qualityLevels.exhigh'),
+        lossless: this.$t('settings.page.qualityLevels.lossless'),
+        hires: this.$t('settings.page.qualityLevels.hires'),
       };
       const requested = levels[info.requestedLevel];
       const actual = levels[info.sourceLevel];
       const parts = [];
-      if (requested) parts.push(`请求档位：${requested}`);
-      if (actual) parts.push(`音源档位：${actual}`);
+      if (requested)
+        parts.push(
+          this.$t('settings.page.requestedTier', { level: requested })
+        );
+      if (actual)
+        parts.push(this.$t('settings.page.sourceTier', { level: actual }));
       return parts.join(' · ');
     },
     isAndroid() {
@@ -1614,7 +1738,7 @@ export default {
         config.protocol = value;
         if (value === 'noProxy') {
           ipcRenderer.send('removeProxy');
-          this.showToast('已关闭代理');
+          this.showToast(this.$t('settings.page.proxyDisabled'));
         }
         this.$store.commit('updateSettings', {
           key: 'proxyConfig',
@@ -1799,7 +1923,8 @@ export default {
     },
     async copyMediaDiagnostic() {
       this.mediaDiagnostic =
-        window.YesPlayMusicAndroid.getMediaDiagnostics?.() || '播放器尚未连接';
+        window.YesPlayMusicAndroid.getMediaDiagnostics?.() ||
+        this.$t('settings.page.diagnosticsUnavailable');
       await this.$nextTick();
       let copied = false;
       try {
@@ -1809,7 +1934,11 @@ export default {
         this.$refs.mediaDiagnostic.select();
         copied = document.execCommand('copy');
       }
-      this.showToast(copied ? '诊断信息已复制' : '已显示诊断信息，可长按复制');
+      this.showToast(
+        copied
+          ? this.$t('settings.page.diagnosticsCopied')
+          : this.$t('settings.page.diagnosticsVisible')
+      );
     },
     ...mapActions(['showToast']),
     saveAndroidApi() {
@@ -1920,7 +2049,7 @@ export default {
         artworkBridge().clearArtworkCache();
         this.countDBSize();
       } catch (error) {
-        this.showToast('清除图片缓存失败，请稍后重试');
+        this.showToast(this.$t('settings.page.clearArtworkFailed'));
       } finally {
         this.artworkClearing = false;
       }
@@ -1955,7 +2084,7 @@ export default {
       countDBSize().then(data => {
         if (data === undefined) {
           this.tracksCache = {
-            size: '0KB',
+            size: '0 B',
             length: 0,
           };
           return;
@@ -1975,7 +2104,9 @@ export default {
           if (stats.error) throw new Error(stats.error);
           this.countDBSize();
         } catch (error) {
-          this.showToast(error.message || '清除缓存失败，请稍后重试');
+          this.showToast(
+            error.message || this.$t('settings.page.clearAudioFailed')
+          );
         } finally {
           this.cacheClearing = false;
         }
@@ -2011,7 +2142,7 @@ export default {
       } else {
         ipcRenderer.send('setProxy', config);
       }
-      this.showToast('已更新代理设置');
+      this.showToast(this.$t('settings.page.proxyUpdated'));
     },
     clickOutside() {
       this.exitRecordShortcut();
@@ -2077,7 +2208,7 @@ export default {
       };
       this.$store.commit('updateShortcut', payload);
       ipcRenderer.send('updateShortcut', payload);
-      this.showToast('快捷键已保存');
+      this.showToast(this.$t('settings.page.shortcutSaved'));
       this.recordedShortcut = [];
     },
     exitRecordShortcut() {
@@ -2581,6 +2712,10 @@ input[type='number'] {
     &:hover {
       background: var(--color-secondary-bg);
     }
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
     &.active {
       background: var(--color-body-bg);
       border-color: rgba(128, 128, 128, 0.18);
@@ -2595,13 +2730,6 @@ input[type='number'] {
 }
 .settings-panel {
   outline: none;
-}
-.panel-title {
-  margin: 28px 0 16px;
-  padding: 0;
-  font-size: 22px;
-  font-weight: 650;
-  border: none;
 }
 .settings-cards {
   display: grid;
@@ -2620,12 +2748,15 @@ input[type='number'] {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.4px;
-  opacity: 0.56;
+  opacity: 0.66;
 }
-.settings-card > .item {
+.settings-card .item {
   margin: 0;
   padding: 18px 0;
   gap: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border-top: 1px solid rgba(128, 128, 128, 0.1);
   > .left {
     flex: 1;
@@ -2633,8 +2764,12 @@ input[type='number'] {
   }
   > .right {
     flex: 0 0 auto;
-    max-width: 54%;
+    max-width: 56%;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
   }
   .title {
     font-size: 15px;
@@ -2644,16 +2779,25 @@ input[type='number'] {
     overflow-wrap: anywhere;
   }
   .description {
-    margin-top: 5px;
+    margin-top: 4px;
     font-size: 12px;
-    line-height: 1.65;
-    opacity: 0.55;
-    max-width: 52ch;
+    line-height: 1.55;
+    opacity: 0.62;
+    max-width: 56ch;
     overflow-wrap: anywhere;
   }
 }
 .settings-card .item {
   color: inherit;
+}
+.settings-card .item > .right > button {
+  white-space: nowrap;
+}
+.settings-card button:focus-visible,
+.settings-card select:focus-visible,
+.settings-card input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 .settings-card select {
   width: 180px;
@@ -2773,17 +2917,6 @@ input[type='number'] {
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
-.settings-card ::v-deep .player-button-settings {
-  margin: 0 0 14px;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-  summary {
-    padding: 12px 0;
-    font-size: 15px;
-  }
-}
 .footer {
   margin: 36px 0 0;
   padding: 24px 0 0;
@@ -2834,15 +2967,11 @@ input[type='number'] {
       }
     }
   }
-  .panel-title {
-    font-size: 20px;
-    margin-top: 24px;
-  }
   .settings-card {
     padding: 18px 16px 4px;
     border-radius: 16px;
   }
-  .settings-card > .item {
+  .settings-card .item {
     gap: 16px;
     padding: 16px 0;
     > .right {
@@ -2877,7 +3006,7 @@ input[type='number'] {
   .settings-tabs button span {
     display: none;
   }
-  .settings-card > .item {
+  .settings-card .item {
     gap: 10px;
   }
   .settings-card select {

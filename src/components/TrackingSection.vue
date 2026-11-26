@@ -12,13 +12,21 @@
       <p v-if="error" role="status" class="muted">{{ error }}</p>
       <div v-if="payload" v-page-reveal>
         <template v-if="tab === 'profile'">
-          <div class="profile-card">
-            <div class="profile-meta">
-              <span class="profile-id">ID {{ profile.userId || uid }}</span>
-              <span v-for="tag in profileTags" :key="tag" class="profile-tag">{{
-                tag
-              }}</span>
+          <div class="profile-meta">
+            <div class="profile-info-block">
+              <span>ID</span>
+              <strong>{{ profile.userId || uid }}</strong>
             </div>
+            <div class="profile-info-block">
+              <span>{{ $t('tracking.specialIdentity') }}</span>
+              <strong>{{
+                profileTags.length
+                  ? profileTags.join(' · ')
+                  : $t('tracking.none')
+              }}</strong>
+            </div>
+          </div>
+          <div class="profile-card">
             <p v-if="profile.signature">{{ profile.signature }}</p>
             <p v-if="profile.description">{{ profile.description }}</p>
             <p
@@ -39,11 +47,11 @@
             v-if="profile.artistId"
             class="artist-link"
             :to="'/artist/' + profile.artistId"
-            >查看歌手主页</router-link
+            >{{ $t('tracking.viewArtist') }}</router-link
           >
-          <small v-if="updatedAt" class="snapshot-date"
-            >保存于 {{ date(updatedAt) }}</small
-          >
+          <small v-if="updatedAt" class="snapshot-date">{{
+            $t('tracking.savedAt', { date: date(updatedAt) })
+          }}</small>
         </template>
         <template v-else-if="tab === 'playlists'">
           <CoverRow type="playlist" :items="items" :show-play-count="true" />
@@ -77,12 +85,17 @@
               ><span
                 v-if="newEventIds.includes(String(item.id))"
                 class="new-event-badge"
-                >新动态</span
-              ><span v-if="item.archiveStatus" class="deleted-badge"
-                >已删除或不可见</span
-              ><span v-if="item.topEvent || item.top">置顶</span></div
+                >{{ $t('tracking.newActivity') }}</span
+              ><span v-if="item.archiveStatus" class="deleted-badge">{{
+                $t('tracking.unavailable')
+              }}</span
+              ><span v-if="item.topEvent || item.top">{{
+                $t('tracking.pinned')
+              }}</span></div
             >
-            <p>{{ eventData(item).msg || item.message || '分享了一条动态' }}</p>
+            <p>{{
+              eventData(item).msg || item.message || $t('tracking.sharePost')
+            }}</p>
             <template v-for="resource in eventResources(item)">
               <button
                 v-if="resource.kind === 'song'"
@@ -98,8 +111,10 @@
                   alt=""
                 /><span
                   ><strong>{{ resource.name }}</strong
-                  ><small>{{ resource.subtitle || '歌曲' }}</small></span
-                ><span class="resource-action">播放</span>
+                  ><small>{{
+                    resource.subtitle || $t('tracking.song')
+                  }}</small></span
+                ><span class="resource-action">{{ $t('tracking.play') }}</span>
               </button>
               <a
                 v-else-if="resource.kind === 'video'"
@@ -119,7 +134,7 @@
                   alt=""
                 /><span
                   ><strong>{{ resource.name }}</strong
-                  ><small>视频 · 在网易云打开</small></span
+                  ><small>{{ $t('tracking.video') }}</small></span
                 ></a
               >
               <router-link
@@ -141,52 +156,61 @@
             </template>
             <div v-if="eventData(item).event" class="forwarded-event"
               ><strong>{{
-                (eventData(item).event.user || {}).nickname || '转发动态'
+                (eventData(item).event.user || {}).nickname ||
+                $t('tracking.repost')
               }}</strong
               ><p>{{ eventData(eventData(item).event).msg }}</p
               ><div class="event-images"
                 ><button
                   v-for="(pic, index) in eventData(item).event.pics || []"
                   :key="index"
-                  :aria-label="'查看转发图片 ' + (index + 1)"
+                  :aria-label="
+                    $t('tracking.viewRepostImage', { number: index + 1 })
+                  "
                   @click="viewPhotos(eventData(item).event.pics, index)"
                   ><img
                     v-image-fade
                     :src="(pic.originUrl || pic.squareUrl) | resizeImage(224)"
                     loading="lazy"
-                    alt="转发图片" /></button></div
+                    :alt="
+                      $t('tracking.viewRepostImage', { number: index + 1 })
+                    " /></button></div
             ></div>
             <div class="event-images"
               ><button
                 v-for="(pic, index) in item.pics || []"
                 :key="index"
-                :aria-label="'查看图片 ' + (index + 1)"
+                :aria-label="$t('tracking.viewImage', { number: index + 1 })"
                 @click="viewPhotos(item.pics, index)"
                 ><img
                   v-image-fade
                   :src="(pic.originUrl || pic.squareUrl) | resizeImage(224)"
                   loading="lazy"
-                  alt="动态图片" /></button
+                  :alt="$t('tracking.imageAlt')" /></button
             ></div>
             <div class="event-footer"
               ><span v-if="item.rcmdInfo && item.rcmdInfo.reason">{{
                 item.rcmdInfo.reason
               }}</span
-              ><span
-                >赞 {{ (item.info || {}).likedCount || 0 }} · 评论
-                {{ (item.info || {}).commentCount || 0 }} · 转发
-                {{ (item.info || {}).shareCount || 0 }}</span
-              ></div
+              ><span>{{
+                $t('tracking.engagement', {
+                  likes: (item.info || {}).likedCount || 0,
+                  comments: (item.info || {}).commentCount || 0,
+                  reposts: (item.info || {}).shareCount || 0,
+                })
+              }}</span></div
             >
           </article>
         </template>
-        <p v-if="tab !== 'profile' && !items.length" class="muted">暂无内容</p>
+        <p v-if="tab !== 'profile' && !items.length" class="muted">{{
+          $t('tracking.noContent')
+        }}</p>
         <button
           v-if="hasMore"
           :disabled="loading"
           class="load-more"
           @click="load(false, true)"
-          >加载更多</button
+          >{{ $t('tracking.loadMore') }}</button
         >
       </div>
     </slot>
@@ -304,31 +328,39 @@ export default {
       const p = this.profile,
         d = this.payload || {};
       return [
-        ['等级', d.level],
-        ['累计听歌', d.listenSongs],
-        ['村龄（天）', d.createDays],
-        ['歌单', p.playlistCount],
-        ['收藏', p.playlistBeSubscribedCount],
+        [this.$t('tracking.stats.level'), d.level],
+        [this.$t('tracking.stats.listens'), d.listenSongs],
+        [this.$t('tracking.stats.accountAge'), d.createDays],
+        [this.$t('tracking.stats.playlists'), p.playlistCount],
+        [this.$t('tracking.stats.collections'), p.playlistBeSubscribedCount],
         [
-          '听歌排行',
-          d.peopleCanSeeMyPlayRecord === false ? '不公开' : undefined,
+          this.$t('tracking.stats.listeningRank'),
+          d.peopleCanSeeMyPlayRecord === false
+            ? this.$t('tracking.stats.private')
+            : undefined,
         ],
-        ['动态', p.eventCount],
-        ['关注', p.follows],
-        ['粉丝', p.followeds],
+        [this.$t('tracking.stats.events'), p.eventCount],
+        [this.$t('tracking.stats.following'), p.follows],
+        [this.$t('tracking.stats.followers'), p.followeds],
         [
-          '生日',
+          this.$t('tracking.stats.birthday'),
           p.birthday > 0
-            ? new Date(p.birthday).toLocaleDateString()
+            ? new Date(p.birthday).toLocaleDateString(this.$i18n.locale)
             : undefined,
         ],
         [
-          '注册日期',
+          this.$t('tracking.stats.joined'),
           p.createTime > 0
-            ? new Date(p.createTime).toLocaleDateString()
+            ? new Date(p.createTime).toLocaleDateString(this.$i18n.locale)
             : undefined,
         ],
-        ['性别', { 1: '男', 2: '女' }[p.gender]],
+        [
+          this.$t('tracking.gender'),
+          {
+            1: this.$t('tracking.stats.male'),
+            2: this.$t('tracking.stats.female'),
+          }[p.gender],
+        ],
       ]
         .filter(([, value]) => value !== undefined && value !== null)
         .map(([label, value]) => ({ label, value }));
@@ -397,6 +429,7 @@ export default {
         !append && this.cacheEnabled && ['profile', 'events'].includes(section);
       if (canReportVisit)
         this.$emit('visit-status', { section, status: 'loading' });
+      let denied = false;
       let previous = append || force ? this.payload : null;
       this.loading = true;
       this.error = '';
@@ -437,7 +470,7 @@ export default {
           return;
         }
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-          if (!this.payload) this.error = '当前离线，暂无已保存内容';
+          if (!this.payload) this.error = this.$t('tracking.noLocalContent');
           if (canReportVisit)
             this.$emit('visit-status', { section, status: 'error' });
           return;
@@ -558,22 +591,38 @@ export default {
           }
           await saveTrackingSnapshot(scope, uid, snapshotKey, data).catch(
             () => {
-              if (current()) this.$emit('notice', '离线副本保存失败');
+              if (current())
+                this.$emit('notice', this.$t('tracking.offlineSaveFailed'));
             }
           );
         }
       } catch (error) {
         if (current()) {
-          this.error = error.message || '加载失败';
+          denied = [401, 403, -460].includes(
+            Number(
+              error.response?.data?.code || error.response?.status || error.code
+            )
+          );
+          this.error = error.message || this.$t('tracking.loadFailed');
           if (canReportVisit)
             this.$emit('visit-status', { section, status: 'error' });
         }
       } finally {
-        if (current()) this.loading = false;
+        if (current()) {
+          this.loading = false;
+          this.$emit('section-result', {
+            uid,
+            scope,
+            section,
+            data: denied ? null : this.payload,
+          });
+        }
       }
     },
     date(value) {
-      return value ? new Date(value).toLocaleString() : '未提供';
+      return value
+        ? new Date(value).toLocaleString(this.$i18n.locale)
+        : this.$t('tracking.notProvided');
     },
     artists(song) {
       return (song.ar || song.artists || [])
@@ -594,7 +643,7 @@ export default {
           kind,
           id,
           key: kind + ':' + id,
-          name: value.name || value.title || '分享内容',
+          name: value.name || value.title || this.$t('tracking.sharePost'),
           cover:
             value.coverImgUrl ||
             value.picUrl ||
@@ -604,9 +653,12 @@ export default {
           subtitle:
             kind === 'song'
               ? this.artists(value)
-              : { playlist: '歌单', album: '专辑', mv: 'MV', video: '视频' }[
-                  kind
-                ],
+              : {
+                  playlist: this.$t('library.playlists'),
+                  album: this.$t('search.album'),
+                  mv: 'MV',
+                  video: this.$t('tracking.video'),
+                }[kind],
           path: '/' + kind + '/' + id,
         });
       }
@@ -853,26 +905,30 @@ small {
 .profile-meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  .profile-id {
-    padding: 5px 8px;
-    border-radius: 6px;
-    background: var(--color-secondary-bg);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.profile-info-block {
+  display: flex;
+  flex: 1 1 160px;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--color-secondary-bg);
+  span {
     font-size: 12px;
-    opacity: 0.68;
+    opacity: 0.65;
   }
-  .profile-tag {
-    padding: 5px 8px;
-    background: var(--color-secondary-bg);
-    border-radius: 6px;
-    font-size: 12px;
+  strong {
+    font-size: 14px;
+    font-weight: 600;
     overflow-wrap: anywhere;
   }
 }
 .profile-card {
-  padding: 10px 0;
+  padding: 16px;
 }
 .stats {
   grid-template-columns: repeat(2, minmax(0, 1fr));

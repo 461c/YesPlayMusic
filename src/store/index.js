@@ -46,19 +46,22 @@ store.watch(
   }
 );
 
-if ([undefined, null].includes(store.state.settings.lang)) {
-  const defaultLang = 'en';
-  const langMapper = new Map()
-    .set('zh', 'zh-CN')
-    .set('zh-TW', 'zh-TW')
-    .set('en', 'en')
-    .set('tr', 'tr');
-  store.state.settings.lang =
-    langMapper.get(
-      langMapper.has(navigator.language)
-        ? navigator.language
-        : navigator.language.slice(0, 2)
-    ) || defaultLang;
+const supportedLanguages = ['en', 'zh-CN', 'zh-TW'];
+if (!supportedLanguages.includes(store.state.settings.lang)) {
+  const hasSavedLanguage = ![undefined, null].includes(
+    store.state.settings.lang
+  );
+  const languageMap = new Map([
+    ['zh', 'zh-CN'],
+    ['zh-TW', 'zh-TW'],
+    ['en', 'en'],
+  ]);
+  const browserLanguage = languageMap.get(
+    languageMap.has(navigator.language)
+      ? navigator.language
+      : navigator.language.slice(0, 2)
+  );
+  store.state.settings.lang = hasSavedLanguage ? 'en' : browserLanguage || 'en';
   localStorage.setItem('settings', JSON.stringify(store.state.settings));
 }
 

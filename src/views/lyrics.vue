@@ -36,6 +36,7 @@
         ></div>
         <div
           class="gradient-layer current"
+          ref="currentGradientLayer"
           :class="{
             'fade-in': previousBackground && !gradientTransitionActive,
           }"
@@ -731,6 +732,8 @@ export default {
         return;
       }
       this.$nextTick(() => {
+        // Flush the initial transparent state before starting the crossfade.
+        this.$refs.currentGradientLayer?.getBoundingClientRect();
         this.gradientTransitionActive = true;
         this.gradientTransitionTimer = setTimeout(() => {
           this.previousBackground = '';

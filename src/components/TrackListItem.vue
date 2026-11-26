@@ -40,10 +40,10 @@
             class="local-status"
             >{{
               track.localOnly
-                ? '仅本地'
+                ? $t('trackStatus.localOnly')
                 : track.archiveStatus === 'not-listed'
-                ? '本次未上榜'
-                : '已移除'
+                ? $t('trackStatus.notInRank')
+                : $t('trackStatus.removed')
             }}</span
           >
           <span v-if="isSubTitle" :title="subTitle" class="sub-title">
@@ -81,7 +81,7 @@
     </div>
 
     <div v-if="showCachedStatus" class="cached-status">
-      {{ isCached ? '已下载' : '' }}
+      {{ isCached ? $t('offlineCache.downloadedStatus') : '' }}
     </div>
 
     <div v-if="showLikeButton" class="actions">

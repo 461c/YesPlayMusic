@@ -7,29 +7,48 @@
         @click="expanded = !expanded"
         >{{
           known
-            ? ready.length + ' / ' + ids.length + ' 首可离线'
-            : '正在读取离线状态'
+            ? $t('offlineCache.available', {
+                ready: ready.length,
+                total: ids.length,
+              })
+            : $t('offlineCache.reading')
         }}
         ▾</button
       >
-      <button v-if="ready.length" @click="play">播放离线歌曲</button>
-      <button v-if="missing.length" :disabled="busy || offline" @click="cache"
-        >缓存剩余 {{ missing.length }} 首</button
+      <button v-if="ready.length" @click="play">{{
+        $t('offlineCache.play')
+      }}</button>
+      <button
+        v-if="missing.length"
+        :disabled="busy || offline"
+        @click="cache"
+        >{{
+          $t('offlineCache.cacheRemaining', { count: missing.length })
+        }}</button
       >
-      <button v-if="active" @click="manager.stop()">取消缓存</button>
+      <button v-if="active" @click="manager.stop()">{{
+        $t('offlineCache.cancel')
+      }}</button>
     </div>
     <div v-if="active" class="cache-progress" role="status" aria-live="polite">
       <div class="progress-labels">
         <span>
-          <strong>{{ manager.stage }}</strong>
+          <strong>{{ cacheText(manager.stage) }}</strong>
           <template v-if="manager.currentSong">
             · {{ manager.currentSong }}
           </template>
         </span>
-        <span v-if="manager.networkPending">等待网络响应</span>
+        <span v-if="manager.networkPending">{{
+          $t('offlineCache.waitingNetwork')
+        }}</span>
         <span v-else-if="manager.songTotal">
-          已检查 {{ manager.songChecked }} 首 · 已处理 {{ manager.songDone }} /
-          {{ manager.songTotal }} 首
+          {{
+            $t('offlineCache.checkedProcessed', {
+              checked: manager.songChecked,
+              done: manager.songDone,
+              total: manager.songTotal,
+            })
+          }}
         </span>
       </div>
       <div
@@ -38,13 +57,13 @@
         role="progressbar"
         :aria-valuenow="manager.songDone"
         :aria-valuemax="manager.songTotal"
-        aria-label="歌单缓存进度"
+        :aria-label="$t('offlineCache.progressLabel')"
       >
         <span :style="{ width: songPercent + '%' }"></span>
       </div>
       <div v-if="manager.phaseTotal" class="phase-progress">
         <div class="progress-labels">
-          <span>{{ manager.phaseLabel }}</span>
+          <span>{{ cacheText(manager.phaseLabel) }}</span>
           <span>{{ manager.phaseProgress }} / {{ manager.phaseTotal }}</span>
         </div>
         <div class="progress-track phase-track" role="progressbar">
@@ -54,7 +73,11 @@
       <div v-if="manager.activeDownloadKind === 'audio'" class="file-progress">
         <div class="progress-labels">
           <span>
-            下载 {{ formatBytes(manager.downloadedBytes) }}
+            {{
+              $t('offlineCache.downloaded', {
+                downloaded: formatBytes(manager.downloadedBytes),
+              })
+            }}
             <template v-if="manager.downloadTotalBytes">
               / {{ formatBytes(manager.downloadTotalBytes) }}
             </template>
@@ -79,32 +102,46 @@
         v-else-if="manager.currentTargetImagesTotal"
         class="progress-labels image-progress"
       >
-        <span
-          >封面 {{ manager.currentTargetImagesDone }} /
-          {{ manager.currentTargetImagesTotal }}</span
-        >
-        <span v-if="manager.stage.includes('下载')">{{ manager.stage }}</span>
+        <span>{{
+          $t('offlineCache.coverProgress', {
+            done: manager.currentTargetImagesDone,
+            total: manager.currentTargetImagesTotal,
+          })
+        }}</span>
+        <span v-if="manager.networkPending">{{
+          cacheText(manager.stage)
+        }}</span>
       </div>
     </div>
-    <p v-else-if="busy" class="cache-progress" role="status"
-      >正在处理其他缓存任务：{{ manager.currentSong || manager.stage }}</p
-    >
-    <p v-else-if="message" role="status">{{ message }}</p>
+    <p v-else-if="busy" class="cache-progress" role="status">{{
+      $t('offlineCache.processingOther', {
+        task: manager.currentSong || cacheText(manager.stage),
+      })
+    }}</p>
+    <p v-else-if="message" role="status">{{ cacheText(message) }}</p>
     <template v-if="expanded && known"
-      ><p>{{ missing.length ? '待缓存歌曲' : '所有歌曲均可离线播放' }}</p
+      ><p>{{
+        missing.length
+          ? $t('offlineCache.pending')
+          : $t('offlineCache.allReady')
+      }}</p
       ><ul v-if="missing.length"
         ><li v-for="trackId in missing.slice(0, limit)" :key="trackId">{{
-          names[trackId] || '歌曲 ' + trackId
+          names[trackId] || $t('offlineCache.trackFallback', { id: trackId })
         }}</li></ul
-      ><button v-if="limit < missing.length" @click="limit += 100"
-        >显示更多</button
-      ></template
+      ><button v-if="limit < missing.length" @click="limit += 100">{{
+        $t('offlineCache.showMore')
+      }}</button></template
     >
   </section>
 </template>
 <script>
 import { playableLibraryIds } from '@/utils/db';
-import { libraryCacheManager, cacheTargets } from '@/utils/libraryCache';
+import {
+  libraryCacheManager,
+  cacheTargets,
+  localizeCacheText,
+} from '@/utils/libraryCache';
 export default {
   props: {
     id: { type: [Number, String], required: true },
@@ -242,7 +279,7 @@ export default {
           this.known = true;
         }
       } catch (_) {
-        this.message = '无法读取本地音频状态';
+        this.message = this.$t('offlineCache.readFailed');
       }
     },
     async play() {
@@ -278,6 +315,9 @@ export default {
       return speed >= 1024 * 1024
         ? `${(speed / 1024 / 1024).toFixed(1)} MB/s`
         : `${(speed / 1024).toFixed(0)} KB/s`;
+    },
+    cacheText(value) {
+      return localizeCacheText(value);
     },
   },
 };

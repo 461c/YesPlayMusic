@@ -4,7 +4,7 @@
       ><h1>
         <LibraryAvatarMenu
           :avatar="data.user.avatarUrl"
-          :label="data.user.nickname || '音乐库'"
+          :label="data.user.nickname || $t('library.localTitle')"
         />{{ data.user.nickname }}
       </h1>
       <label class="page-search">
@@ -12,8 +12,8 @@
         <input
           v-model="searchInput"
           type="search"
-          aria-label="搜索"
-          placeholder="搜索"
+          :aria-label="$t('nav.search')"
+          :placeholder="$t('nav.search')"
           @keydown.esc="closeSearch"
         />
       </label>
@@ -21,16 +21,16 @@
     <div v-if="offline" class="offline-note">
       {{
         $store.state.settings.archiveMode
-          ? '纪念模式：正在显示本地保存的音乐库。'
+          ? $t('library.offlineArchive')
           : hasLocalData
-          ? '当前离线，正在显示本地保存的音乐库。'
-          : '暂无本地音乐库数据，请联网打开一次。'
+          ? $t('library.offlineAvailable')
+          : $t('library.offlineEmpty')
       }}
       <button
         v-if="!$store.state.settings.archiveMode"
         :disabled="refreshing"
         @click="loadData(true)"
-        >重试</button
+        >{{ $t('library.retry') }}</button
       >
     </div>
     <LibrarySearch
@@ -48,11 +48,11 @@
               v-if="liked.playlists[0] && liked.playlists[0].coverImgUrl"
               v-image-fade
               :src="liked.playlists[0].coverImgUrl | resizeImage(224)"
-              alt="喜欢的音乐封面"
+              :alt="$t('library.likedCover')"
           /></div>
           <div class="bottom">
             <div class="titles">
-              <div class="title">我喜欢</div>
+              <div class="title">{{ $t('library.liked') }}</div>
               <div class="sub-title">
                 {{ liked.songs.length }} {{ $t('common.songs') }}
               </div>
@@ -60,14 +60,14 @@
             <div class="liked-actions">
               <button
                 class="intelligence-button"
-                aria-label="心动模式"
-                title="心动模式"
+                :aria-label="$t('library.heartMode')"
+                :title="$t('library.heartMode')"
                 @click.stop="playIntelligenceList"
                 ><svg-icon icon-class="heart-solid"
               /></button>
               <button
-                aria-label="播放我喜欢"
-                title="播放我喜欢"
+                :aria-label="$t('library.playLiked')"
+                :title="$t('library.playLiked')"
                 @click.stop="playLikedSongs"
                 ><svg-icon icon-class="play"
               /></button>
@@ -87,69 +87,36 @@
 
       <div class="section-two">
         <div class="tabs-row">
-          <div class="tabs">
-            <div
+          <div
+            v-if="visibleTabs.length"
+            class="tabs"
+            role="tablist"
+            :aria-label="$t('tracking.contentGroups')"
+          >
+            <button
+              v-for="tab in visibleTabs"
+              :key="tab.key"
               class="tab"
-              :class="{ active: currentTab === 'created' }"
-              @click="updateCurrentTab('created')"
-              >创建</div
+              role="tab"
+              :aria-selected="currentTab === tab.key"
+              :class="{ active: currentTab === tab.key }"
+              @click="updateCurrentTab(tab.key)"
+              >{{ $t('library.' + tab.label) }}</button
             >
-            <div
-              class="tab"
-              :class="{ active: currentTab === 'saved' }"
-              @click="updateCurrentTab('saved')"
-              >收藏</div
-            >
-            <div
-              class="tab"
-              :class="{ active: currentTab === 'albums' }"
-              @click="updateCurrentTab('albums')"
-            >
-              {{ $t('library.albums') }}
-            </div>
-            <div
-              class="tab"
-              :class="{ active: currentTab === 'activity' }"
-              @click="updateCurrentTab('activity')"
-              >动态</div
-            >
-            <div
-              class="tab"
-              :class="{ active: currentTab === 'follows' }"
-              @click="updateCurrentTab('follows')"
-            >
-              关注
-            </div>
-            <div
-              class="tab"
-              :class="{ active: currentTab === 'mvs' }"
-              @click="updateCurrentTab('mvs')"
-            >
-              视频
-            </div>
-            <div
-              class="tab"
-              :class="{ active: currentTab === 'cloudDisk' }"
-              @click="updateCurrentTab('cloudDisk')"
-            >
-              {{ $t('library.cloudDisk') }}
-            </div>
-            <div
-              class="tab"
-              :class="{ active: currentTab === 'playHistory' }"
-              @click="updateCurrentTab('playHistory')"
-            >
-              排行
-            </div>
           </div>
           <button
-            v-show="currentTab === 'created'"
+            v-show="
+              currentTab === 'created' ||
+              (ownUid && !visibleTabs.some(tab => tab.key === 'created'))
+            "
             class="tab-button"
             @click="openAddPlaylistModal"
             ><svg-icon icon-class="plus" />{{ $t('library.newPlayList') }}
           </button>
           <button
-            v-show="currentTab === 'cloudDisk'"
+            v-show="
+              currentTab === 'cloudDisk' || (ownUid && !liked.cloudDisk.length)
+            "
             class="tab-button"
             @click="selectUploadFiles"
             ><svg-icon icon-class="arrow-up-alt" />{{
@@ -194,14 +161,18 @@
               :scope="profileScope"
               :cache-enabled="true"
               section="profile"
-              title="资料"
+              :title="$t('tracking.profile')"
               @notice="showToast($event)"
             />
             <button
               class="person-refresh"
               :disabled="activityRefreshing"
               @click="refreshActivity"
-              >{{ activityRefreshing ? '刷新中…' : '刷新' }}</button
+              >{{
+                activityRefreshing
+                  ? $t('library.refreshing')
+                  : $t('library.refresh')
+              }}</button
             >
           </div>
           <TrackingSection
@@ -211,7 +182,8 @@
             :scope="profileScope"
             :cache-enabled="true"
             section="events"
-            title="动态"
+            @section-result="recordSection"
+            :title="$t('library.activity')"
             @notice="showToast($event)"
           />
         </div>
@@ -223,8 +195,9 @@
           :scope="profileScope"
           :cache-enabled="true"
           section="follows"
+          @section-result="recordSection"
           :extra-artists="liked.artists"
-          title="关注"
+          :title="$t('library.follows')"
           @open-user="openUser"
           @notice="showToast($event)"
         />
@@ -246,6 +219,7 @@
 
         <div v-show="currentTab === 'playHistory'">
           <button
+            v-if="liked.playHistory.weekData.length"
             :class="{
               'playHistory-button': true,
               'playHistory-button--selected': playHistoryMode === 'week',
@@ -255,6 +229,7 @@
             {{ $t('library.playHistory.week') }}
           </button>
           <button
+            v-if="liked.playHistory.allData.length"
             :class="{
               'playHistory-button': true,
               'playHistory-button--selected': playHistoryMode === 'all',
@@ -324,11 +299,45 @@ export default {
       likedSongs: [],
       currentTab: 'created',
       playHistoryMode: 'week',
+      socialVisibility: {},
       disabledPlaylistIds: [],
       offlinePlaylistStatusReady: false,
     };
   },
   computed: {
+    visibleTabs() {
+      const mine = list => String(list.creator?.userId) === this.ownUid;
+      const lists = this.liked.playlists.slice(1);
+      const history = this.liked.playHistory;
+      const user = this.data.user || {};
+      const signedIn = this.ownUid && isAccountLoggedIn();
+      return [
+        ['created', 'created', lists.some(mine)],
+        ['saved', 'saved', lists.some(list => !mine(list))],
+        ['albums', 'albums', signedIn && this.liked.albums.length],
+        [
+          'activity',
+          'activity',
+          signedIn && (this.socialVisibility.events ?? user.eventCount !== 0),
+        ],
+        [
+          'follows',
+          'follows',
+          signedIn &&
+            (this.liked.artists.length ||
+              (this.socialVisibility.follows ?? user.follows !== 0)),
+        ],
+        ['mvs', 'videos', signedIn && this.liked.mvs.length],
+        ['cloudDisk', 'cloudDisk', signedIn && this.liked.cloudDisk.length],
+        [
+          'playHistory',
+          'ranking',
+          signedIn && (history.weekData.length || history.allData.length),
+        ],
+      ]
+        .filter(([, , visible]) => visible)
+        .map(([key, label]) => ({ key, label }));
+    },
     offlineDisabledPlaylistIds() {
       if (!this.offline) return [];
       if (!this.offlinePlaylistStatusReady)
@@ -375,6 +384,16 @@ export default {
     },
   },
   watch: {
+    visibleTabs(tabs) {
+      if (!tabs.some(tab => tab.key === this.currentTab))
+        this.currentTab = tabs[0]?.key || '';
+    },
+    playHistoryList(list) {
+      if (!list?.length && this.liked.playHistory.allData.length)
+        this.playHistoryMode = 'all';
+      else if (!list?.length && this.liked.playHistory.weekData.length)
+        this.playHistoryMode = 'week';
+    },
     searchInput(value) {
       clearTimeout(this.searchTimer);
       this.searchTimer = setTimeout(() => {
@@ -382,6 +401,7 @@ export default {
       }, 160);
     },
     accountScope() {
+      this.socialVisibility = {};
       this.closeSearch();
     },
   },
@@ -404,6 +424,14 @@ export default {
     if (navigator.onLine !== false && !archiveMode()) dailyTask();
   },
   methods: {
+    recordSection({ uid, scope, section, data }) {
+      if (uid !== this.ownUid || scope !== this.profileScope) return;
+      this.$set(
+        this.socialVisibility,
+        section,
+        Boolean(data?.[section === 'events' ? 'events' : 'follow']?.length)
+      );
+    },
     closeSearch() {
       clearTimeout(this.searchTimer);
       this.searchInput = '';
@@ -494,7 +522,7 @@ export default {
     },
     playLikedSongs() {
       if (!this.liked.playlists[0])
-        return this.showToast('暂无本地歌单信息，请联网加载一次');
+        return this.showToast(this.$t('library.noLocalPlaylists'));
       this.$store.state.player.playPlaylistByID(
         this.liked.playlists[0].id,
         'first',
@@ -503,7 +531,7 @@ export default {
     },
     playIntelligenceList() {
       if (!this.liked.playlists[0])
-        return this.showToast('暂无本地歌单信息，请联网加载一次');
+        return this.showToast(this.$t('library.noLocalPlaylists'));
       this.$store.state.player.playIntelligenceListById(
         this.liked.playlists[0].id,
         'first',
@@ -519,7 +547,7 @@ export default {
       if (tab === 'follows' && !archiveMode() && navigator.onLine !== false)
         this.$store
           .dispatch('fetchLikedArtists')
-          .catch(() => this.showToast('艺人列表刷新失败，保留缓存'));
+          .catch(() => this.showToast(this.$t('library.artistRefreshFailed')));
       if (['created', 'saved'].includes(tab)) {
         this.updateData({
           key: 'libraryPlaylistFilter',
@@ -578,13 +606,14 @@ export default {
       const file = e.target.files?.[0];
       if (!file) return;
       try {
-        this.showToast('正在上传歌曲…');
+        this.showToast(this.$t('library.uploadInProgress'));
         const result = await uploadSong(file);
-        if (result?.code !== 200) throw new Error(result?.msg || '上传未成功');
+        if (result?.code !== 200)
+          throw new Error(result?.msg || this.$t('library.uploadUnsuccessful'));
         await this.$store.dispatch('fetchCloudDisk');
-        this.showToast('歌曲已上传');
+        this.showToast(this.$t('library.uploadSucceeded'));
       } catch (error) {
-        this.showToast(error.message || '上传失败，请重试');
+        this.showToast(error.message || this.$t('library.uploadFailed'));
       } finally {
         e.target.value = '';
       }

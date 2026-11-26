@@ -9,6 +9,10 @@
   }
 }
 
+.library-page {
+  padding-top: 28px;
+}
+
 .library-header {
   display: flex;
   align-items: center;
@@ -23,9 +27,6 @@
   .page-search {
     flex: none;
   }
-}
-.library-page {
-  padding-top: 28px;
 }
 @media (max-width: 600px) {
   .library-header h1 {
@@ -152,11 +153,14 @@ h1 {
   font-size: 18px;
   color: var(--color-text);
   .tab {
+    font: inherit;
+    color: inherit;
+    background: transparent;
     font-weight: 600;
     padding: 8px 14px;
     margin-right: 14px;
     border-radius: 8px;
-    cursor: pointer;
+    cursor: pointer !important;
     user-select: none;
     transition: 0.2s;
     opacity: 0.68;
