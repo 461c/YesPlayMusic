@@ -11,7 +11,7 @@ import {
   cacheAlbum,
   getSavedTrackDetails,
   cacheTrackDetail,
-  getTrackSource,
+  getCachedTrackSourceStates,
   cacheTrackSource,
 } from './db';
 import { retainTracks } from './retainedTracks';
@@ -111,7 +111,7 @@ export function riskResponse(error) {
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 // Keep requests serial and bounded by the persisted per-minute budget, but
 // avoid adding a second fixed delay in front of every request.
-const API_INTERVAL_MS = 0;
+const API_INTERVAL_MS = 500;
 const BUDGET_WINDOW_MS = 60000;
 const REQUESTS_PER_WINDOW = 100;
 
@@ -428,17 +428,19 @@ class LibraryCacheManager {
         }
       }
     } else {
-      let checked = 0;
-      for (const id of ids) {
-        const cached = await getTrackSource(id);
-        states[id] =
-          cached?.source?.byteLength &&
-          (!cached.requestedLevel ||
-            cached.requestedLevel ===
-              musicQualityLevel(this.store.state.settings.musicQuality))
-            ? 2
-            : 0;
-        onProgress(++checked);
+      const quality = musicQualityLevel(this.store.state.settings.musicQuality);
+      const chunkSize = 100;
+      for (let start = 0; start < ids.length; start += chunkSize) {
+        const batch = ids.slice(start, start + chunkSize).map(Number);
+        Object.assign(
+          states,
+          await getCachedTrackSourceStates(batch, quality)
+        );
+        onProgress(Math.min(start + batch.length, ids.length));
+        if (start + batch.length < ids.length) {
+          await sleep(0);
+          await this.waitIfPaused();
+        }
       }
     }
     return states;

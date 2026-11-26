@@ -182,6 +182,20 @@ export async function playableLibraryIds() {
   return new Set(keys.map(String));
 }
 
+export async function getCachedTrackSourceStates(ids, requestedLevel) {
+  const states = {};
+  const keys = ids.map(Number);
+  if (!keys.length) return states;
+  await db.trackSources.where('id').anyOf(keys).each(track => {
+    states[String(track.id)] =
+      track?.source?.byteLength &&
+      (!track.requestedLevel || track.requestedLevel === requestedLevel)
+        ? 2
+        : 0;
+  });
+  return states;
+}
+
 export function getTrackSource(id) {
   return db.trackSources.get(Number(id)).then(track => {
     if (!track) return null;
