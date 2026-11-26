@@ -474,6 +474,7 @@ export default {
         // 在 Electron 环境下，即使不显示歌词页面，也保持定时器运行以更新 Touch Bar
         if (process.env.IS_ELECTRON !== true) {
           clearInterval(this.lyricsInterval);
+          this.lyricsInterval = null;
         }
         this.$store.commit('enableScrolling', true);
         // Fullscreen is requested on documentElement, so it makes the whole
@@ -504,6 +505,7 @@ export default {
   },
   destroyed() {
     clearInterval(this.lyricsInterval);
+    this.lyricsInterval = null;
   },
   methods: {
     ...mapMutations(['toggleLyrics', 'updateModal']),
@@ -651,15 +653,25 @@ export default {
       }
     },
     setLyricsInterval() {
+      // Keep one timer across opening and closing lyrics. Electron keeps it
+      // alive while hidden so the Touch Bar can continue to update.
+      if (this.lyricsInterval) return;
       this.lyricsInterval = setInterval(() => {
         const progress = this.player.seek(null, false) ?? 0;
         let oldHighlightLyricIndex = this.highlightLyricIndex;
-        this.highlightLyricIndex = this.lyric.findIndex((l, index) => {
-          const nextLyric = this.lyric[index + 1];
-          return (
-            progress >= l.time && (nextLyric ? progress < nextLyric.time : true)
-          );
-        });
+        let low = 0;
+        let high = this.lyric.length - 1;
+        let currentIndex = -1;
+        while (low <= high) {
+          const mid = Math.floor((low + high) / 2);
+          if (progress >= this.lyric[mid].time) {
+            currentIndex = mid;
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
+        }
+        this.highlightLyricIndex = currentIndex;
         if (oldHighlightLyricIndex !== this.highlightLyricIndex) {
           // 只在显示歌词页面时才滚动
           if (this.showLyrics) {
