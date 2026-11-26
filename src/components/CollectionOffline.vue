@@ -51,10 +51,7 @@
           <span :style="{ width: phasePercent + '%' }"></span>
         </div>
       </div>
-      <div
-        v-if="manager.activeDownloadKind === 'audio'"
-        class="file-progress"
-      >
+      <div v-if="manager.activeDownloadKind === 'audio'" class="file-progress">
         <div class="progress-labels">
           <span>
             下载 {{ formatBytes(manager.downloadedBytes) }}
@@ -96,8 +93,8 @@
     <template v-if="expanded && known"
       ><p>{{ missing.length ? '待缓存歌曲' : '所有歌曲均可离线播放' }}</p
       ><ul v-if="missing.length"
-        ><li v-for="id in missing.slice(0, limit)" :key="id">{{
-          names[id] || '歌曲 ' + id
+        ><li v-for="trackId in missing.slice(0, limit)" :key="trackId">{{
+          names[trackId] || '歌曲 ' + trackId
         }}</li></ul
       ><button v-if="limit < missing.length" @click="limit += 100"
         >显示更多</button
