@@ -3,11 +3,11 @@
   "platform": "win32",
   "arch": "x64",
   "target": "nsis",
-  "sourceSha": "8dba933b56dde0d6e3bf999cff0a7da18060b80c",
-  "runUrl": "https://github.com/461c/YesPlayMusic/actions/runs/45734994581",
-  "builtAt": "2026-11-26T01:22:40.835Z",
+  "sourceSha": "afb221b13cdab7126d72643225dc3c63265d9ab6",
+  "runUrl": "https://github.com/461c/YesPlayMusic/actions/runs/45737696969",
+  "builtAt": "2026-11-26T01:47:40.240Z",
   "installer": "YesPlayMusic-Setup-x64.exe",
   "originalName": "YesPlayMusic-Setup-0.4.11-x64.exe",
-  "size": 64432068,
-  "sha256": "f474589d04648b1eb4f155095e02ff540e5066970f5422935cb6a7112dbbe7a7"
+  "size": 64433664,
+  "sha256": "72c6cf34e2f93c78adff20a155d685d7651bf1852466823c411f9adedec09465"
 }
