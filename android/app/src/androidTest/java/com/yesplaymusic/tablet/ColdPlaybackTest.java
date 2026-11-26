@@ -52,16 +52,14 @@ public class ColdPlaybackTest {
 
     @Test public void selectUncachedSongsThenReplayOffline() throws Exception {
         long first = System.currentTimeMillis(), second = first + 1;
-        List<String> legacy = Collections.synchronizedList(new ArrayList<>());
+        List<String> requests = Collections.synchronizedList(new ArrayList<>());
         AtomicInteger audioReads = new AtomicInteger();
         try (SystemMediaTest.Fixture fixture = new SystemMediaTest.Fixture((request, origin) -> {
             String path = request.getPath(), id = request.getQueryParameter("id");
             if (path.startsWith("/audio/")) { audioReads.incrementAndGet(); return null; }
             if ("/song/url/v1".equals(path) || "/song/url".equals(path)) {
-                boolean v1 = path.endsWith("/v1");
-                if (!v1) legacy.add(id);
-                return result(new JSONObject().put("id", id).put("url", v1 && String.valueOf(second).equals(id)
-                    ? JSONObject.NULL : origin + "/audio/" + id + ".wav"));
+                requests.add(path);
+                return result(new JSONObject().put("id", id).put("url", origin + "/audio/" + id + ".wav"));
             }
             // No song metadata, artwork, lyrics or public music service is needed to start the stream.
             return new JSONObject().put("code", 200).put("songs", new JSONArray()).put("data", new JSONArray());
@@ -78,7 +76,7 @@ public class ColdPlaybackTest {
                 awaitPlayback(activity, first);
                 assertTrue(js(activity, "(" + PLAYER + ".replacePlaylist([" + second + "], 2, 'playlist'), true)"));
                 awaitPlayback(activity, second);
-                assertEquals(Collections.singletonList(String.valueOf(second)), legacy);
+                assertEquals(java.util.Arrays.asList("/song/url", "/song/url"), requests);
                 assertTrue(audioReads.get() >= 2);
                 awaitJs(activity, "JSON.parse(YesPlayMusicAndroid.getLibraryAudioStates('[" + second + "]'))['" + second + "'] === 2");
 
@@ -96,7 +94,7 @@ public class ColdPlaybackTest {
         }
     }
 
-    @Test public void fallbackKeepsCredentialsAndHonorsPlaybackRestrictions() throws Exception {
+    @Test public void legacyEndpointKeepsCredentialsAndHonorsPlaybackRestrictions() throws Exception {
         String cookie = "MUSIC_U=playback-fixture;";
         List<String> requests = Collections.synchronizedList(new ArrayList<>());
         try (SystemMediaTest.Fixture fixture = new SystemMediaTest.Fixture((request, origin) -> {
@@ -107,7 +105,7 @@ public class ColdPlaybackTest {
             if ("92".equals(id)) return result(new JSONObject().put("id", id).put("url", origin + "/trial.wav")
                 .put("freeTrialInfo", new JSONObject().put("end", 30)));
             if ("93".equals(id)) return new JSONObject().put("code", 429);
-            return result(new JSONObject().put("id", id).put("url", legacy ? origin + "/full.wav" : "null"));
+            return result(new JSONObject().put("id", id).put("url", origin + "/full.wav"));
         })) {
             ApiClient.setBaseUrl(app, fixture.origin());
             ApiClient.setCookie(app, cookie);
@@ -116,8 +114,8 @@ public class ColdPlaybackTest {
                 try { ApiClient.resolveAudio(app, id, "higher"); fail("Restricted response must not produce a source"); }
                 catch (IOException expected) { }
             }
-            assertEquals(java.util.Arrays.asList("91:" + cookie + ":higher", "91:" + cookie + ":192000",
-                "92:" + cookie + ":higher", "93:" + cookie + ":higher"), requests);
+            assertEquals(java.util.Arrays.asList("91:" + cookie + ":192000",
+                "92:" + cookie + ":192000", "93:" + cookie + ":192000"), requests);
         }
     }
 }

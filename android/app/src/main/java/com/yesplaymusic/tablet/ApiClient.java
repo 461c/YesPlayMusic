@@ -128,11 +128,8 @@ final class ApiClient {
         AudioSource source;
         try {
             String encodedId = Uri.encode(id);
-            source = requestAudio(context, "/song/url/v1?id=" + encodedId + "&level=" + Uri.encode(level),
+            source = requestAudio(context, "/song/url?id=" + encodedId + "&br=" + legacyBitrate(level),
                 id, level, cookie, api);
-            if (source == null)
-                source = requestAudio(context, "/song/url?id=" + encodedId + "&br=" + legacyBitrate(level),
-                    id, level, cookie, api);
             if (source == null && !cookie.contains("MUSIC_U=")) {
                 source = new AudioSource("https://music.163.com/song/media/outer/url?id=" + encodedId,
                     new JSONObject().put("requestedLevel", level).put("guest", true), 120000);
