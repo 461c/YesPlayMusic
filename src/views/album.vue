@@ -1,6 +1,7 @@
 <template>
   <div v-page-reveal="show" v-show="show" class="album-page">
-    <div class="playlist-info">
+    <p v-if="loadError" role="status">{{ loadError }}</p>
+    <div v-else class="playlist-info">
       <Cover
         :id="album.id"
         :image-url="album.picUrl | resizeImage(1024)"
@@ -73,6 +74,14 @@
         </div>
       </div>
     </div>
+    <CollectionOffline
+      v-if="show && !loadError"
+      :key="album.id"
+      :id="album.id"
+      type="album"
+      :members="tracks"
+      :tracks="tracks"
+    />
     <div v-if="tracksByDisc.length > 1">
       <div v-for="item in tracksByDisc" :key="item.disc">
         <h2 class="disc">Disc {{ item.disc }}</h2>
@@ -151,6 +160,7 @@ import { getTrackDetail } from '@/api/track';
 import { getAlbum, albumDynamicDetail, likeAAlbum } from '@/api/album';
 import locale from '@/locale';
 import { splitSoundtrackAlbumTitle, splitAlbumTitle } from '@/utils/common';
+import { archiveMode } from '@/utils/archiveMode';
 import NProgress from 'nprogress';
 import { isAccountLoggedIn } from '@/utils/auth';
 import { groupBy, toPairs, sortBy } from 'lodash';
@@ -166,6 +176,7 @@ import Modal from '@/components/Modal.vue';
 export default {
   name: 'Album',
   components: {
+    CollectionOffline: () => import('@/components/CollectionOffline.vue'),
     Cover,
     ButtonTwoTone,
     TrackList,
@@ -182,6 +193,8 @@ export default {
   data() {
     return {
       show: false,
+      loadError: '',
+      generation: 0,
       album: {
         id: 0,
         picUrl: '',
@@ -274,31 +287,46 @@ export default {
             : splitTitle.subtitle;
       }
     },
-    loadData(id) {
-      setTimeout(() => {
-        if (!this.show) NProgress.start();
-      }, 1000);
-      getAlbum(id).then(data => {
+    async loadData(id) {
+      const generation = ++this.generation;
+      this.loadError = '';
+      this.moreAlbums = [];
+      this.dynamicDetail = {};
+      this.tracks = [];
+      try {
+        const data = await getAlbum(id);
+        if (generation !== this.generation) return;
         this.album = data.album;
         this.tracks = data.songs;
         this.formatTitle();
-        NProgress.done();
         this.show = true;
-
-        // to get explicit mark
-        let trackIDs = this.tracks.map(t => t.id);
-        getTrackDetail(trackIDs.join(',')).then(data => {
-          this.tracks = data.songs;
-        });
-
-        // get more album by this artist
-        getArtistAlbum({ id: this.album.artist.id, limit: 100 }).then(data => {
-          this.moreAlbums = data.hotAlbums;
-        });
-      });
-      albumDynamicDetail(id).then(data => {
-        this.dynamicDetail = data;
-      });
+        if (archiveMode() || navigator.onLine === false) return;
+        const current = () => generation === this.generation;
+        await Promise.allSettled([
+          this.tracks.length &&
+            getTrackDetail(this.tracks.map(t => t.id).join(',')).then(
+              result => {
+                if (current()) this.tracks = result.songs;
+              }
+            ),
+          getArtistAlbum({ id: this.album.artist.id, limit: 100 }).then(
+            result => {
+              if (current()) this.moreAlbums = result.hotAlbums;
+            }
+          ),
+          albumDynamicDetail(id).then(result => {
+            if (current()) this.dynamicDetail = result;
+          }),
+        ]);
+      } catch (e) {
+        if (generation === this.generation)
+          this.loadError = e.message || '专辑资料暂不可用';
+      } finally {
+        if (generation === this.generation) {
+          this.show = true;
+          NProgress.done();
+        }
+      }
     },
     toggleFullDescription() {
       this.showFullDescription = !this.showFullDescription;

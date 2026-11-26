@@ -165,6 +165,14 @@
       </div>
     </div>
 
+    <CollectionOffline
+      v-if="show"
+      :key="playlist.id"
+      :id="playlist.id"
+      type="playlist"
+      :members="playlist.trackIds || []"
+      :tracks="bufferedTracks"
+    />
     <TrackList
       :id="playlist.id"
       :tracks="filteredTracks"
@@ -341,6 +349,7 @@ const specialPlaylist = {
 export default {
   name: 'Playlist',
   components: {
+    CollectionOffline: () => import('@/components/CollectionOffline.vue'),
     Cover,
     ButtonTwoTone,
     TrackList,
@@ -464,7 +473,7 @@ export default {
     ...mapActions(['playFirstTrackOnList', 'playTrackOnListByID', 'showToast']),
     playPlaylistByID(trackID = 'first') {
       let trackIDs = this.playlist.trackIds.map(t => t.id);
-      this.$store.state.player.replacePlaylist(
+      this.$store.state.player.playCollection(
         trackIDs,
         this.playlist.id,
         'playlist',

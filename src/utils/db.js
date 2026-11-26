@@ -171,6 +171,17 @@ export function cacheTrackSource(
     });
 }
 
+// Electron writes a source row only after the complete response has arrived.
+export async function playableLibraryIds() {
+  const native = window.YesPlayMusicAndroid;
+  const keys = native?.getPlayableLibraryIds
+    ? JSON.parse(native.getPlayableLibraryIds())
+    : process.env.IS_ELECTRON
+    ? await db.trackSources.toCollection().primaryKeys()
+    : [];
+  return new Set(keys.map(String));
+}
+
 export function getTrackSource(id) {
   return db.trackSources.get(Number(id)).then(track => {
     if (!track) return null;

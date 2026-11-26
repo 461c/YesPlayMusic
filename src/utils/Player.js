@@ -7,7 +7,12 @@ import { getLyric, getMP3, getTrackDetail, scrobble } from '@/api/track';
 import store from '@/store';
 import ListeningClock from '@/utils/listeningClock';
 import { isAccountLoggedIn } from '@/utils/auth';
-import { cacheTrackSource, getTrackSource } from '@/utils/db';
+import { archiveMode } from '@/utils/archiveMode';
+import {
+  cacheTrackSource,
+  getTrackSource,
+  playableLibraryIds,
+} from '@/utils/db';
 import { isCreateMpris, isCreateTray } from '@/utils/platform';
 import { Howl, Howler } from 'howler';
 import shuffle from 'lodash/shuffle';
@@ -1001,10 +1006,21 @@ export default class {
       this._replaceCurrentTrack(autoPlayTrackID);
     }
   }
+  async playCollection(ids, id, type, trackID = 'first') {
+    if (navigator.onLine === false || archiveMode()) {
+      const available = await playableLibraryIds();
+      ids = ids.filter(song => available.has(String(song)));
+      if (!ids.length || (trackID !== 'first' && !ids.includes(trackID))) {
+        store.dispatch('showToast', '没有可播放的本地音频');
+        return;
+      }
+    }
+    if (ids.length) this.replacePlaylist(ids, id, type, trackID);
+  }
   playAlbumByID(id, trackID = 'first') {
     getAlbum(id).then(data => {
       let trackIDs = data.songs.map(t => t.id);
-      this.replacePlaylist(trackIDs, id, 'album', trackID);
+      return this.playCollection(trackIDs, id, 'album', trackID);
     });
   }
   playPlaylistByID(id, trackID = 'first', noCache = false) {
@@ -1013,7 +1029,7 @@ export default class {
     );
     getPlaylistDetail(id, noCache).then(data => {
       let trackIDs = data.playlist.trackIds.map(t => t.id);
-      this.replacePlaylist(trackIDs, id, 'playlist', trackID);
+      return this.playCollection(trackIDs, id, 'playlist', trackID);
     });
   }
   playArtistByID(id, trackID = 'first') {

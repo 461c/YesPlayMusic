@@ -426,6 +426,10 @@ export default {
           if (!this.payload) this.error = archiveError().message;
           return;
         }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          if (!this.payload) this.error = '当前离线，暂无已保存内容';
+          return;
+        }
         const cursor = append
           ? section === 'events'
             ? { lasttime: previous.lasttime }

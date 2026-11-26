@@ -89,6 +89,23 @@ final class AudioCache {
         return state;
     }
 
+    static synchronized String playableIds(Context context) {
+        SimpleCache storage = get(context);
+        String scope = key(context, "0", "").substring("track:0::".length());
+        android.content.SharedPreferences prefs = ApiClient.preferences(context);
+        String level = prefs.getString("qualityLevel", "exhigh");
+        java.util.Set<String> pinned = prefs.getStringSet("preservedAudio", java.util.Collections.emptySet());
+        boolean archive = prefs.getBoolean("archiveMode", false);
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (String entry : storage.getKeys()) {
+            String[] parts = entry.split(":");
+            if (parts.length == 4 && "track".equals(parts[0]) && scope.equals(parts[3])
+                    && (level.equals(parts[2]) || archive || pinned.contains(entry)) && complete(storage, entry))
+                ids.add(parts[1]);
+        }
+        return new org.json.JSONArray(ids).toString();
+    }
+
     static synchronized int state(Context context, String id) {
         if (!id.matches("\\d+")) return 0;
         String entry = key(context, id, ApiClient.preferences(context).getString("qualityLevel", "exhigh"));

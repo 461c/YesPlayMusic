@@ -1,5 +1,6 @@
 import { retainTracks } from '@/utils/retainedTracks';
 import { observeTrackedPlaylistArtwork } from '@/utils/trackingArtwork';
+import { archiveMode } from '@/utils/archiveMode';
 import { cachedResource } from '@/utils/cachedResource';
 import {
   getCachedPlaylist,
@@ -95,7 +96,7 @@ export function getPlaylistDetail(id, noCache = false) {
       await savePlaylistSnapshot(id, data, scope);
       return data;
     });
-  if (!noCache) return cachedResource(read, load);
+  if (!noCache || archiveMode()) return cachedResource(read, load);
   if (navigator.onLine === false) return cachedResource(read, load);
   return load().catch(async error => {
     const cached = await read();

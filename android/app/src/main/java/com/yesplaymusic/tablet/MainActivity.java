@@ -402,6 +402,7 @@ public final class MainActivity extends Activity {
         @JavascriptInterface public void stopLibraryCacheTask(String id) { LibraryCacheTask.cancel(id); }
         @JavascriptInterface public void pauseLibraryCacheTask(String id) { LibraryCacheTask.pause(id); }
         @JavascriptInterface public void resumeLibraryCacheTask(String id) { LibraryCacheTask.resume(id); }
+        @JavascriptInterface public String getPlayableLibraryIds() { return AudioCache.playableIds(MainActivity.this); }
         @JavascriptInterface public String getLibraryAudioStates(String json) {
             JSONObject states = new JSONObject();
             try { JSONArray ids = new JSONArray(json); for (int i = 0; i < Math.min(200, ids.length()); i++) states.put(ids.getString(i), AudioCache.state(MainActivity.this, ids.getString(i))); }

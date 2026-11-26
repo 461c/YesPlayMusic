@@ -1,4 +1,6 @@
 import Vue from 'vue';
+import { archiveMode } from '@/utils/archiveMode';
+import { libraryScope } from '@/utils/offlineLibrary';
 import VueRouter from 'vue-router';
 import { isLooseLoggedIn, isAccountLoggedIn } from '@/utils/auth';
 
@@ -159,7 +161,11 @@ router.beforeEach((to, from, next) => {
     }
   }
   if (to.meta.requireLogin) {
-    if (isLooseLoggedIn()) {
+    const localLibrary =
+      ['library', 'likedSongs'].includes(to.name) &&
+      (navigator.onLine === false || archiveMode()) &&
+      libraryScope();
+    if (isLooseLoggedIn() || localLibrary) {
       next();
     } else {
       if (process.env.IS_ELECTRON === true) {

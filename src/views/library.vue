@@ -41,7 +41,7 @@
       :query="searchQuery"
     />
     <div v-show="!searchQuery">
-      <div class="section-one">
+      <div v-if="currentTab !== 'shelf'" class="section-one">
         <div class="liked-songs" @click="goToLikedSongsList">
           <div class="top"
             ><img
@@ -85,9 +85,18 @@
         </div>
       </div>
 
-      <div class="section-two">
+      <div
+        class="section-two"
+        :class="{ 'shelf-section': currentTab === 'shelf' }"
+      >
         <div class="tabs-row">
           <div class="tabs">
+            <div
+              class="tab"
+              :class="{ active: currentTab === 'shelf' }"
+              @click="updateCurrentTab('shelf')"
+              >离线库</div
+            >
             <div
               class="tab"
               :class="{ active: currentTab === 'created' }"
@@ -158,6 +167,7 @@
           </button>
         </div>
 
+        <OfflineShelf v-if="currentTab === 'shelf'" />
         <div v-show="currentTab === 'created' || currentTab === 'saved'">
           <div v-if="liked.playlists.length > 1">
             <CoverRow
@@ -302,6 +312,7 @@ import MvRow from '@/components/MvRow.vue';
 export default {
   name: 'Library',
   components: {
+    OfflineShelf: () => import('@/components/OfflineShelf.vue'),
     LibrarySearch,
     LibraryAvatarMenu,
     SvgIcon,
@@ -320,10 +331,7 @@ export default {
       refreshing: false,
       activityRefreshing: false,
       likedSongs: [],
-      currentTab:
-        this.$store.state.data.libraryPlaylistFilter === 'liked'
-          ? 'saved'
-          : 'created',
+      currentTab: 'shelf',
       playHistoryMode: 'week',
     };
   },
@@ -390,7 +398,7 @@ export default {
   activated() {
     this.$parent.$refs.scrollbar.restorePosition();
     this.loadData();
-    dailyTask();
+    if (navigator.onLine !== false && !archiveMode()) dailyTask();
   },
   methods: {
     closeSearch() {
@@ -460,7 +468,10 @@ export default {
       );
     },
     updateCurrentTab(tab) {
-      if (!isAccountLoggedIn() && !['created', 'saved'].includes(tab)) {
+      if (
+        !isAccountLoggedIn() &&
+        !['shelf', 'created', 'saved'].includes(tab)
+      ) {
         this.showToast(locale.t('toast.needToLogin'));
         return;
       }
@@ -475,7 +486,11 @@ export default {
           value: tab === 'created' ? 'mine' : 'liked',
         });
       }
-      this.$parent.$refs.main.scrollTo({ top: 375, behavior: 'smooth' });
+      this.$nextTick(() =>
+        this.$refs.library
+          .querySelector('.tabs-row')
+          ?.scrollIntoView({ block: 'nearest' })
+      );
     },
     goToLikedSongsList() {
       this.$router.push({ path: '/library/liked-songs' });
@@ -543,6 +558,9 @@ export default {
 </style>
 
 <style lang="scss" scoped>
+.shelf-section {
+  margin-top: 24px;
+}
 .library-page {
   position: relative;
 }
