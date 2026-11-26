@@ -12,20 +12,6 @@
       <p v-if="error" role="status" class="muted">{{ error }}</p>
       <div v-if="payload" v-page-reveal>
         <template v-if="tab === 'profile'">
-          <div class="profile-meta">
-            <div class="profile-info-block">
-              <span>ID</span>
-              <strong>{{ profile.userId || uid }}</strong>
-            </div>
-            <div class="profile-info-block">
-              <span>{{ $t('tracking.specialIdentity') }}</span>
-              <strong>{{
-                profileTags.length
-                  ? profileTags.join(' · ')
-                  : $t('tracking.none')
-              }}</strong>
-            </div>
-          </div>
           <div class="profile-card">
             <p v-if="profile.signature">{{ profile.signature }}</p>
             <p v-if="profile.description">{{ profile.description }}</p>
@@ -323,6 +309,15 @@ export default {
       const p = this.profile,
         d = this.payload || {};
       return [
+        [this.$t('tracking.userId'), p.userId || this.uid],
+        ...(this.profileTags.length
+          ? [
+              [
+                this.$t('tracking.specialIdentity'),
+                this.profileTags.join(' · '),
+              ],
+            ]
+          : []),
         [this.$t('tracking.stats.level'), d.level],
         [this.$t('tracking.stats.listens'), d.listenSongs],
         [this.$t('tracking.stats.accountAge'), d.createDays],
@@ -715,6 +710,7 @@ small {
     margin: 10px 0 0;
     font-size: 21px;
     font-weight: 700;
+    overflow-wrap: anywhere;
   }
 }
 .playlist-grid {
@@ -875,31 +871,6 @@ small {
 </style>
 
 <style lang="scss" scoped>
-.profile-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-.profile-info-block {
-  display: flex;
-  flex: 1 1 160px;
-  min-width: 0;
-  flex-direction: column;
-  gap: 5px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--color-secondary-bg);
-  span {
-    font-size: 12px;
-    opacity: 0.65;
-  }
-  strong {
-    font-size: 14px;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-  }
-}
 .profile-card {
   padding: 16px;
 }

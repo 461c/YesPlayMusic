@@ -121,17 +121,6 @@
                 </div>
                 <button
                   v-if="likedPlaylist(items)"
-                  class="preview-toggle"
-                  :aria-expanded="likesExpanded"
-                  @click.stop="likesExpanded = !likesExpanded"
-                  >{{
-                    likesExpanded
-                      ? $t('tracking.collapseSongs')
-                      : $t('tracking.showSongs')
-                  }}</button
-                >
-                <button
-                  v-if="likedPlaylist(items)"
                   :aria-label="$t('tracking.playLiked')"
                   @click.stop="playLikes(items)"
                   ><svg-icon icon-class="play"
@@ -140,7 +129,7 @@
             </div>
             <div class="songs">
               <TrackingSection
-                v-if="likedPlaylist(items) && likesExpanded"
+                v-if="likedPlaylist(items)"
                 :refresh-on-open="true"
                 :uid="selected"
                 :scope="scope"
@@ -341,7 +330,6 @@ export default {
       inputId: '',
       ready: false,
       notice: '',
-      likesExpanded: false,
       managing: false,
       editing: '',
       editId: '',
@@ -516,7 +504,6 @@ export default {
       this.group = 'activity';
       this.rank = 'week';
       this.notice = '';
-      this.likesExpanded = false;
     },
     backUser() {
       if (this.$router) {
@@ -530,7 +517,6 @@ export default {
       this.group = previous.group;
       this.rank = previous.rank;
       this.notice = '';
-      this.likesExpanded = false;
     },
     likedPlaylist(items) {
       return items.find(
@@ -604,7 +590,6 @@ export default {
       this.group = 'activity';
       this.rank = 'week';
       this.notice = '';
-      this.likesExpanded = false;
     },
     addUser() {
       if (!this.ready) return;
@@ -874,17 +859,6 @@ select {
   gap: 28px;
   align-items: start;
 }
-.tracking-page .liked-songs .bottom button.preview-toggle {
-  width: auto;
-  height: auto;
-  margin: 0 8px 0 0;
-  padding: 7px 10px;
-  border-radius: 8px;
-  background: var(--color-secondary-bg);
-  box-shadow: none;
-  color: var(--color-text);
-  font-size: 12px;
-}
 @media (max-width: 850px) {
   .activity-columns {
     grid-template-columns: minmax(0, 1fr);
@@ -892,10 +866,6 @@ select {
   }
 }
 @media (max-width: 520px) {
-  .tracking-page .liked-songs .bottom button.preview-toggle {
-    margin-right: 5px;
-    padding: 6px 8px;
-  }
 }
 </style>
 

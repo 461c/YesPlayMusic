@@ -182,38 +182,18 @@
               $t('settings.cachePanel.storage')
             }}</h4
             ><div class="cache-overview">
-              <div class="cache-metrics">
-                <div class="cache-metric">
-                  <span>{{ $t('settings.cachePanel.audioCache') }}</span>
-                  <strong v-if="cacheStatsReady">{{ tracksCache.size }}</strong>
-                  <strong v-else>{{
-                    $t('settings.cachePanel.statsLoading')
-                  }}</strong>
-                  <small v-if="cacheStatsReady">{{
-                    $t('settings.cachePanel.trackCacheSummary', {
-                      full: tracksCache.length,
-                      partial: tracksCache.partial,
-                    })
-                  }}</small>
-                  <small v-else-if="cacheStatsError">{{
-                    cacheStatsError
-                  }}</small>
-                </div>
-                <div class="cache-metric">
-                  <span>{{ $t('settings.cachePanel.artworkCache') }}</span>
-                  <strong>{{ artworkCache.size }}</strong>
-                  <small>{{
-                    $t('settings.cachePanel.artworkCount', {
-                      count: artworkCache.count,
-                    })
-                  }}</small>
-                </div>
+              <div class="cache-metric">
+                <span>{{ $t('settings.cachePanel.artworkCache') }}</span>
+                <strong>{{ artworkCache.size }}</strong>
+                <small>{{
+                  $t('settings.cachePanel.artworkCount', {
+                    count: artworkCache.count,
+                  })
+                }}</small>
               </div>
               <div class="cache-actions">
                 <button
-                  :disabled="
-                    !cacheStatsReady || cacheClearing || manualCacheBusy
-                  "
+                  :disabled="cacheClearing || manualCacheBusy"
                   @click="clearCache()"
                   >{{
                     cacheClearing
@@ -231,17 +211,6 @@
                   }}</button
                 >
               </div>
-              <details class="cache-details">
-                <summary>{{ $t('settings.cachePanel.artworkStats') }}</summary>
-                <p>{{ $t('settings.cachePanel.artworkDescription') }}</p>
-                <p>{{
-                  $t('settings.cachePanel.artworkStatsSummary', {
-                    hits: artworkCache.hits || 0,
-                    downloads: artworkCache.downloads || 0,
-                    failures: artworkCache.failures || 0,
-                  })
-                }}</p>
-              </details>
             </div></section
           ><section class="settings-card" v-if="isAndroid || isElectron"
             ><h4 class="card-heading">{{
@@ -1197,7 +1166,7 @@ import {
   changeThemeColor,
   bytesToSize,
 } from '@/utils/common';
-import { countDBSize, clearDB } from '@/utils/db';
+import { clearDB } from '@/utils/db';
 import { applyCustomCss } from '@/utils/customCss';
 import { isAndroid } from '@/utils/androidAudio';
 import pkg from '../../package.json';
@@ -1222,17 +1191,10 @@ export default {
       androidApiInput: isAndroid ? window.YesPlayMusicAndroid.getApiUrl() : '',
       customCssInput: this.$store.state.settings.customCssUrl || '',
       customCssLoading: false,
-      tracksCache: {
-        size: '0 B',
-        length: 0,
-        partial: 0,
-      },
       artworkCache: { size: '0 B', count: 0, pending: 0 },
       artworkClearing: false,
       cacheStatsTimer: null,
       cacheClearing: false,
-      cacheStatsReady: false,
-      cacheStatsError: '',
       cacheManager: libraryCacheManager(this.$store),
       allOutputDevices: [
         {
@@ -1878,7 +1840,7 @@ export default {
     },
   },
   created() {
-    this.countDBSize();
+    this.refreshArtworkStats();
     if (process.env.IS_ELECTRON) this.getAllOutputDevices();
   },
   beforeDestroy() {
@@ -1898,8 +1860,11 @@ export default {
       clearInterval(this.cacheStatsTimer);
       this.cacheStatsTimer = null;
       if (key === 'cache') {
-        this.countDBSize();
-        this.cacheStatsTimer = setInterval(() => this.countDBSize(), 3000);
+        this.refreshArtworkStats();
+        this.cacheStatsTimer = setInterval(
+          () => this.refreshArtworkStats(),
+          3000
+        );
       }
     },
     categoryKey(event, key) {
@@ -2044,15 +2009,14 @@ export default {
         const { cancelArtworkSync } = await import('@/utils/libraryArtwork');
         cancelArtworkSync();
         artworkBridge().clearArtworkCache();
-        this.countDBSize();
+        this.refreshArtworkStats();
       } catch (error) {
         this.showToast(this.$t('settings.page.clearArtworkFailed'));
       } finally {
         this.artworkClearing = false;
       }
     },
-    countDBSize() {
-      this.cacheStatsError = '';
+    refreshArtworkStats() {
       if (this.isElectron) {
         try {
           const stats = JSON.parse(artworkBridge().getArtworkCacheStats());
@@ -2060,6 +2024,7 @@ export default {
         } catch (_) {
           /* Keep settings usable if disk storage is unavailable. */
         }
+        return;
       }
       if (this.isAndroid) {
         try {
@@ -2067,32 +2032,10 @@ export default {
             window.YesPlayMusicAndroid.getArtworkCacheStats()
           );
           this.artworkCache = { ...artwork, size: bytesToSize(artwork.bytes) };
-          const stats = JSON.parse(
-            window.YesPlayMusicAndroid.getAudioCacheStats()
-          );
-          if (stats.error) throw new Error(stats.error);
-          this.tracksCache.size = bytesToSize(stats.bytes);
-          this.tracksCache.length = stats.length;
-          this.tracksCache.partial = stats.partial;
-          this.cacheStatsReady = true;
         } catch (error) {
-          this.cacheStatsError =
-            error.message || this.$t('settings.cachePanel.statsUnavailable');
-          console.debug('Unable to read native audio cache', error);
+          console.debug('Unable to read artwork cache', error);
         }
-        return;
       }
-      countDBSize()
-        .then(data => {
-          this.tracksCache.size = bytesToSize(data.bytes);
-          this.tracksCache.length = data.length;
-          this.cacheStatsReady = true;
-        })
-        .catch(error => {
-          this.cacheStatsError =
-            error.message || this.$t('settings.cachePanel.statsUnavailable');
-          console.debug('Unable to read audio cache', error);
-        });
     },
     async clearCache() {
       if (this.isAndroid) {
@@ -2103,7 +2046,6 @@ export default {
             window.YesPlayMusicAndroid.clearAudioCache()
           );
           if (stats.error) throw new Error(stats.error);
-          this.countDBSize();
         } catch (error) {
           this.showToast(
             error.message || this.$t('settings.page.clearAudioFailed')
@@ -2113,9 +2055,7 @@ export default {
         }
         return;
       }
-      clearDB().then(() => {
-        this.countDBSize();
-      });
+      clearDB();
     },
     lastfmConnect() {
       lastfmAuth();
@@ -2725,11 +2665,6 @@ input[type='number'] {
 .cache-overview {
   padding: 18px 0 12px;
 }
-.cache-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
 .cache-metric {
   display: flex;
   flex-direction: column;
@@ -2756,14 +2691,6 @@ input[type='number'] {
   gap: 10px;
   margin-top: 14px;
 }
-.cache-details {
-  margin-top: 14px;
-  font-size: 13px;
-  opacity: 0.72;
-  p {
-    margin: 8px 0 0;
-  }
-}
 .settings-about-card p {
   margin: 10px 0;
   line-height: 1.65;
@@ -2774,11 +2701,6 @@ input[type='number'] {
 .about-version {
   float: right;
   opacity: 0.58;
-}
-@media (max-width: 600px) {
-  .cache-metrics {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 .settings-card {
   min-width: 0;
