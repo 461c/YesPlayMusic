@@ -82,10 +82,6 @@
           >
             <div class="event-meta"
               ><time>{{ date(item.eventTime || item.showTime) }}</time
-              ><span
-                v-if="newEventIds.includes(String(item.id))"
-                class="new-event-badge"
-                >{{ $t('tracking.newActivity') }}</span
               ><span v-if="item.archiveStatus" class="deleted-badge">{{
                 $t('tracking.unavailable')
               }}</span
@@ -245,7 +241,6 @@ export default {
     extraArtists: { type: Array, default: () => [] },
     refreshOnOpen: { type: Boolean, default: false },
     maxAge: { type: Number, default: Infinity },
-    newEventIds: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -425,10 +420,6 @@ export default {
         snapshotKey =
           section === 'likes' ? `likes:${this.playlistId}` : section;
       const current = () => epoch === this.generation && scope === this.scope;
-      const canReportVisit =
-        !append && this.cacheEnabled && ['profile', 'events'].includes(section);
-      if (canReportVisit)
-        this.$emit('visit-status', { section, status: 'loading' });
       let denied = false;
       let previous = append || force ? this.payload : null;
       this.loading = true;
@@ -465,14 +456,10 @@ export default {
         }
         if (archiveMode()) {
           if (!this.payload) this.error = archiveError().message;
-          if (canReportVisit)
-            this.$emit('visit-status', { section, status: 'error' });
           return;
         }
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
           if (!this.payload) this.error = this.$t('tracking.noLocalContent');
-          if (canReportVisit)
-            this.$emit('visit-status', { section, status: 'error' });
           return;
         }
         const cursor = append
@@ -486,10 +473,6 @@ export default {
           section === 'likes' ? { id: this.playlistId, s: 0 } : cursor
         );
         if (!current() || archiveMode()) return;
-        const visitData =
-          section === 'events'
-            ? { events: (data.events || []).slice() }
-            : { profile: data.profile };
         const collectionKey = {
           playlists: 'playlist',
           follows: 'follow',
@@ -570,14 +553,6 @@ export default {
         if (!current() || archiveMode()) return;
         this.payload = data;
         this.updatedAt = Date.now();
-        if (canReportVisit) {
-          this.$emit('visit-observed', {
-            uid,
-            section,
-            data: visitData,
-          });
-          this.$emit('visit-status', { section, status: 'success' });
-        }
         if (section === 'profile')
           this.$emit('profile', { uid, profile: data.profile });
         if (this.cacheEnabled) {
@@ -604,8 +579,6 @@ export default {
             )
           );
           this.error = error.message || this.$t('tracking.loadFailed');
-          if (canReportVisit)
-            this.$emit('visit-status', { section, status: 'error' });
         }
       } finally {
         if (current()) {
@@ -968,12 +941,6 @@ small {
   padding: 4px 7px;
   border: 1px solid rgba(128, 128, 128, 0.3);
   border-radius: 5px;
-}
-.new-event-badge {
-  padding: 4px 7px;
-  border-radius: 5px;
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
 }
 .event-unavailable {
   border: 1px dashed rgba(128, 128, 128, 0.35);

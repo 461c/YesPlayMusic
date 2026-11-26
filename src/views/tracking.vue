@@ -20,65 +20,6 @@
       >
     </header>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
-    <section
-      v-if="selected && !managing && isSavedUser"
-      class="visit-diff"
-      aria-live="polite"
-      :aria-label="$t('tracking.compare')"
-    >
-      <strong>{{ $t('tracking.compare') }}</strong>
-      <span v-if="!visitBaselineReady" class="visit-message">{{
-        $t('tracking.readingLocal')
-      }}</span>
-      <span
-        v-else-if="
-          !visitBaseline ||
-          !visitBaseline.profile ||
-          !visitBaseline.events?.initialized
-        "
-        class="visit-message"
-        >{{ $t('tracking.firstVisit') }}</span
-      >
-      <template v-else>
-        <span
-          v-for="change in profileChanges"
-          :key="change.label"
-          class="visit-change"
-          >{{ change.label }} {{ change.delta > 0 ? '+' : ''
-          }}{{ change.delta }}</span
-        >
-        <span
-          v-for="change in profileTextChanges"
-          :key="change"
-          class="visit-change"
-          >{{ change }}</span
-        >
-        <span v-if="newEventIds.length" class="visit-change">{{
-          $t('tracking.newEvents', { count: newEventIds.length })
-        }}</span>
-        <span v-if="visitHasError" class="visit-message" role="status">{{
-          $t('tracking.partialRefresh')
-        }}</span>
-        <span
-          v-else-if="
-            visitStatus.profile === 'success' &&
-            visitStatus.events === 'success'
-          "
-          class="visit-message"
-          >{{
-            profileChanges.length ||
-            profileTextChanges.length ||
-            newEventIds.length
-              ? $t('tracking.updated')
-              : $t('tracking.noChanges')
-          }}</span
-        >
-        <span v-else class="visit-message">{{ $t('tracking.updating') }}</span>
-        <time v-if="visitBaseline.viewedAt" class="visit-date">{{
-          $t('tracking.lastViewed', { date: date(visitBaseline.viewedAt) })
-        }}</time>
-      </template>
-    </section>
     <div v-if="managing" key="management" v-page-reveal>
       <form class="add-user" @submit.prevent="addUser()"
         ><input
@@ -271,8 +212,6 @@
                     :title="$t('tracking.profile')"
                     @profile="updateProfile"
                     @notice="notice = $event"
-                    @visit-observed="observeVisit"
-                    @visit-status="updateVisitStatus"
                   />
                   <button
                     class="person-refresh"
@@ -295,9 +234,6 @@
                   @section-result="recordSection"
                   :title="$t('tracking.activity')"
                   @notice="notice = $event"
-                  @visit-observed="observeVisit"
-                  @visit-status="updateVisitStatus"
-                  :new-event-ids="newEventIds"
                 />
               </div>
               <template v-else-if="group === 'created' || group === 'saved'">
@@ -389,9 +325,7 @@ import {
   trackingScope,
   normalizeTrackingId,
   readTrackingList,
-  readTrackingSnapshot,
   saveTrackingList,
-  saveTrackingSnapshot,
   deleteTrackingSnapshots,
 } from '@/utils/trackingStore';
 export default {
@@ -408,17 +342,6 @@ export default {
       ready: false,
       notice: '',
       likesExpanded: false,
-      visitBaselineReady: false,
-      visitReadDelayed: false,
-      visitReadTimer: null,
-      visitPending: {},
-      visitBaseline: null,
-      visitDraft: null,
-      visitStatus: { profile: 'pending', events: 'pending' },
-      newEventIds: [],
-      visitGeneration: 0,
-      visitChanged: false,
-      visitWrites: Promise.resolve(),
       managing: false,
       editing: '',
       editId: '',
@@ -462,60 +385,6 @@ export default {
     isSavedUser() {
       return this.users.some(user => user.id === this.selected);
     },
-    profileChanges() {
-      const before = this.visitBaseline?.profile,
-        after = this.visitDraft?.profile;
-      if (!before || !after) return [];
-      return [
-        { key: 'followeds', label: this.$t('tracking.stats.followers') },
-        { key: 'follows', label: this.$t('tracking.stats.following') },
-        { key: 'playlistCount', label: this.$t('tracking.stats.playlists') },
-        {
-          key: 'playlistBeSubscribedCount',
-          label: this.$t('tracking.stats.collections'),
-        },
-        { key: 'eventCount', label: this.$t('tracking.stats.events') },
-      ]
-        .map(({ key, label }) => ({
-          label,
-          delta: Number(after[key]) - Number(before[key]),
-          known:
-            after[key] !== undefined &&
-            after[key] !== null &&
-            after[key] !== '' &&
-            before[key] !== undefined &&
-            before[key] !== null &&
-            before[key] !== '' &&
-            Number.isFinite(Number(after[key])) &&
-            Number.isFinite(Number(before[key])),
-        }))
-        .filter(change => change.known && change.delta !== 0);
-    },
-    profileTextChanges() {
-      const before = this.visitBaseline?.profile,
-        after = this.visitDraft?.profile;
-      if (!before || !after) return [];
-      return [
-        ['nickname', this.$t('tracking.changes.nickname')],
-        ['signature', this.$t('tracking.changes.signature')],
-      ]
-        .filter(([key]) => {
-          const oldValue = before[key],
-            newValue = after[key];
-          return (
-            oldValue !== undefined &&
-            newValue !== undefined &&
-            oldValue !== newValue
-          );
-        })
-        .map(([, label]) => label);
-    },
-    visitHasError() {
-      return (
-        this.visitStatus.profile === 'error' ||
-        this.visitStatus.events === 'error'
-      );
-    },
   },
   watch: {
     selected() {
@@ -542,14 +411,7 @@ export default {
       .map(user => ({ alias: '', ...user }));
     this.syncRoute();
   },
-  deactivated() {
-    this.visitGeneration++;
-    this.clearVisitReadTimer();
-    this.commitVisit();
-  },
   beforeDestroy() {
-    this.clearVisitReadTimer();
-    this.commitVisit();
     this.scopeGeneration++;
   },
   methods: {
@@ -601,7 +463,6 @@ export default {
               avatar: this.$route.query.avatar || '',
             }
           : null;
-      this.startVisit();
     },
     async refreshCurrent() {
       if (this.refreshing || !this.selected) return;
@@ -656,7 +517,6 @@ export default {
       this.rank = 'week';
       this.notice = '';
       this.likesExpanded = false;
-      this.startVisit();
     },
     backUser() {
       if (this.$router) {
@@ -671,7 +531,6 @@ export default {
       this.rank = previous.rank;
       this.notice = '';
       this.likesExpanded = false;
-      this.startVisit();
     },
     likedPlaylist(items) {
       return items.find(
@@ -718,137 +577,6 @@ export default {
       if (this.$route) this.syncRoute();
       else if (this.users.length) this.selectUser(this.users[0].id, false);
     },
-    async startVisit() {
-      const generation = ++this.visitGeneration;
-      const uid = this.selected;
-      const scope = this.scope;
-      this.clearVisitReadTimer();
-      this.visitBaselineReady = false;
-      this.visitReadDelayed = false;
-      this.visitPending = {};
-      this.visitBaseline = null;
-      this.visitDraft = null;
-      this.visitChanged = false;
-      this.newEventIds = [];
-      this.visitStatus = { profile: 'pending', events: 'pending' };
-      if (!uid || !this.isSavedUser) {
-        this.visitBaselineReady = true;
-        return;
-      }
-      if (typeof setTimeout === 'function')
-        this.visitReadTimer = setTimeout(() => {
-          if (generation === this.visitGeneration && !this.visitBaselineReady)
-            this.visitReadDelayed = true;
-        }, 1500);
-      let saved = null;
-      try {
-        saved = await readTrackingSnapshot(scope, uid, 'visit');
-      } catch (_) {
-        saved = null;
-      }
-      if (
-        generation !== this.visitGeneration ||
-        scope !== this.scope ||
-        uid !== this.selected
-      )
-        return;
-      this.visitBaseline = saved?.data || null;
-      this.visitDraft = saved?.data
-        ? JSON.parse(JSON.stringify(saved.data))
-        : { profile: null, events: { ids: [], latest: 0 } };
-      this.visitBaselineReady = true;
-      this.visitReadDelayed = false;
-      this.clearVisitReadTimer();
-      Object.keys(this.visitPending).forEach(section => {
-        this.recordVisitData({
-          uid,
-          section,
-          data: this.visitPending[section],
-        });
-      });
-      this.visitPending = {};
-    },
-    clearVisitReadTimer() {
-      if (this.visitReadTimer && typeof clearTimeout === 'function')
-        clearTimeout(this.visitReadTimer);
-      this.visitReadTimer = null;
-    },
-    updateVisitStatus({ section, status }) {
-      if (!this.isSavedUser || !['profile', 'events'].includes(section)) return;
-      this.$set(this.visitStatus, section, status);
-    },
-    observeVisit({ uid, section, data }) {
-      if (
-        !this.isSavedUser ||
-        uid !== this.selected ||
-        !['profile', 'events'].includes(section)
-      )
-        return;
-      if (!this.visitBaselineReady) {
-        this.$set(this.visitPending, section, data);
-        return;
-      }
-      this.recordVisitData({ uid, section, data });
-    },
-    recordVisitData({ uid, section, data }) {
-      if (!this.visitDraft || uid !== this.selected) return;
-      if (section === 'profile') {
-        this.visitDraft.profile = data.profile || {};
-      } else {
-        const events = Array.isArray(data.events) ? data.events : [];
-        const previous = this.visitBaseline?.events || { ids: [], latest: 0 };
-        const known = new Set(previous.ids || []);
-        this.newEventIds = previous.initialized
-          ? events
-              .filter(item => {
-                const id = String(item.id || '');
-                const time = Number(item.eventTime || item.showTime || 0);
-                return (
-                  id &&
-                  time > 0 &&
-                  !known.has(id) &&
-                  time >= Number(previous.latest || 0)
-                );
-              })
-              .map(item => String(item.id))
-          : [];
-        const displayedThisVisit = this.visitDraft.events || previous;
-        const ids = [
-          ...new Set([
-            ...(displayedThisVisit.ids || []),
-            ...events.map(item => String(item.id || '')).filter(Boolean),
-          ]),
-        ].slice(-500);
-        this.visitDraft.events = {
-          ids,
-          initialized: true,
-          latest: Math.max(
-            Number(previous.latest || 0),
-            ...events.map(item => Number(item.eventTime || item.showTime || 0))
-          ),
-        };
-      }
-      this.visitChanged = true;
-    },
-    async commitVisit() {
-      if (
-        !this.visitChanged ||
-        !this.visitDraft ||
-        !this.selected ||
-        !this.isSavedUser ||
-        !this.visitBaselineReady
-      )
-        return;
-      const uid = this.selected;
-      const scope = this.scope;
-      const data = { ...this.visitDraft, viewedAt: Date.now() };
-      this.visitChanged = false;
-      this.visitDraft = data;
-      this.visitWrites = this.visitWrites
-        .catch(() => {})
-        .then(() => saveTrackingSnapshot(scope, uid, 'visit', data));
-      await this.visitWrites.catch(() => {});
-    },
     persist() {
       const scope = this.scope,
         users = JSON.parse(JSON.stringify(this.users));
@@ -877,7 +605,6 @@ export default {
       this.rank = 'week';
       this.notice = '';
       this.likesExpanded = false;
-      this.startVisit();
     },
     addUser() {
       if (!this.ready) return;
@@ -1147,73 +874,6 @@ select {
   gap: 28px;
   align-items: start;
 }
-.visit-diff {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 14px 0 10px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: var(--color-secondary-bg);
-  font-size: 13px;
-}
-.visit-diff > strong {
-  margin-right: 4px;
-  font-size: 14px;
-}
-.visit-change {
-  padding: 5px 9px;
-  border-radius: 999px;
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-  white-space: nowrap;
-}
-.visit-message,
-.visit-date {
-  opacity: 0.68;
-}
-.visit-date {
-  margin-left: auto;
-  font-size: 12px;
-}
-.tracking-page .section-one {
-  display: block;
-  margin-top: 24px;
-}
-.tracking-page .liked-songs {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  min-height: 92px;
-  margin: 0;
-  padding: 12px 16px;
-  border-radius: 12px;
-}
-.tracking-page .liked-songs .top {
-  flex: none;
-  padding: 0;
-}
-.tracking-page .liked-songs .top img {
-  width: 64px;
-  height: 64px;
-}
-.tracking-page .liked-songs .bottom {
-  flex: 1;
-  min-width: 0;
-}
-.tracking-page .liked-songs .bottom .title {
-  font-size: 18px;
-}
-.tracking-page .liked-songs .bottom .sub-title {
-  font-size: 13px;
-}
-.tracking-page .liked-songs .bottom button {
-  width: 38px;
-  height: 38px;
-}
 .tracking-page .liked-songs .bottom button.preview-toggle {
   width: auto;
   height: auto;
@@ -1225,12 +885,6 @@ select {
   color: var(--color-text);
   font-size: 12px;
 }
-.tracking-page .section-one .songs {
-  margin-top: 12px;
-}
-.tracking-page .section-two {
-  margin-top: 28px;
-}
 @media (max-width: 850px) {
   .activity-columns {
     grid-template-columns: minmax(0, 1fr);
@@ -1238,17 +892,6 @@ select {
   }
 }
 @media (max-width: 520px) {
-  .visit-date {
-    flex-basis: 100%;
-    margin-left: 0;
-  }
-  .tracking-page .liked-songs {
-    gap: 10px;
-    padding: 10px 12px;
-  }
-  .tracking-page .liked-songs .bottom .title {
-    font-size: 16px;
-  }
   .tracking-page .liked-songs .bottom button.preview-toggle {
     margin-right: 5px;
     padding: 6px 8px;

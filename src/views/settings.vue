@@ -52,7 +52,7 @@
           :aria-controls="'settings-panel-' + category.key"
           :tabindex="activeCategory === category.key ? 0 : -1"
           :class="{ active: activeCategory === category.key }"
-          @click="activeCategory = category.key"
+          @click="selectCategory(category.key)"
           @keydown="categoryKey($event, category.key)"
           ><strong>{{ category.title }}</strong
           ><span>{{ category.caption }}</span></button
@@ -181,79 +181,67 @@
             ><h4 class="card-heading">{{
               $t('settings.cachePanel.storage')
             }}</h4
-            ><div v-if="isElectron || isAndroid" class="item">
-              <div class="left">
-                <div v-if="isAndroid" class="title">{{
-                  $t('settings.cachePanel.usedStorage', {
-                    size: tracksCache.size,
-                  })
-                }}</div>
-                <div v-else class="title">
-                  {{
-                    $t('settings.cacheCount', {
-                      song: tracksCache.length,
-                      size: tracksCache.size,
-                    })
-                  }}</div
-                >
-                <div v-if="isAndroid" class="description">
-                  {{
+            ><div class="cache-overview">
+              <div class="cache-metrics">
+                <div class="cache-metric">
+                  <span>{{ $t('settings.cachePanel.audioCache') }}</span>
+                  <strong v-if="cacheStatsReady">{{ tracksCache.size }}</strong>
+                  <strong v-else>{{
+                    $t('settings.cachePanel.statsLoading')
+                  }}</strong>
+                  <small v-if="cacheStatsReady">{{
                     $t('settings.cachePanel.trackCacheSummary', {
                       full: tracksCache.length,
                       partial: tracksCache.partial,
                     })
-                  }}
+                  }}</small>
+                  <small v-else-if="cacheStatsError">{{
+                    cacheStatsError
+                  }}</small>
+                </div>
+                <div class="cache-metric">
+                  <span>{{ $t('settings.cachePanel.artworkCache') }}</span>
+                  <strong>{{ artworkCache.size }}</strong>
+                  <small>{{
+                    $t('settings.cachePanel.artworkCount', {
+                      count: artworkCache.count,
+                    })
+                  }}</small>
                 </div>
               </div>
-              <div class="right">
+              <div class="cache-actions">
                 <button
-                  :disabled="cacheClearing || manualCacheBusy"
+                  :disabled="
+                    !cacheStatsReady || cacheClearing || manualCacheBusy
+                  "
                   @click="clearCache()"
-                >
-                  {{
+                  >{{
                     cacheClearing
                       ? $t('settings.cachePanel.clearing')
                       : $t('settings.clearSongsCache')
-                  }}
-                </button>
-              </div>
-            </div>
-            <div v-if="isAndroid || isElectron" class="item">
-              <div class="left">
-                <div class="title">{{
-                  $t('settings.cachePanel.artworkTitle', {
-                    count: artworkCache.count,
-                    size: artworkCache.size,
-                  })
-                }}</div>
-                <div class="description"
-                  >{{ $t('settings.cachePanel.artworkDescription')
-                  }}<details
-                    ><summary>{{
-                      $t('settings.cachePanel.artworkStats')
-                    }}</summary
-                    >{{
-                      $t('settings.cachePanel.artworkStatsSummary', {
-                        hits: artworkCache.hits || 0,
-                        downloads: artworkCache.downloads || 0,
-                        failures: artworkCache.failures || 0,
-                      })
-                    }}</details
-                  ></div
+                  }}</button
                 >
-              </div>
-              <div class="right">
                 <button
                   :disabled="artworkClearing || manualCacheBusy"
                   @click="clearArtworkCache"
-                >
-                  {{
+                  >{{
                     artworkClearing
                       ? $t('settings.cachePanel.clearing')
                       : $t('settings.cachePanel.clearArtwork')
-                  }}
-                </button>
+                  }}</button
+                >
               </div>
+              <details class="cache-details">
+                <summary>{{ $t('settings.cachePanel.artworkStats') }}</summary>
+                <p>{{ $t('settings.cachePanel.artworkDescription') }}</p>
+                <p>{{
+                  $t('settings.cachePanel.artworkStatsSummary', {
+                    hits: artworkCache.hits || 0,
+                    downloads: artworkCache.downloads || 0,
+                    failures: artworkCache.failures || 0,
+                  })
+                }}</p>
+              </details>
             </div></section
           ><section class="settings-card" v-if="isAndroid || isElectron"
             ><h4 class="card-heading">{{
@@ -559,7 +547,42 @@
         aria-labelledby="settings-tab-other"
         tabindex="0"
         class="settings-panel"
-        ><div class="settings-cards"
+        ><div class="settings-cards">
+          <section class="settings-card settings-about-card">
+            <h4 class="card-heading">{{ $t('settings.page.about') }}</h4>
+            <p class="about-attribution"
+              >{{ $t('settings.page.madeBy') }}
+              <a
+                href="https://github.com/qier222"
+                target="_blank"
+                rel="noopener noreferrer"
+                >QIER222</a
+              >
+              · {{ $t('settings.page.forkMaintained') }}
+              <a
+                href="https://kuanzzz.pages.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                >kuanzzz.pages.dev</a
+              >
+            </p>
+            <p class="about-license">{{ $t('settings.page.licenseNote') }}</p>
+            <p class="about-links">
+              <a
+                href="https://github.com/qier222/YesPlayMusic"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ $t('settings.page.upstreamRepository') }}</a
+              >
+              <span> · </span>
+              <a
+                href="https://github.com/461c/YesPlayMusic"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ $t('settings.page.forkRepository') }}</a
+              >
+              <span class="about-version">v{{ version }}</span>
+            </p> </section
           ><SettingsSync v-if="isAndroid || isElectron" /><section
             class="settings-card"
             v-if="isAndroid"
@@ -1159,47 +1182,9 @@
                   class="text-input"
                   :placeholder="$t('settings.page.ipAddress')"
                   :disabled="!enableRealIP"
-                />
-              </div> </div></section></div></section
-      ><div class="footer">
-        <p class="author"
-          >{{ $t('settings.page.madeBy') }}
-          <a
-            href="https://github.com/qier222"
-            target="_blank"
-            rel="noopener noreferrer"
-            >QIER222</a
-          ></p
-        >
-        <p class="author"
-          >{{ $t('settings.page.forkMaintained') }}
-          <a
-            href="https://kuanzzz.pages.dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            >kuanzzz.pages.dev</a
-          >
-          · {{ $t('settings.page.licenseNote') }}
-        </p>
-        <p class="repository-links">
-          <a
-            href="https://github.com/qier222/YesPlayMusic"
-            target="_blank"
-            rel="noopener noreferrer"
-            >{{ $t('settings.page.upstreamRepository') }}</a
-          >
-          <span> · </span>
-          <a
-            href="https://github.com/461c/YesPlayMusic"
-            target="_blank"
-            rel="noopener noreferrer"
-            >{{ $t('settings.page.forkRepository') }}</a
-          >
-        </p>
-        <p class="version">v{{ version }}</p>
-      </div></div
-    ></div
-  >
+                /> </div></div
+          ></section> </div></section></div
+  ></div>
 </template>
 
 <script>
@@ -1246,6 +1231,8 @@ export default {
       artworkClearing: false,
       cacheStatsTimer: null,
       cacheClearing: false,
+      cacheStatsReady: false,
+      cacheStatsError: '',
       cacheManager: libraryCacheManager(this.$store),
       allOutputDevices: [
         {
@@ -1891,20 +1878,30 @@ export default {
     },
   },
   created() {
-    this.countDBSize('tracks');
+    this.countDBSize();
     if (process.env.IS_ELECTRON) this.getAllOutputDevices();
-    if (this.isAndroid) {
-      this.cacheStatsTimer = setInterval(() => this.countDBSize(), 3000);
-    }
   },
   beforeDestroy() {
     clearInterval(this.cacheStatsTimer);
   },
+  deactivated() {
+    clearInterval(this.cacheStatsTimer);
+    this.cacheStatsTimer = null;
+  },
   activated() {
-    this.countDBSize('tracks');
+    this.selectCategory(this.activeCategory);
     if (process.env.IS_ELECTRON) this.getAllOutputDevices();
   },
   methods: {
+    selectCategory(key) {
+      this.activeCategory = key;
+      clearInterval(this.cacheStatsTimer);
+      this.cacheStatsTimer = null;
+      if (key === 'cache') {
+        this.countDBSize();
+        this.cacheStatsTimer = setInterval(() => this.countDBSize(), 3000);
+      }
+    },
     categoryKey(event, key) {
       const index = this.categories.findIndex(item => item.key === key);
       let next = index;
@@ -1916,7 +1913,7 @@ export default {
       else if (event.key === 'End') next = this.categories.length - 1;
       else return;
       event.preventDefault();
-      this.activeCategory = this.categories[next].key;
+      this.selectCategory(this.categories[next].key);
       this.$nextTick(() =>
         document.getElementById('settings-tab-' + this.activeCategory)?.focus()
       );
@@ -2055,6 +2052,7 @@ export default {
       }
     },
     countDBSize() {
+      this.cacheStatsError = '';
       if (this.isElectron) {
         try {
           const stats = JSON.parse(artworkBridge().getArtworkCacheStats());
@@ -2072,26 +2070,29 @@ export default {
           const stats = JSON.parse(
             window.YesPlayMusicAndroid.getAudioCacheStats()
           );
-          if (stats.error) return;
+          if (stats.error) throw new Error(stats.error);
           this.tracksCache.size = bytesToSize(stats.bytes);
           this.tracksCache.length = stats.length;
           this.tracksCache.partial = stats.partial;
+          this.cacheStatsReady = true;
         } catch (error) {
+          this.cacheStatsError =
+            error.message || this.$t('settings.cachePanel.statsUnavailable');
           console.debug('Unable to read native audio cache', error);
         }
         return;
       }
-      countDBSize().then(data => {
-        if (data === undefined) {
-          this.tracksCache = {
-            size: '0 B',
-            length: 0,
-          };
-          return;
-        }
-        this.tracksCache.size = bytesToSize(data.bytes);
-        this.tracksCache.length = data.length;
-      });
+      countDBSize()
+        .then(data => {
+          this.tracksCache.size = bytesToSize(data.bytes);
+          this.tracksCache.length = data.length;
+          this.cacheStatsReady = true;
+        })
+        .catch(error => {
+          this.cacheStatsError =
+            error.message || this.$t('settings.cachePanel.statsUnavailable');
+          console.debug('Unable to read audio cache', error);
+        });
     },
     async clearCache() {
       if (this.isAndroid) {
@@ -2510,21 +2511,6 @@ input[type='number'] {
   }
 }
 
-.footer {
-  text-align: center;
-  margin-top: 6rem;
-  color: var(--color-text);
-  font-weight: 600;
-  .author {
-    font-size: 0.9rem;
-  }
-  .version {
-    font-size: 0.88rem;
-    opacity: 0.58;
-    margin-top: -10px;
-  }
-}
-
 .beforeAnimation {
   -webkit-transition: 0.2s cubic-bezier(0.24, 0, 0.5, 1);
   transition: 0.2s cubic-bezier(0.24, 0, 0.5, 1);
@@ -2729,11 +2715,70 @@ input[type='number'] {
   }
 }
 .settings-panel {
+  margin-top: 24px;
   outline: none;
 }
 .settings-cards {
   display: grid;
   gap: 16px;
+}
+.cache-overview {
+  padding: 18px 0 12px;
+}
+.cache-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.cache-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--color-secondary-bg);
+  > span,
+  > small {
+    opacity: 0.66;
+  }
+  > strong {
+    font-size: 24px;
+    font-weight: 650;
+  }
+  > small {
+    font-size: 12px;
+  }
+}
+.cache-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.cache-details {
+  margin-top: 14px;
+  font-size: 13px;
+  opacity: 0.72;
+  p {
+    margin: 8px 0 0;
+  }
+}
+.settings-about-card p {
+  margin: 10px 0;
+  line-height: 1.65;
+}
+.settings-about-card a {
+  color: inherit;
+}
+.about-version {
+  float: right;
+  opacity: 0.58;
+}
+@media (max-width: 600px) {
+  .cache-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .settings-card {
   min-width: 0;
@@ -2916,19 +2961,6 @@ input[type='number'] {
 .settings-card .toggle input:focus-visible + label {
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
-}
-.footer {
-  margin: 36px 0 0;
-  padding: 24px 0 0;
-  border-top: 1px solid rgba(128, 128, 128, 0.12);
-  line-height: 1.7;
-  font-weight: 400;
-  .version {
-    margin-top: 8px;
-  }
-  a {
-    color: inherit;
-  }
 }
 @media (max-width: 600px) {
   .settings-page {

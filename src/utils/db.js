@@ -271,21 +271,26 @@ export function getAlbumFromCache(id) {
 }
 
 export function countDBSize() {
-  const trackSizes = [];
+  let bytes = 0;
+  let length = 0;
   return db.trackSources
     .each(track => {
-      trackSizes.push(track.source.byteLength);
+      const size = track?.source?.byteLength || track?.source?.size || 0;
+      if (size > 0) {
+        bytes += size;
+        length++;
+      }
     })
     .then(() => {
-      const res = {
-        bytes: trackSizes.reduce((s1, s2) => s1 + s2, 0),
-        length: trackSizes.length,
+      const result = {
+        bytes,
+        length,
       };
-      tracksCacheBytes = res.bytes;
+      tracksCacheBytes = result.bytes;
       console.debug(
         `[debug][db.js] load tracksCacheBytes: ${tracksCacheBytes}`
       );
-      return res;
+      return result;
     });
 }
 
