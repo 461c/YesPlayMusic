@@ -2,6 +2,7 @@ export default {
   common: {
     play: '播放',
     songs: '首歌',
+    loadFailed: '內容載入失敗，請再試一次。',
   },
   nav: {
     home: '首頁',

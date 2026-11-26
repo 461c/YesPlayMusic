@@ -190,12 +190,18 @@
       "
     />
 
-    <div v-if="offline" class="offline-note">
+    <div v-if="offlineMode" class="offline-note">
       {{
         tracks.length
           ? $t('offlineCache.localPlaylist')
           : $t('offlineCache.noLocalPlaylist')
       }}
+    </div>
+    <div v-else-if="loadFailed" class="offline-note" role="status">
+      {{ $t('common.loadFailed') }}
+      <button v-if="!hasMore" @click="loadData(id)">{{
+        $t('library.retry')
+      }}</button>
     </div>
     <div ref="loadMoreTrigger" class="load-more">
       <ButtonTwoTone
@@ -376,6 +382,7 @@ export default {
     return {
       show: false,
       offline: navigator.onLine === false,
+      loadFailed: false,
       cachedTrackIds: [],
       playlist: {
         id: 0,
@@ -507,6 +514,7 @@ export default {
         if (
           !this.show ||
           this.refreshingPlaylist ||
+          this.loadFailed ||
           !this.hasMore ||
           this.loadingMore ||
           !this.$refs.loadMoreTrigger
@@ -574,6 +582,7 @@ export default {
       const generation = ++this.loadGeneration;
       this.id = id;
       this.refreshingPlaylist = true;
+      this.loadFailed = false;
       this.loadingMore = false;
       const cached = await getCachedPlaylist(id);
       if (generation !== this.loadGeneration) return;
@@ -589,7 +598,7 @@ export default {
         if (this.hasMore && this.tracks.length < 50)
           this.loadMore(50 - this.tracks.length);
       } catch (error) {
-        if (generation === this.loadGeneration) this.offline = true;
+        if (generation === this.loadGeneration) this.loadFailed = true;
       } finally {
         if (generation === this.loadGeneration) {
           this.refreshingPlaylist = false;
@@ -612,6 +621,7 @@ export default {
       }
       const generation = this.loadGeneration;
       this.loadingMore = true;
+      this.loadFailed = false;
       try {
         const available = new Map(
           this.bufferedTracks.map(track => [String(track.id), track])
@@ -633,7 +643,7 @@ export default {
         this.hasMore =
           this.lastLoadedTrackIndex + 1 < this.playlist.trackIds.length;
       } catch (error) {
-        if (generation === this.loadGeneration) this.offline = true;
+        if (generation === this.loadGeneration) this.loadFailed = true;
       } finally {
         if (generation === this.loadGeneration) this.loadingMore = false;
       }

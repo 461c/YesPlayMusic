@@ -19,7 +19,7 @@ import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
 public class TabletUiTest {
-    private WebView findWeb(View view) {
+    private static WebView findWeb(View view) {
         if (view instanceof WebView) return (WebView) view;
         if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
             WebView found = findWeb(((ViewGroup) view).getChildAt(i));
@@ -27,7 +27,7 @@ public class TabletUiTest {
         }
         return null;
     }
-    private boolean js(Activity activity, String expression) throws Exception {
+    static boolean js(Activity activity, String expression) throws Exception {
         AtomicReference<String> result = new AtomicReference<>("false");
         CountDownLatch done = new CountDownLatch(1);
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
@@ -39,7 +39,7 @@ public class TabletUiTest {
         assertTrue(done.await(5, TimeUnit.SECONDS));
         return "true".equals(result.get());
     }
-    private void awaitJs(Activity activity, String expression) throws Exception {
+    static void awaitJs(Activity activity, String expression) throws Exception {
         long deadline = System.currentTimeMillis() + 30000;
         while (System.currentTimeMillis() < deadline) {
             if (js(activity, expression)) return;

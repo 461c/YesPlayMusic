@@ -44,9 +44,9 @@ final class ApiClient {
         if (!cookie.equals(preferences(context).getString("cookie", ""))) audioUrls.clear();
         preferences(context).edit().putString("cookie", cookie).apply();
     }
-    private static String audioKey(Context context, String id, String level) {
-        return id + ":" + level + ":"
-            + preferences(context).getString("cookie", "") + ":" + baseUrl(context);
+    private static String configuredApi(Context context) {
+        return preferences(context).getBoolean("useRemoteApi", false)
+            ? preferences(context).getString("apiUrl", "") : "local";
     }
     static JSONObject audioInfo(Context context, String id) {
         AudioSource source = resolvedAudio.get(id);
@@ -88,18 +88,27 @@ final class ApiClient {
         }
     }
     static JSONObject json(Context context, String path) throws Exception {
-        return json(context, path, preferences(context).getString("cookie", ""),
-            preferences(context).getBoolean("useRemoteApi", false) ? baseUrl(context) : "local");
+        return json(context, path, preferences(context).getString("cookie", ""), configuredApi(context));
+    }
+    private static final class ApiStatusException extends IOException {
+        final int status;
+        ApiStatusException(int status) {
+            super("音乐接口请求失败（HTTP " + status + "）");
+            this.status = status;
+        }
     }
     static JSONObject json(Context context, String path, String cookie, String api) throws Exception {
         String separator = path.contains("?") ? "&" : "?";
-        ensureReady(context);
-        URL url = new URL(("local".equals(api) ? baseUrl(context) : api) + path + separator + "cookie=" + Uri.encode(cookie));
+        if (preferences(context).getBoolean("archiveMode", false)) throw new IOException("纪念模式：停止接口更新");
+        String base = "local".equals(api)
+            ? LocalApi.ensureStarted(context).get(45, java.util.concurrent.TimeUnit.SECONDS) : api;
+        URL url = new URL(base + path + separator + "cookie=" + Uri.encode(cookie));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(path.startsWith("/scrobble?") ? 45000 : 15000);
         try {
-            if (connection.getResponseCode() != 200) throw new IOException("音乐接口请求失败（HTTP " + connection.getResponseCode() + "）");
+            int status = connection.getResponseCode();
+            if (status != 200) throw new ApiStatusException(status);
             return new JSONObject(new String(read(connection.getInputStream()), StandardCharsets.UTF_8));
         } finally { connection.disconnect(); }
     }
@@ -107,43 +116,78 @@ final class ApiClient {
         return resolveAudio(context, id, preferences(context).getString("qualityLevel", "exhigh"));
     }
     static Uri resolveAudio(Context context, String id, String level) throws IOException {
-        String key = audioKey(context, id, level);
+        if (preferences(context).getBoolean("archiveMode", false)) throw new IOException("纪念模式：停止接口更新");
+        String cookie = preferences(context).getString("cookie", "");
+        String api = configuredApi(context);
+        String key = id + ":" + level + ":" + cookie + ":" + api;
         AudioSource cached = audioUrls.get(key);
         if (cached != null && cached.expires > SystemClock.elapsedRealtime()) {
             resolvedAudio.put(id, cached);
             return Uri.parse(cached.url);
         }
-        String result;
-        JSONObject info = new JSONObject();
-        long lifetime = 120000;
-        String cookie = preferences(context).getString("cookie", "");
-        if (cookie.contains("MUSIC_U=")) {
-            try {
-                JSONObject response = json(context, "/song/url/v1?id=" + Uri.encode(id) + "&level=" + Uri.encode(level));
-                int responseCode = response.optInt("code", 200);
-                String responseMessage = response.optString("message", response.optString("msg", ""));
-                if (responseCode != 200 || responseMessage.matches(".*(验证码|风控|访问频繁|操作频繁|安全验证|限流).*"))
-                    throw new IOException("音乐接口返回（API " + responseCode + "）：" + responseMessage);
-                JSONArray data = response.optJSONArray("data");
-                JSONObject track = data == null ? null : data.optJSONObject(0);
-                result = track == null ? "" : track.optString("url", "");
-                if (result.isEmpty() || (track.has("freeTrialInfo") && !track.isNull("freeTrialInfo"))) {
-                    throw new IOException("该曲目没有可用的完整音源");
-                }
-                info.put("requestedLevel", level).put("sourceLevel", track.optString("level", ""))
-                    .put("bitrate", track.optLong("br", 0)).put("sourceFormat", track.optString("type", ""));
-                lifetime = Math.max(1000, Math.min(120000, track.optLong("expi", 120) * 1000 - 10000));
-            } catch (Exception error) { throw new IOException(error); }
-        } else {
-            result = "https://music.163.com/song/media/outer/url?id=" + Uri.encode(id);
-            try { info.put("requestedLevel", level).put("guest", true); } catch (Exception ignored) { }
-        }
+        AudioSource source;
+        try {
+            String encodedId = Uri.encode(id);
+            source = requestAudio(context, "/song/url/v1?id=" + encodedId + "&level=" + Uri.encode(level),
+                id, level, cookie, api);
+            if (source == null)
+                source = requestAudio(context, "/song/url?id=" + encodedId + "&br=" + legacyBitrate(level),
+                    id, level, cookie, api);
+            if (source == null && !cookie.contains("MUSIC_U=")) {
+                source = new AudioSource("https://music.163.com/song/media/outer/url?id=" + encodedId,
+                    new JSONObject().put("requestedLevel", level).put("guest", true), 120000);
+            }
+            if (source == null) throw new IOException("该曲目没有可用的完整音源");
+        } catch (IOException error) { throw error; }
+        catch (Exception error) { throw new IOException("无法获取歌曲音源", error); }
         if (audioUrls.size() > 100) audioUrls.clear();
-        AudioSource source = new AudioSource(result, info, lifetime);
         audioUrls.put(key, source);
         if (resolvedAudio.size() > 100) resolvedAudio.clear();
         resolvedAudio.put(id, source);
-        return Uri.parse(result);
+        return Uri.parse(source.url);
+    }
+    private static int legacyBitrate(String level) {
+        switch (level) {
+            case "standard": return 128000;
+            case "higher": return 192000;
+            case "lossless": return 350000;
+            case "hires": return 999000;
+            default: return 320000;
+        }
+    }
+    private static boolean unsupportedRoute(int code) {
+        return code == 404 || code == 405 || code == 501;
+    }
+    /** A missing route or unusable address may use the other API with the same credentials. */
+    private static AudioSource requestAudio(Context context, String path, String id, String level,
+            String cookie, String api) throws Exception {
+        JSONObject response;
+        try { response = json(context, path, cookie, api); }
+        catch (ApiStatusException error) {
+            if (unsupportedRoute(error.status)) return null;
+            throw error;
+        } catch (org.json.JSONException invalidResponse) { return null; }
+        int code = response.optInt("code", 200);
+        String message = response.optString("message", response.optString("msg", ""));
+        if (message.matches(".*(验证码|风控|访问频繁|操作频繁|安全验证|限流).*"))
+            throw new IOException("音乐接口返回（API " + code + "）：" + message);
+        if (unsupportedRoute(code)) return null;
+        if (code != 200) throw new IOException("音乐接口返回（API " + code + "）：" + message);
+        JSONArray data = response.optJSONArray("data");
+        JSONObject track = data == null ? null : data.optJSONObject(0);
+        if (track == null || !id.equals(track.optString("id", id))) return null;
+        if (track.optInt("code", 200) != 200 || !track.isNull("freeTrialInfo"))
+            throw new IOException("该曲目没有可用的完整音源");
+        Object rawUrl = track.opt("url");
+        if (!(rawUrl instanceof String)) return null;
+        Uri uri = Uri.parse(((String) rawUrl).trim());
+        if (uri.getHost() == null || uri.getHost().isEmpty()
+                || !("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))) return null;
+        JSONObject info = new JSONObject().put("requestedLevel", level).put("sourceLevel", track.optString("level", ""))
+            .put("bitrate", track.optLong("br", 0)).put("sourceFormat", track.optString("type", ""));
+        if (!cookie.contains("MUSIC_U=")) info.put("guest", true);
+        long lifetime = Math.max(1000, Math.min(120000, track.optLong("expi", 120) * 1000 - 10000));
+        return new AudioSource(uri.toString(), info, lifetime);
     }
     static void ensureReady(Context context) throws Exception {
         if (preferences(context).getBoolean("archiveMode", false)) throw new IOException("纪念模式：停止接口更新");

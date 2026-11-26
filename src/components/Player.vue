@@ -51,7 +51,10 @@
               :class="['name', { 'has-list': hasList() }]"
               @click="hasList() && goToList()"
             >
-              {{ currentTrack.name }}
+              {{
+                currentTrack.name ||
+                $t('offlineCache.trackFallback', { id: currentTrack.id })
+              }}
             </div>
             <div class="artist">
               <span

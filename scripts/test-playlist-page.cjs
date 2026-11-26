@@ -99,6 +99,43 @@ function page() {
     4,
     'Ignore pagination from previous navigation'
   );
+  const retry = page();
+  const plays = [];
+  retry.$store = {
+    state: {
+      settings: { archiveMode: false },
+      player: { playCollection: ids => plays.push(Array.from(ids)) },
+    },
+  };
+  Object.defineProperty(retry, 'offlineMode', {
+    get: () => component.computed.offlineMode.call(retry),
+  });
+  retry.applyPlaylist({ playlist: fixture(3, 2) });
+  retry.cachedTrackIds = ['1'];
+  context.getTrackDetail = async () => {
+    throw new Error('Page request failed');
+  };
+  await retry.loadMore();
+  assert.equal(retry.loadFailed, true);
+  assert.equal(retry.offlineMode, false);
+  retry.playPlaylistByID(2);
+  assert.deepStrictEqual(
+    plays.pop(),
+    [1, 2, 3],
+    'A paging error must not block uncached songs'
+  );
+  context.navigator.onLine = false;
+  retry.playPlaylistByID();
+  assert.deepStrictEqual(
+    plays.pop(),
+    [1],
+    'Offline playback still filters the queue'
+  );
+  context.navigator.onLine = true;
+  context.getTrackDetail = async () => ({ songs: [{ id: 3 }] });
+  await retry.loadMore();
+  assert.equal(retry.loadFailed, false);
+  assert.equal(retry.tracks.length, 3);
   const apiContext = {
     module: { exports: {} },
     request: async config =>

@@ -159,12 +159,14 @@ public class SystemMediaTest {
         } finally { device.pressBack(); }
     }
 
-    /** Offline PCM fixture served on loopback; no music account or public API is used. */
-    private static final class Fixture implements AutoCloseable {
+    /** A null route response serves the PCM fixture. All traffic stays on loopback. */
+    static final class Fixture implements AutoCloseable {
+        interface Routes { org.json.JSONObject reply(android.net.Uri request, String origin) throws Exception; }
         private final ServerSocket server = new ServerSocket(0, 0, java.net.InetAddress.getByName("127.0.0.1"));
         private volatile boolean open = true;
-        Fixture() throws Exception {
-            byte[] pcm = new byte[5760000];
+        Fixture() throws Exception { this(null); }
+        Fixture(Routes routes) throws Exception {
+            byte[] pcm = new byte[routes == null ? 5760000 : 12 * 32000];
             ByteBuffer wav = ByteBuffer.allocate(44 + pcm.length).order(ByteOrder.LITTLE_ENDIAN);
             wav.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + pcm.length)
                 .put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII)).putInt(16).putShort((short) 1).putShort((short) 1)
@@ -180,15 +182,20 @@ public class SystemMediaTest {
                         header.write(value);
                         if (header.toString("US-ASCII").endsWith("\r\n\r\n")) break;
                     }
+                    String target = header.toString("US-ASCII").split(" ", 3)[1];
+                    org.json.JSONObject json = routes == null ? null : routes.reply(android.net.Uri.parse(target), origin());
+                    byte[] body = json == null ? bytes : json.toString().getBytes(StandardCharsets.UTF_8);
+                    String type = json == null ? "audio/wav" : "application/json";
                     OutputStream output = socket.getOutputStream();
-                    output.write(("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: " + bytes.length
+                    output.write(("HTTP/1.1 200 OK\r\nContent-Type: " + type + "\r\nContent-Length: " + body.length
                         + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
-                    output.write(bytes); output.flush();
+                    output.write(body); output.flush();
                 } catch (Exception ignored) { }
             }, "SystemMediaFixture");
             worker.setDaemon(true); worker.start();
         }
-        String url() { return "http://127.0.0.1:" + server.getLocalPort() + "/fixture.wav"; }
+        String origin() { return "http://127.0.0.1:" + server.getLocalPort(); }
+        String url() { return origin() + "/fixture.wav"; }
         @Override public void close() throws Exception { open = false; server.close(); }
     }
 }

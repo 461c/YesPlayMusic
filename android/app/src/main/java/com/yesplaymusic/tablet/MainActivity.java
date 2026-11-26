@@ -349,7 +349,10 @@ public final class MainActivity extends Activity {
                     ApiClient.preferences(this).edit().putString("favoriteUserId", command.optString("userId"))
                         .putString("likedSongIds", command.optJSONArray("likedSongIds") == null ? "[]" : command.optJSONArray("likedSongIds").toString()).apply();
                     break;
-                case "play": controller.play(); break;
+                case "play":
+                    if (controller.getPlaybackState() == Player.STATE_IDLE && controller.getMediaItemCount() > 0)
+                        controller.prepare();
+                    controller.play(); break;
                 case "pause": controller.pause(); break;
                 case "stop": controller.stop(); break;
                 case "seek": controller.seekTo((long) (command.optDouble("position") * 1000)); break;

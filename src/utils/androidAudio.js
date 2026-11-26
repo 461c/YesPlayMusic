@@ -90,7 +90,7 @@ export default class AndroidAudio {
       sourceId: String(owner.playlistSource?.id || 0),
       source:
         this.sourceTrackId === String(owner.currentTrackID) ? this._src : '',
-      track: owner.currentTrack,
+      track: owner.currentTrack?.name ? owner.currentTrack : null,
       personalFm: owner.isPersonalFM,
       volume: owner.volume,
       repeatMode: owner.isPersonalFM

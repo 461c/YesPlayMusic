@@ -2,6 +2,7 @@ export default {
   common: {
     play: 'PLAY',
     songs: 'Songs',
+    loadFailed: 'Couldn’t load the content. Please try again.',
   },
   nav: {
     home: 'Home',

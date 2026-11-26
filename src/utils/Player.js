@@ -46,12 +46,13 @@ const excludeSaveKeys = [
   '_playing',
   '_personalFMLoading',
   '_personalFMNextLoading',
-  '_nativeTrackLoadingId',
+  '_nativeMetadataId',
 ];
 
 function setTitle(track) {
   document.title = track
-    ? `${track.name} · ${track.ar[0].name} - YesPlayMusic`
+    ? [track.name, track.ar?.[0]?.name].filter(Boolean).join(' · ') +
+      ' - YesPlayMusic'
     : 'YesPlayMusic';
   if (isCreateTray) {
     ipcRenderer?.send('updateTrayTooltip', document.title);
@@ -78,7 +79,7 @@ export default class {
     this._volumeBeforeMuted = 1; // 用于保存静音前的音量
     this._personalFMLoading = false; // 是否正在私人FM中加载新的track
     this._personalFMNextLoading = false; // 是否正在缓存私人FM的下一首歌曲
-    this._nativeTrackLoadingId = '';
+    this._nativeMetadataId = 0;
 
     // 播放信息
     this._list = []; // 播放列表
@@ -262,6 +263,18 @@ export default class {
       ipcRenderer?.send('updateTrayPlayState', this._playing);
     }
   }
+  _selectNativeTrack(id) {
+    if (this.currentTrackID === id && this.currentTrack.al) return;
+    // The native queue can play an ID before song/detail or IndexedDB is ready.
+    this._nativeMetadataId = 0;
+    this._currentTrack = {
+      id,
+      name: '',
+      ar: [{ id: 0, name: '' }],
+      al: { id: 0, name: '' },
+      dt: 0,
+    };
+  }
   _syncNativeState(state) {
     if ([0, 1, 2].includes(state.repeatMode))
       this._repeatMode = { 0: 'off', 1: 'one', 2: 'on' }[state.repeatMode];
@@ -282,23 +295,30 @@ export default class {
     if (state.playlistIndex >= 0) this.current = state.playlistIndex;
     const id = Number(state.trackId);
     if (!id || (id === this.currentTrackID && this.currentTrack.name)) return;
-    if (this._nativeTrackLoadingId === String(id)) return;
-    this._nativeTrackLoadingId = String(id);
+    this._selectNativeTrack(id);
+    const selected = this.currentTrack;
+    if (!selected.dt && state.duration > 0)
+      selected.dt = Math.round(state.duration * 1000);
+    if (this._nativeMetadataId === id) return;
+    this._nativeMetadataId = id;
     if (state.playlistIndex === -1 && this._playNextList[0] === id)
       this._playNextList.shift();
     getTrackDetail(id)
       .then(data => {
         const native = JSON.parse(window.YesPlayMusicAndroid.getState());
-        if (String(native.trackId) !== String(id)) return;
-        this._currentTrack = data.songs[0];
+        const track = data?.songs?.find(song => Number(song.id) === id);
+        if (
+          !track ||
+          this.currentTrack !== selected ||
+          Number(native.trackId) !== id
+        )
+          return;
+        this._currentTrack = track;
         setTitle(this._playing ? this._currentTrack : null);
+        if (this._playing) this._updateNowPlaying(track);
         this.saveSelfToLocalStorage();
       })
-      .catch(() => {})
-      .finally(() => {
-        if (this._nativeTrackLoadingId === String(id))
-          this._nativeTrackLoadingId = '';
-      });
+      .catch(() => {});
   }
   _setIntervals() {
     // 同步播放进度
@@ -595,6 +615,14 @@ export default class {
   ) {
     if (autoplay && this._currentTrack.name) {
       this._scrobble(this.currentTrack, this._howler?.seek());
+    }
+    if (isAndroid) {
+      const trackId = Number(id);
+      if (!Number.isSafeInteger(trackId) || trackId <= 0)
+        return Promise.resolve(false);
+      this._selectNativeTrack(trackId);
+      this._nativeMetadataId = 0;
+      return this._replaceCurrentTrackAudio(this.currentTrack, autoplay, false);
     }
     return getTrackDetail(id).then(data => {
       const track = data.songs[0];
@@ -905,7 +933,11 @@ export default class {
       player[key] = value;
     }
 
-    localStorage.setItem('player', JSON.stringify(player));
+    try {
+      localStorage.setItem('player', JSON.stringify(player));
+    } catch (error) {
+      console.debug('Unable to save player state', error);
+    }
   }
 
   pause() {
@@ -940,15 +972,17 @@ export default class {
         setTitle(this._currentTrack);
       }
       this._playDiscordPresence(this._currentTrack, this.seek());
-      if (store.state.lastfm.key !== undefined) {
-        trackUpdateNowPlaying({
-          artist: this.currentTrack.ar[0].name,
-          track: this.currentTrack.name,
-          album: this.currentTrack.al.name,
-          trackNumber: this.currentTrack.no,
-          duration: ~~(this.currentTrack.dt / 1000),
-        });
-      }
+      this._updateNowPlaying(this.currentTrack);
+    });
+  }
+  _updateNowPlaying(track) {
+    if (!track.name || store.state.lastfm.key === undefined) return;
+    trackUpdateNowPlaying({
+      artist: track.ar?.[0]?.name || '',
+      track: track.name,
+      album: track.al?.name || '',
+      trackNumber: track.no,
+      duration: ~~(track.dt / 1000),
     });
   }
   playOrPause() {

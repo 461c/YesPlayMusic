@@ -58,15 +58,15 @@
           <div class="controls">
             <div class="top-part">
               <div class="track-info">
-                <div class="title" :title="currentTrack.name">
+                <div class="title" :title="currentTrackName">
                   <router-link
                     v-if="hasList()"
                     :to="`${getListPath()}`"
                     @click.native="toggleLyrics"
-                    >{{ currentTrack.name }}
+                    >{{ currentTrackName }}
                   </router-link>
                   <span v-else>
-                    {{ currentTrack.name }}
+                    {{ currentTrackName }}
                   </span>
                 </div>
                 <div class="subtitle">
@@ -352,6 +352,12 @@ export default {
     ...mapState(['player', 'settings', 'showLyrics']),
     currentTrack() {
       return this.player.currentTrack;
+    },
+    currentTrackName() {
+      return (
+        this.currentTrack.name ||
+        this.$t('offlineCache.trackFallback', { id: this.currentTrack.id })
+      );
     },
     volume: {
       get() {

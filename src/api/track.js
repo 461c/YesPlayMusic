@@ -77,7 +77,7 @@ export function getTrackDetail(ids) {
       const privileges = data.privileges || [];
       data.songs = await retainTracks(
         mapTrackPlayableStatus(data.songs, privileges),
-        await getSavedTrackDetails(String(ids).split(','))
+        await getSavedTrackDetails(String(ids).split(',')).catch(() => [])
       );
       observeTrackArtwork(data.songs || []);
       observeTrackedTrackArtwork(data.songs || []);

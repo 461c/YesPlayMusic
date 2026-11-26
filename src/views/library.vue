@@ -18,10 +18,12 @@
         />
       </label>
     </header>
-    <div v-if="offline" class="offline-note">
+    <div v-if="offline || refreshFailed" class="offline-note">
       {{
         $store.state.settings.archiveMode
           ? $t('library.offlineArchive')
+          : !offline
+          ? $t('common.loadFailed')
           : hasLocalData
           ? $t('library.offlineAvailable')
           : $t('library.offlineEmpty')
@@ -294,6 +296,7 @@ export default {
       searchTimer: null,
       show: false,
       offline: navigator.onLine === false,
+      refreshFailed: false,
       refreshing: false,
       activityRefreshing: false,
       likedSongs: [],
@@ -442,18 +445,16 @@ export default {
     async loadData(force = false) {
       if (this.refreshing) return;
       this.refreshing = true;
+      this.refreshFailed = false;
       try {
         await this.$store.dispatch('restoreLibrary');
         this.show = true;
         NProgress.done();
-        if (archiveMode() || navigator.onLine === false) {
-          this.offline = true;
-          return;
-        }
+        this.offline = archiveMode() || navigator.onLine === false;
+        if (this.offline) return;
         const refreshKey = 'library-refresh:' + this.accountScope;
         const refreshedAt = Number(localStorage.getItem(refreshKey)) || 0;
         if (!force && this.hasLocalData && Date.now() - refreshedAt < 600000) {
-          this.offline = false;
           return;
         }
         const scope = this.accountScope;
@@ -471,8 +472,11 @@ export default {
             .then(() => this.$store.dispatch('fetchLikedSongsWithDetails')),
           ...actions.map(action => this.$store.dispatch(action)),
         ]);
-        this.offline = results.some(result => result.status === 'rejected');
-        if (!this.offline && scope === this.accountScope)
+        if (scope !== this.accountScope) return;
+        this.refreshFailed = results.some(
+          result => result.status === 'rejected'
+        );
+        if (!this.refreshFailed && !this.offline)
           localStorage.setItem(refreshKey, String(Date.now()));
       } finally {
         await this.refreshOfflinePlaylistStatus();
@@ -488,6 +492,7 @@ export default {
     async refreshOfflinePlaylistStatus() {
       const scope = this.accountScope;
       this.offlinePlaylistStatusReady = false;
+      if (!this.offline) return;
       try {
         const [playableIds, snapshots] = await Promise.all([
           playableLibraryIds(),
