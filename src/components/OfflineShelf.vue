@@ -21,96 +21,62 @@
         ></div
       >
     </header>
-    <div class="shelf-layout">
-      <div>
-        <p v-if="error" role="status"
-          >{{ error }} <button @click="load">重试</button></p
-        >
-        <p v-else-if="!visible.length" class="empty">{{
-          loading
-            ? '正在读取本地收藏…'
-            : onlyReady
-            ? '还没有完整缓存的歌曲。'
-            : '暂无已保存的收藏。'
-        }}</p>
-        <article
-          v-for="row in visible.slice(0, limit)"
-          :key="row.key"
-          class="shelf-row"
-        >
-          <router-link :to="'/' + row.type + '/' + row.id" class="collection">
-            <img
-              v-if="row.cover"
-              :src="row.cover | resizeImage(224)"
-              alt=""
-              loading="lazy"
-            /><i v-else aria-hidden="true">♫</i>
-            <div
-              ><small>{{ groupNames[row.group] }}</small
-              ><strong>{{ row.name }}</strong
-              ><span>{{
-                row.known
-                  ? row.ready.length + ' / ' + row.total + ' 首可离线'
-                  : '尚无本地歌曲清单'
-              }}</span></div
-            >
-          </router-link>
-          <button
-            v-if="row.ready.length"
-            class="play"
-            :aria-label="'播放' + row.name + '的离线歌曲'"
-            @click="play(row)"
-            ><svg-icon icon-class="play"
-          /></button>
-        </article>
-        <button v-if="visible.length > limit" class="more" @click="limit += 24"
-          >显示更多</button
-        >
-      </div>
-      <aside
-        ><div class="people-title"
-          ><h3>关注的动态</h3
-          ><router-link :to="{ name: 'libraryPeople' }"
-            >管理用户</router-link
-          ></div
-        >
-        <p v-if="!people.length" class="empty"
-          >添加用户后，可在这里查看已保存的动态。</p
-        >
-        <router-link
-          v-for="person in people"
-          :key="person.id"
-          :to="{ name: 'libraryPerson', params: { uid: person.id } }"
-          class="person"
-        >
+    <div>
+      <p v-if="error" role="status"
+        >{{ error }} <button @click="load">重试</button></p
+      >
+      <p v-else-if="!visible.length" class="empty">{{
+        loading
+          ? '正在读取本地收藏…'
+          : onlyReady
+          ? '还没有完整缓存的歌曲。'
+          : '暂无已保存的收藏。'
+      }}</p>
+      <article
+        v-for="row in visible.slice(0, limit)"
+        :key="row.key"
+        class="shelf-row"
+      >
+        <router-link :to="'/' + row.type + '/' + row.id" class="collection">
           <img
-            v-if="person.avatar"
-            :src="person.avatar | resizeImage(96)"
+            v-if="row.cover"
+            :src="row.cover | resizeImage(224)"
             alt=""
             loading="lazy"
-          /><i v-else>{{
-            (person.alias || person.name || '人').slice(0, 1)
-          }}</i>
+          /><i v-else aria-hidden="true">♫</i>
           <div
-            ><strong>{{ person.alias || person.name || person.id }}</strong
-            ><span>{{ person.summary }}</span></div
+            ><small>{{ groupNames[row.group] }}</small
+            ><strong>{{ row.name }}</strong
+            ><span>{{
+              row.known
+                ? row.ready.length + ' / ' + row.total + ' 首可离线'
+                : '尚无本地歌曲清单'
+            }}</span></div
           >
         </router-link>
-      </aside>
+        <button
+          v-if="row.ready.length"
+          class="play"
+          :aria-label="'播放' + row.name + '的离线歌曲'"
+          @click="play(row)"
+          ><svg-icon icon-class="play"
+        /></button>
+      </article>
+      <button v-if="visible.length > limit" class="more" @click="limit += 24"
+        >显示更多</button
+      >
     </div>
   </section>
 </template>
 <script>
-import { readShelf, savedPeople } from '@/utils/offlineShelf';
+import { readShelf } from '@/utils/offlineShelf';
 import { libraryScope } from '@/utils/offlineLibrary';
-import { trackingScope } from '@/utils/trackingStore';
 import { playableLibraryIds } from '@/utils/db';
 export default {
   name: 'OfflineShelf',
   data() {
     return {
       rows: [],
-      people: [],
       onlyReady: false,
       limit: 12,
       error: '',
@@ -146,7 +112,6 @@ export default {
   watch: {
     scope() {
       this.rows = [];
-      this.people = [];
       this.load();
     },
     playlists: 'load',
@@ -168,13 +133,9 @@ export default {
       this.error = '';
       try {
         const state = this.$store.state;
-        const [rows, people] = await Promise.all([
-          readShelf(state, this.scope),
-          savedPeople(trackingScope(state.data.user?.userId)),
-        ]);
+        const rows = await readShelf(state, this.scope);
         if (generation !== this.generation) return;
         this.rows = rows;
-        this.people = people;
       } catch (_) {
         if (generation === this.generation) this.error = '无法读取本地音乐库。';
       } finally {
@@ -203,16 +164,13 @@ export default {
   margin: 24px 0 36px;
 }
 .shelf-heading,
-.people-title,
 .shelf-row,
-.person,
 .collection,
 .filter {
   display: flex;
   align-items: center;
 }
 .shelf-heading,
-.people-title,
 .shelf-row {
   justify-content: space-between;
   gap: 12px;
@@ -225,7 +183,6 @@ export default {
   color: var(--color-primary);
 }
 h2,
-h3,
 p {
   margin: 0;
 }
@@ -261,18 +218,14 @@ button {
   color: var(--color-primary);
   background: var(--color-primary-bg);
 }
-.shelf-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(210px, 1fr);
-  gap: 36px;
+.shelf-heading + div {
   margin-top: 18px;
 }
 .shelf-row {
   padding: 12px 0;
   border-bottom: 1px solid rgba(128, 128, 128, 0.16);
 }
-.collection,
-.person {
+.collection {
   min-width: 0;
   gap: 12px;
   text-decoration: none;
@@ -287,22 +240,18 @@ button {
   border-radius: 9px;
   object-fit: cover;
 }
-.collection i,
-.person i {
+.collection i {
   display: grid;
   place-items: center;
   font-style: normal;
   background: var(--color-secondary-bg);
   flex: none;
 }
-.collection div,
-.person div {
+.collection div {
   min-width: 0;
 }
 .collection strong,
-.person strong,
 .collection span,
-.person span,
 .collection small {
   display: block;
   overflow: hidden;
@@ -311,13 +260,11 @@ button {
 }
 .collection small,
 .collection span,
-.person span,
 .empty {
   font-size: 12px;
   opacity: 0.65;
 }
-.collection strong,
-.person strong {
+.collection strong {
   margin: 3px 0;
 }
 .play {
@@ -332,32 +279,6 @@ button {
   width: 13px;
   height: 13px;
 }
-aside {
-  align-self: start;
-  padding: 16px 18px;
-  border-radius: 14px;
-  background: var(--color-secondary-bg);
-}
-.people-title h3 {
-  font-size: 17px;
-}
-.people-title a {
-  font-size: 12px;
-  color: var(--color-primary);
-}
-.person {
-  padding-top: 16px;
-}
-.person img,
-.person i {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-.person strong {
-  font-size: 14px;
-}
 .empty {
   padding: 15px 0;
 }
@@ -366,10 +287,6 @@ aside {
   background: var(--color-secondary-bg);
 }
 @media (max-width: 680px) {
-  .shelf-layout {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-  }
   .shelf-heading {
     padding: 16px;
   }

@@ -20,6 +20,63 @@
       >
     </header>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
+    <section
+      v-if="selected && !managing && isSavedUser"
+      class="visit-diff"
+      aria-live="polite"
+      aria-label="与上次查看的变化"
+    >
+      <strong>较上次查看</strong>
+      <span v-if="!visitReady" class="visit-message">正在读取本地记录…</span>
+      <span
+        v-else-if="
+          !visitBaseline ||
+          !visitBaseline.profile ||
+          !visitBaseline.events?.initialized
+        "
+        class="visit-message"
+        >首次记录，下次打开时显示变化</span
+      >
+      <template v-else>
+        <span
+          v-for="change in profileChanges"
+          :key="change.label"
+          class="visit-change"
+          >{{ change.label }} {{ change.delta > 0 ? '+' : ''
+          }}{{ change.delta }}</span
+        >
+        <span
+          v-for="change in profileTextChanges"
+          :key="change"
+          class="visit-change"
+          >{{ change }}</span
+        >
+        <span v-if="newEventIds.length" class="visit-change"
+          >本页新增动态 {{ newEventIds.length }}</span
+        >
+        <span v-if="visitHasError" class="visit-message" role="status"
+          >部分内容未成功刷新</span
+        >
+        <span
+          v-else-if="
+            visitStatus.profile === 'success' &&
+            visitStatus.events === 'success'
+          "
+          class="visit-message"
+          >{{
+            profileChanges.length ||
+            profileTextChanges.length ||
+            newEventIds.length
+              ? '已更新本页内容'
+              : '本次未发现变化'
+          }}</span
+        >
+        <span v-else class="visit-message">正在更新资料和动态…</span>
+        <time v-if="visitBaseline.viewedAt" class="visit-date"
+          >上次查看 {{ date(visitBaseline.viewedAt) }}</time
+        >
+      </template>
+    </section>
     <div v-if="managing" key="management" v-page-reveal>
       <form class="add-user" @submit.prevent="addUser()"
         ><input
@@ -74,7 +131,7 @@
       <TrackingSection
         :refresh-on-open="true"
         ref="collection"
-        v-if="selected"
+        v-if="selected && (!isSavedUser || visitReady)"
         :key="selected"
         :uid="selected"
         :scope="scope"
@@ -109,6 +166,13 @@
                 </div>
                 <button
                   v-if="likedPlaylist(items)"
+                  class="preview-toggle"
+                  :aria-expanded="likesExpanded"
+                  @click.stop="likesExpanded = !likesExpanded"
+                  >{{ likesExpanded ? '收起歌曲' : '查看歌曲' }}</button
+                >
+                <button
+                  v-if="likedPlaylist(items)"
                   aria-label="播放喜欢的音乐"
                   @click.stop="playLikes(items)"
                   ><svg-icon icon-class="play"
@@ -117,8 +181,8 @@
             </div>
             <div class="songs">
               <TrackingSection
+                v-if="likedPlaylist(items) && likesExpanded"
                 :refresh-on-open="true"
-                v-if="likedPlaylist(items)"
                 :uid="selected"
                 :scope="scope"
                 :cache-enabled="isSavedUser"
@@ -179,6 +243,8 @@
                     title="资料"
                     @profile="updateProfile"
                     @notice="notice = $event"
+                    @visit-observed="observeVisit"
+                    @visit-status="updateVisitStatus"
                   />
                   <button
                     class="person-refresh"
@@ -196,6 +262,9 @@
                   section="events"
                   title="动态"
                   @notice="notice = $event"
+                  @visit-observed="observeVisit"
+                  @visit-status="updateVisitStatus"
+                  :new-event-ids="newEventIds"
                 />
               </div>
               <template v-else-if="group === 'created' || group === 'saved'">
@@ -260,8 +329,11 @@
           </div>
         </template>
       </TrackingSection>
+      <p v-else-if="selected && isSavedUser" class="visit-loading"
+        >正在读取本地查看记录…</p
+      >
       <button
-        v-else-if="ready"
+        v-else-if="ready && !selected"
         class="empty-add"
         @click="$router.push({ name: 'libraryPeople' })"
         >添加用户</button
@@ -279,7 +351,9 @@ import {
   trackingScope,
   normalizeTrackingId,
   readTrackingList,
+  readTrackingSnapshot,
   saveTrackingList,
+  saveTrackingSnapshot,
   deleteTrackingSnapshots,
 } from '@/utils/trackingStore';
 export default {
@@ -295,6 +369,15 @@ export default {
       inputId: '',
       ready: false,
       notice: '',
+      likesExpanded: false,
+      visitReady: false,
+      visitBaseline: null,
+      visitDraft: null,
+      visitStatus: { profile: 'pending', events: 'pending' },
+      newEventIds: [],
+      visitGeneration: 0,
+      visitChanged: false,
+      visitWrites: Promise.resolve(),
       managing: false,
       editing: '',
       editId: '',
@@ -330,6 +413,57 @@ export default {
     isSavedUser() {
       return this.users.some(user => user.id === this.selected);
     },
+    profileChanges() {
+      const before = this.visitBaseline?.profile,
+        after = this.visitDraft?.profile;
+      if (!before || !after) return [];
+      return [
+        { key: 'followeds', label: '粉丝' },
+        { key: 'follows', label: '关注' },
+        { key: 'playlistCount', label: '歌单' },
+        { key: 'playlistBeSubscribedCount', label: '收藏' },
+        { key: 'eventCount', label: '动态' },
+      ]
+        .map(({ key, label }) => ({
+          label,
+          delta: Number(after[key]) - Number(before[key]),
+          known:
+            after[key] !== undefined &&
+            after[key] !== null &&
+            after[key] !== '' &&
+            before[key] !== undefined &&
+            before[key] !== null &&
+            before[key] !== '' &&
+            Number.isFinite(Number(after[key])) &&
+            Number.isFinite(Number(before[key])),
+        }))
+        .filter(change => change.known && change.delta !== 0);
+    },
+    profileTextChanges() {
+      const before = this.visitBaseline?.profile,
+        after = this.visitDraft?.profile;
+      if (!before || !after) return [];
+      return [
+        ['nickname', '昵称已更改'],
+        ['signature', '签名已更改'],
+      ]
+        .filter(([key]) => {
+          const oldValue = before[key],
+            newValue = after[key];
+          return (
+            oldValue !== undefined &&
+            newValue !== undefined &&
+            oldValue !== newValue
+          );
+        })
+        .map(([, label]) => label);
+    },
+    visitHasError() {
+      return (
+        this.visitStatus.profile === 'error' ||
+        this.visitStatus.events === 'error'
+      );
+    },
   },
   watch: {
     scope: {
@@ -349,7 +483,13 @@ export default {
       .map(user => ({ alias: '', ...user }));
     this.syncRoute();
   },
+  deactivated() {
+    this.visitGeneration++;
+    this.commitVisit();
+    this.visitReady = false;
+  },
   beforeDestroy() {
+    this.commitVisit();
     this.scopeGeneration++;
   },
   methods: {
@@ -366,6 +506,7 @@ export default {
               avatar: this.$route.query.avatar || '',
             }
           : null;
+      this.startVisit();
     },
     async refreshCurrent() {
       if (this.refreshing || !this.selected) return;
@@ -419,6 +560,8 @@ export default {
       this.group = 'activity';
       this.rank = 'week';
       this.notice = '';
+      this.likesExpanded = false;
+      this.startVisit();
     },
     backUser() {
       if (this.$router) {
@@ -432,6 +575,8 @@ export default {
       this.group = previous.group;
       this.rank = previous.rank;
       this.notice = '';
+      this.likesExpanded = false;
+      this.startVisit();
     },
     likedPlaylist(items) {
       return items.find(
@@ -478,6 +623,109 @@ export default {
       if (this.$route) this.syncRoute();
       else if (this.users.length) this.selectUser(this.users[0].id, false);
     },
+    async startVisit() {
+      const generation = ++this.visitGeneration;
+      const uid = this.selected;
+      const scope = this.scope;
+      this.visitReady = false;
+      this.visitBaseline = null;
+      this.visitDraft = null;
+      this.visitChanged = false;
+      this.newEventIds = [];
+      this.visitStatus = { profile: 'pending', events: 'pending' };
+      if (!uid || !this.isSavedUser) {
+        this.visitReady = true;
+        return;
+      }
+      await this.visitWrites.catch(() => {});
+      if (
+        generation !== this.visitGeneration ||
+        scope !== this.scope ||
+        uid !== this.selected
+      )
+        return;
+      const saved = await readTrackingSnapshot(scope, uid, 'visit');
+      if (
+        generation !== this.visitGeneration ||
+        scope !== this.scope ||
+        uid !== this.selected
+      )
+        return;
+      this.visitBaseline = saved?.data || null;
+      this.visitDraft = saved?.data
+        ? JSON.parse(JSON.stringify(saved.data))
+        : { profile: null, events: { ids: [], latest: 0 } };
+      this.visitReady = true;
+    },
+    updateVisitStatus({ section, status }) {
+      if (!this.isSavedUser || !['profile', 'events'].includes(section)) return;
+      this.$set(this.visitStatus, section, status);
+    },
+    observeVisit({ uid, section, data }) {
+      if (
+        !this.isSavedUser ||
+        uid !== this.selected ||
+        !this.visitReady ||
+        !this.visitDraft ||
+        !['profile', 'events'].includes(section)
+      )
+        return;
+      if (section === 'profile') {
+        this.visitDraft.profile = data.profile || {};
+      } else {
+        const events = Array.isArray(data.events) ? data.events : [];
+        const previous = this.visitBaseline?.events || { ids: [], latest: 0 };
+        const known = new Set(previous.ids || []);
+        this.newEventIds = previous.initialized
+          ? events
+              .filter(item => {
+                const id = String(item.id || '');
+                const time = Number(item.eventTime || item.showTime || 0);
+                return (
+                  id &&
+                  time > 0 &&
+                  !known.has(id) &&
+                  time >= Number(previous.latest || 0)
+                );
+              })
+              .map(item => String(item.id))
+          : [];
+        const displayedThisVisit = this.visitDraft.events || previous;
+        const ids = [
+          ...new Set([
+            ...(displayedThisVisit.ids || []),
+            ...events.map(item => String(item.id || '')).filter(Boolean),
+          ]),
+        ].slice(-500);
+        this.visitDraft.events = {
+          ids,
+          initialized: true,
+          latest: Math.max(
+            Number(previous.latest || 0),
+            ...events.map(item => Number(item.eventTime || item.showTime || 0))
+          ),
+        };
+      }
+      this.visitChanged = true;
+    },
+    async commitVisit() {
+      if (
+        !this.visitChanged ||
+        !this.visitDraft ||
+        !this.selected ||
+        !this.isSavedUser
+      )
+        return;
+      const uid = this.selected;
+      const scope = this.scope;
+      const data = { ...this.visitDraft, viewedAt: Date.now() };
+      this.visitChanged = false;
+      this.visitDraft = data;
+      this.visitWrites = this.visitWrites
+        .catch(() => {})
+        .then(() => saveTrackingSnapshot(scope, uid, 'visit', data));
+      await this.visitWrites.catch(() => {});
+    },
     persist() {
       const scope = this.scope,
         users = JSON.parse(JSON.stringify(this.users));
@@ -504,6 +752,8 @@ export default {
       this.group = 'activity';
       this.rank = 'week';
       this.notice = '';
+      this.likesExpanded = false;
+      this.startVisit();
     },
     addUser() {
       if (!this.ready) return;
@@ -779,10 +1029,115 @@ select {
   gap: 28px;
   align-items: start;
 }
+.visit-diff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--color-secondary-bg);
+  font-size: 13px;
+}
+.visit-diff > strong {
+  margin-right: 4px;
+  font-size: 14px;
+}
+.visit-change {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  white-space: nowrap;
+}
+.visit-message,
+.visit-date {
+  opacity: 0.68;
+}
+.visit-date {
+  margin-left: auto;
+  font-size: 12px;
+}
+.visit-loading {
+  margin: 24px 0;
+  opacity: 0.68;
+}
+.tracking-page .section-one {
+  display: block;
+  margin-top: 14px;
+}
+.tracking-page .liked-songs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 92px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+.tracking-page .liked-songs .top {
+  flex: none;
+  padding: 0;
+}
+.tracking-page .liked-songs .top img {
+  width: 64px;
+  height: 64px;
+}
+.tracking-page .liked-songs .bottom {
+  flex: 1;
+  min-width: 0;
+}
+.tracking-page .liked-songs .bottom .title {
+  font-size: 18px;
+}
+.tracking-page .liked-songs .bottom .sub-title {
+  font-size: 13px;
+}
+.tracking-page .liked-songs .bottom button {
+  width: 38px;
+  height: 38px;
+}
+.tracking-page .liked-songs .bottom button.preview-toggle {
+  width: auto;
+  height: auto;
+  margin: 0 8px 0 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--color-secondary-bg);
+  box-shadow: none;
+  color: var(--color-text);
+  font-size: 12px;
+}
+.tracking-page .section-one .songs {
+  margin-top: 12px;
+}
+.tracking-page .section-two {
+  margin-top: 28px;
+}
 @media (max-width: 850px) {
   .activity-columns {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
+  }
+}
+@media (max-width: 520px) {
+  .visit-date {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .tracking-page .liked-songs {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .tracking-page .liked-songs .bottom .title {
+    font-size: 16px;
+  }
+  .tracking-page .liked-songs .bottom button.preview-toggle {
+    margin-right: 5px;
+    padding: 6px 8px;
   }
 }
 </style>
