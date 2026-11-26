@@ -489,11 +489,11 @@ export default {
   },
   deactivated() {
     this.visitGeneration++;
-    clearTimeout(this.visitReadTimer);
+    this.clearVisitReadTimer();
     this.commitVisit();
   },
   beforeDestroy() {
-    clearTimeout(this.visitReadTimer);
+    this.clearVisitReadTimer();
     this.commitVisit();
     this.scopeGeneration++;
   },
@@ -632,7 +632,7 @@ export default {
       const generation = ++this.visitGeneration;
       const uid = this.selected;
       const scope = this.scope;
-      clearTimeout(this.visitReadTimer);
+      this.clearVisitReadTimer();
       this.visitBaselineReady = false;
       this.visitReadDelayed = false;
       this.visitPending = {};
@@ -645,10 +645,11 @@ export default {
         this.visitBaselineReady = true;
         return;
       }
-      this.visitReadTimer = setTimeout(() => {
-        if (generation === this.visitGeneration && !this.visitBaselineReady)
-          this.visitReadDelayed = true;
-      }, 1500);
+      if (typeof setTimeout === 'function')
+        this.visitReadTimer = setTimeout(() => {
+          if (generation === this.visitGeneration && !this.visitBaselineReady)
+            this.visitReadDelayed = true;
+        }, 1500);
       let saved = null;
       try {
         saved = await readTrackingSnapshot(scope, uid, 'visit');
@@ -667,7 +668,7 @@ export default {
         : { profile: null, events: { ids: [], latest: 0 } };
       this.visitBaselineReady = true;
       this.visitReadDelayed = false;
-      clearTimeout(this.visitReadTimer);
+      this.clearVisitReadTimer();
       Object.keys(this.visitPending).forEach(section => {
         this.recordVisitData({
           uid,
@@ -676,6 +677,11 @@ export default {
         });
       });
       this.visitPending = {};
+    },
+    clearVisitReadTimer() {
+      if (this.visitReadTimer && typeof clearTimeout === 'function')
+        clearTimeout(this.visitReadTimer);
+      this.visitReadTimer = null;
     },
     updateVisitStatus({ section, status }) {
       if (!this.isSavedUser || !['profile', 'events'].includes(section)) return;

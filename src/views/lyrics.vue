@@ -829,7 +829,10 @@ export default {
 
 .gradient-layer {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   transition: opacity 0.5s ease;
 }
 .gradient-layer.current.fade-in,
