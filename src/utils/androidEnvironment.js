@@ -50,7 +50,8 @@ export function updateAndroidQuality(quality) {
 
 export function updateAndroidAudioRequest(settings) {
   if (!native?.setAudioRequestConfig) return;
-  const realIP = process.env.VUE_APP_REAL_IP ||
+  const realIP =
+    process.env.VUE_APP_REAL_IP ||
     (settings.enableRealIP ? settings.realIP : '211.161.244.70');
   const proxy = ['HTTP', 'HTTPS'].includes(settings.proxyConfig?.protocol)
     ? `${settings.proxyConfig.protocol}://${settings.proxyConfig.server}:${settings.proxyConfig.port}`

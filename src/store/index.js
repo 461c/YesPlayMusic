@@ -100,11 +100,12 @@ store.watch(state => state.settings.musicQuality, updateAndroidQuality, {
   immediate: true,
 });
 store.watch(
-  state => JSON.stringify([
-    state.settings.enableRealIP,
-    state.settings.realIP,
-    state.settings.proxyConfig,
-  ]),
+  state =>
+    JSON.stringify([
+      state.settings.enableRealIP,
+      state.settings.realIP,
+      state.settings.proxyConfig,
+    ]),
   () => updateAndroidAudioRequest(store.state.settings),
   { immediate: true }
 );
