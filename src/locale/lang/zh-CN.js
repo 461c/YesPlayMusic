@@ -65,7 +65,7 @@ export default {
   playlist: {
     playlist: '歌单',
     updatedAt: '最后更新于',
-    search: '搜索歌单音乐',
+    search: '搜索',
   },
   login: {
     accessToAll: '可访问全部数据',

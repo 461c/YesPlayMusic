@@ -168,9 +168,7 @@
         class="settings-panel"
         ><h3 class="panel-title">缓存</h3
         ><div class="settings-cards"
-          ><LibraryCacheSettings
-            v-if="isAndroid || isElectron"
-            @busy="manualCacheBusy = $event" /><section
+          ><section
             v-if="isAndroid || isElectron"
             class="settings-card"
             ><h4 class="card-heading">存储管理</h4
@@ -1125,7 +1123,7 @@ import { isAndroid } from '@/utils/androidAudio';
 import pkg from '../../package.json';
 import PlayerButtonSettings from '@/components/PlayerButtonSettings.vue';
 import SettingsSync from '@/components/SettingsSync.vue';
-import LibraryCacheSettings from '@/components/LibraryCacheSettings.vue';
+import { libraryCacheManager } from '@/utils/libraryCache';
 
 const electron =
   process.env.IS_ELECTRON === true ? window.require('electron') : null;
@@ -1136,7 +1134,7 @@ const validShortcutCodes = ['=', '-', '~', '[', ']', ';', "'", ',', '.', '/'];
 
 export default {
   name: 'Settings',
-  components: { PlayerButtonSettings, SettingsSync, LibraryCacheSettings },
+  components: { PlayerButtonSettings, SettingsSync },
   data() {
     return {
       activeCategory: 'playback',
@@ -1159,7 +1157,7 @@ export default {
       artworkClearing: false,
       cacheStatsTimer: null,
       cacheClearing: false,
-      manualCacheBusy: false,
+      cacheManager: libraryCacheManager(this.$store),
       allOutputDevices: [
         {
           deviceId: 'default',
@@ -1175,6 +1173,9 @@ export default {
     };
   },
   computed: {
+    manualCacheBusy() {
+      return this.cacheManager.running || this.cacheManager.starting;
+    },
     showSystemStatusBar: {
       get() {
         return this.settings.showSystemStatusBar !== false;

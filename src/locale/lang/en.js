@@ -68,7 +68,7 @@ export default {
   playlist: {
     playlist: 'Playlists',
     updatedAt: 'Updated at',
-    search: 'Search in playlist',
+    search: 'Search',
   },
   login: {
     accessToAll: 'Access to all data',

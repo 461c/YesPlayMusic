@@ -4,11 +4,11 @@
     :class="{ 'cover-hover': coverHover }"
     @mouseover="focus = true"
     @mouseleave="focus = false"
-    @click="clickCoverToPlay ? play() : goTo()"
+    @click="clickCoverToPlay && allowPlay ? play() : goTo()"
   >
     <div class="cover-container">
       <div
-        v-if="$store.state.settings.showCoverPlayButton !== false"
+        v-if="allowPlay && $store.state.settings.showCoverPlayButton !== false"
         class="shade"
       >
         <transition name="cover-button">
@@ -51,6 +51,7 @@ export default {
     coverHover: { type: Boolean, default: true },
     alwaysShowPlayButton: { type: Boolean, default: true },
     alwaysShowShadow: { type: Boolean, default: false },
+    allowPlay: { type: Boolean, default: true },
     clickCoverToPlay: { type: Boolean, default: false },
     shadowMargin: { type: Number, default: 12 },
     radius: { type: Number, default: 12 },

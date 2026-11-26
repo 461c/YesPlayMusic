@@ -3,6 +3,7 @@
     class="track"
     :class="trackClass"
     :style="trackStyle"
+    :aria-disabled="offlineUnavailable ? 'true' : null"
     :title="showUnavailableSongInGreyStyle ? track.reason : ''"
     @mouseover="hover = true"
     @mouseleave="hover = false"
@@ -79,6 +80,10 @@
       <div></div>
     </div>
 
+    <div v-if="showCachedStatus" class="cached-status">
+      {{ isCached ? '已下载' : '' }}
+    </div>
+
     <div v-if="showLikeButton" class="actions">
       <button @click="likeThisSong">
         <svg-icon
@@ -116,6 +121,9 @@ export default {
       type: Boolean,
       default: true,
     },
+    offline: { type: Boolean, default: false },
+    cachedTrackIds: { type: Array, default: () => [] },
+    showCachedStatus: { type: Boolean, default: false },
   },
 
   data() {
@@ -130,6 +138,7 @@ export default {
         : this.trackProp;
     },
     playable() {
+      if (this.offline && this.isPlaylist) return this.isCached;
       if (this.track?.localOnly || this.track?.archiveStatus === 'removed')
         return this.track.localPlayable === true;
       return this.track?.privilege?.pl > 0 || this.track?.playable;
@@ -185,6 +194,12 @@ export default {
     isLiked() {
       return this.$parent.liked.songs.includes(this.track?.id);
     },
+    isCached() {
+      return this.cachedTrackIds.includes(String(this.track?.id));
+    },
+    offlineUnavailable() {
+      return this.offline && this.isPlaylist && !this.isCached;
+    },
     isPlaying() {
       return this.$store.state.player.currentTrack.id === this.track?.id;
     },
@@ -192,6 +207,7 @@ export default {
       let trackClass = [this.type];
       if (!this.playable && this.showUnavailableSongInGreyStyle)
         trackClass.push('disable');
+      if (this.offlineUnavailable) trackClass.push('offline-unavailable');
       if (this.isPlaying && this.highlightPlayingTrack)
         trackClass.push('playing');
       if (this.focus) trackClass.push('focus');
@@ -372,6 +388,14 @@ button {
     -webkit-line-clamp: 2;
     overflow: hidden;
   }
+  .cached-status {
+    flex: 0 0 62px;
+    margin: 0 12px;
+    font-size: 16px;
+    color: var(--color-text);
+    opacity: 0.68;
+    white-space: nowrap;
+  }
   .time,
   .count {
     font-size: 16px;
@@ -411,6 +435,12 @@ button {
   &:hover {
     background: none;
   }
+}
+
+.track.offline-unavailable {
+  opacity: 0.48;
+  cursor: default;
+  pointer-events: none;
 }
 
 .track.tracklist {

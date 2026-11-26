@@ -12,14 +12,16 @@
       <p v-if="error" role="status" class="muted">{{ error }}</p>
       <div v-if="payload" v-page-reveal>
         <template v-if="tab === 'profile'">
-          <div class="profile-identity"
-            ><strong>{{ profile.nickname }}</strong
-            ><span>ID {{ profile.userId || uid }}</span></div
-          >
-          <div v-if="profileTags.length" class="profile-tags"
-            ><span v-for="tag in profileTags" :key="tag">{{ tag }}</span></div
-          >
           <div class="profile-card">
+            <div class="profile-meta">
+              <span class="profile-id">ID {{ profile.userId || uid }}</span>
+              <span
+                v-for="tag in profileTags"
+                :key="tag"
+                class="profile-tag"
+                >{{ tag }}</span
+              >
+            </div>
             <p v-if="profile.signature">{{ profile.signature }}</p>
             <p v-if="profile.description">{{ profile.description }}</p>
             <p
@@ -851,26 +853,20 @@ small {
 </style>
 
 <style lang="scss" scoped>
-.profile-identity {
+.profile-meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
-  strong {
-    font-size: 22px;
-    overflow-wrap: anywhere;
-  }
-  span {
-    font-size: 12px;
-    opacity: 0.5;
-  }
-}
-.profile-tags {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-top: 12px;
-  span {
+  margin-bottom: 6px;
+  .profile-id {
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: var(--color-secondary-bg);
+    font-size: 12px;
+    opacity: 0.68;
+  }
+  .profile-tag {
     padding: 5px 8px;
     background: var(--color-secondary-bg);
     border-radius: 6px;
@@ -879,7 +875,7 @@ small {
   }
 }
 .profile-card {
-  padding: 16px;
+  padding: 10px 0;
 }
 .stats {
   grid-template-columns: repeat(2, minmax(0, 1fr));

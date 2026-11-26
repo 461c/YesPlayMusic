@@ -27,7 +27,11 @@
       aria-label="与上次查看的变化"
     >
       <strong>较上次查看</strong>
-      <span v-if="!visitReady" class="visit-message">正在读取本地记录…</span>
+      <span v-if="!visitBaselineReady" class="visit-message">{{
+        visitReadDelayed
+          ? '本地比较记录读取较慢，页面仍可浏览'
+          : '正在读取上次查看记录…'
+      }}</span>
       <span
         v-else-if="
           !visitBaseline ||
@@ -131,7 +135,7 @@
       <TrackingSection
         :refresh-on-open="true"
         ref="collection"
-        v-if="selected && (!isSavedUser || visitReady)"
+        v-if="selected"
         :key="selected"
         :uid="selected"
         :scope="scope"
@@ -329,9 +333,6 @@
           </div>
         </template>
       </TrackingSection>
-      <p v-else-if="selected && isSavedUser" class="visit-loading"
-        >正在读取本地查看记录…</p
-      >
       <button
         v-else-if="ready && !selected"
         class="empty-add"
@@ -370,7 +371,10 @@ export default {
       ready: false,
       notice: '',
       likesExpanded: false,
-      visitReady: false,
+      visitBaselineReady: false,
+      visitReadDelayed: false,
+      visitReadTimer: null,
+      visitPending: {},
       visitBaseline: null,
       visitDraft: null,
       visitStatus: { profile: 'pending', events: 'pending' },
@@ -485,10 +489,11 @@ export default {
   },
   deactivated() {
     this.visitGeneration++;
+    clearTimeout(this.visitReadTimer);
     this.commitVisit();
-    this.visitReady = false;
   },
   beforeDestroy() {
+    clearTimeout(this.visitReadTimer);
     this.commitVisit();
     this.scopeGeneration++;
   },
@@ -627,24 +632,29 @@ export default {
       const generation = ++this.visitGeneration;
       const uid = this.selected;
       const scope = this.scope;
-      this.visitReady = false;
+      clearTimeout(this.visitReadTimer);
+      this.visitBaselineReady = false;
+      this.visitReadDelayed = false;
+      this.visitPending = {};
       this.visitBaseline = null;
       this.visitDraft = null;
       this.visitChanged = false;
       this.newEventIds = [];
       this.visitStatus = { profile: 'pending', events: 'pending' };
       if (!uid || !this.isSavedUser) {
-        this.visitReady = true;
+        this.visitBaselineReady = true;
         return;
       }
-      await this.visitWrites.catch(() => {});
-      if (
-        generation !== this.visitGeneration ||
-        scope !== this.scope ||
-        uid !== this.selected
-      )
-        return;
-      const saved = await readTrackingSnapshot(scope, uid, 'visit');
+      this.visitReadTimer = setTimeout(() => {
+        if (generation === this.visitGeneration && !this.visitBaselineReady)
+          this.visitReadDelayed = true;
+      }, 1500);
+      let saved = null;
+      try {
+        saved = await readTrackingSnapshot(scope, uid, 'visit');
+      } catch (_) {
+        saved = null;
+      }
       if (
         generation !== this.visitGeneration ||
         scope !== this.scope ||
@@ -655,7 +665,17 @@ export default {
       this.visitDraft = saved?.data
         ? JSON.parse(JSON.stringify(saved.data))
         : { profile: null, events: { ids: [], latest: 0 } };
-      this.visitReady = true;
+      this.visitBaselineReady = true;
+      this.visitReadDelayed = false;
+      clearTimeout(this.visitReadTimer);
+      Object.keys(this.visitPending).forEach(section => {
+        this.recordVisitData({
+          uid,
+          section,
+          data: this.visitPending[section],
+        });
+      });
+      this.visitPending = {};
     },
     updateVisitStatus({ section, status }) {
       if (!this.isSavedUser || !['profile', 'events'].includes(section)) return;
@@ -665,11 +685,17 @@ export default {
       if (
         !this.isSavedUser ||
         uid !== this.selected ||
-        !this.visitReady ||
-        !this.visitDraft ||
         !['profile', 'events'].includes(section)
       )
         return;
+      if (!this.visitBaselineReady) {
+        this.$set(this.visitPending, section, data);
+        return;
+      }
+      this.recordVisitData({ uid, section, data });
+    },
+    recordVisitData({ uid, section, data }) {
+      if (!this.visitDraft || uid !== this.selected) return;
       if (section === 'profile') {
         this.visitDraft.profile = data.profile || {};
       } else {
@@ -713,7 +739,8 @@ export default {
         !this.visitChanged ||
         !this.visitDraft ||
         !this.selected ||
-        !this.isSavedUser
+        !this.isSavedUser ||
+        !this.visitBaselineReady
       )
         return;
       const uid = this.selected;
@@ -1059,13 +1086,9 @@ select {
   margin-left: auto;
   font-size: 12px;
 }
-.visit-loading {
-  margin: 24px 0;
-  opacity: 0.68;
-}
 .tracking-page .section-one {
   display: block;
-  margin-top: 14px;
+  margin-top: 24px;
 }
 .tracking-page .liked-songs {
   display: flex;

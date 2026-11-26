@@ -16,18 +16,55 @@
       <button v-if="missing.length" :disabled="busy || offline" @click="cache"
         >缓存剩余 {{ missing.length }} 首</button
       >
-      <template v-if="active"
-        ><button @click="manager.paused ? manager.resume() : manager.pause()">{{
-          manager.paused ? '继续' : '暂停'
-        }}</button
-        ><button @click="manager.stop()">取消</button></template
-      >
+      <button v-if="active" @click="manager.stop()">取消缓存</button>
     </div>
-    <p v-if="active" role="status"
-      >{{ manager.stage }} · {{ manager.songDone }} / {{ manager.songTotal }} 首
-      <span v-if="manager.downloadSpeed"
-        >{{ (manager.downloadSpeed / 1024).toFixed(0) }} KB/s</span
-      ></p
+    <div v-if="active" class="cache-progress" role="status" aria-live="polite">
+      <div class="progress-labels">
+        <span
+          ><strong>{{ manager.stage }}</strong>
+          <template v-if="manager.currentSong"> · {{ manager.currentSong }}</template>
+        </span>
+        <span v-if="manager.networkPending">等待网络响应</span>
+        <span v-else-if="manager.songTotal"
+          >已检查 {{ manager.songChecked }} 首 · 已处理 {{ manager.songDone }} / {{ manager.songTotal }} 首</span
+        >
+      </div>
+      <div
+        v-if="manager.songTotal"
+        class="progress-track"
+        role="progressbar"
+        :aria-valuenow="manager.songDone"
+        :aria-valuemax="manager.songTotal"
+        aria-label="歌单缓存进度"
+      >
+        <span :style="{ width: songPercent + '%' }"></span>
+      </div>
+      <div v-if="manager.phaseTotal" class="phase-progress">
+        <div class="progress-labels">
+          <span>{{ manager.phaseLabel }}</span>
+          <span>{{ manager.phaseProgress }} / {{ manager.phaseTotal }}</span>
+        </div>
+        <div class="progress-track phase-track" role="progressbar">
+          <span :style="{ width: phasePercent + '%' }"></span>
+        </div>
+      </div>
+      <div v-if="manager.activeDownloadKind === 'audio'" class="file-progress">
+        <div class="progress-labels">
+          <span>下载 {{ formatBytes(manager.downloadedBytes) }}<template v-if="manager.downloadTotalBytes"> / {{ formatBytes(manager.downloadTotalBytes) }}</template></span>
+          <span>{{ manager.downloadSpeed ? formatSpeed(manager.downloadSpeed) : '' }}</span>
+        </div>
+        <div v-if="manager.downloadTotalBytes" class="progress-track file-track">
+          <span :style="{ width: filePercent + '%' }"></span>
+        </div>
+        <div v-else class="progress-track indeterminate-track"><span></span></div>
+      </div>
+      <div v-else-if="manager.currentTargetImagesTotal" class="progress-labels image-progress">
+        <span>封面 {{ manager.currentTargetImagesDone }} / {{ manager.currentTargetImagesTotal }}</span>
+        <span v-if="manager.stage.includes('下载')">{{ manager.stage }}</span>
+      </div>
+    </div>
+    <p v-else-if="busy" class="cache-progress" role="status"
+      >正在处理其他缓存任务：{{ manager.currentSong || manager.stage }}</p
     >
     <p v-else-if="message" role="status">{{ message }}</p>
     <template v-if="expanded && known"
@@ -49,6 +86,8 @@ export default {
   props: {
     id: { type: [Number, String], required: true },
     type: { type: String, required: true },
+    name: { type: String, default: '' },
+    cover: { type: String, default: '' },
     members: { type: Array, required: true },
     tracks: { type: Array, required: true },
   },
@@ -60,6 +99,7 @@ export default {
       expanded: false,
       limit: 100,
       message: '',
+      requesting: false,
       online: navigator.onLine,
       generation: 0,
     };
@@ -69,8 +109,17 @@ export default {
       return !!(window.YesPlayMusicAndroid || process.env.IS_ELECTRON);
     },
     target() {
-      return cacheTargets(this.$store.state).find(
-        t => t.key === this.type + ':' + this.id
+      return (
+        cacheTargets(this.$store.state).find(
+          t => t.key === this.type + ':' + this.id
+        ) || {
+          key: this.type + ':' + this.id,
+          id: this.id,
+          type: this.type,
+          group: 'saved',
+          name: this.name,
+          cover: this.cover,
+        }
       );
     },
     ids() {
@@ -91,10 +140,52 @@ export default {
       return this.manager.running || this.manager.starting;
     },
     active() {
-      return this.busy && this.manager.currentTargetKey === this.target?.key;
+      return (
+        this.busy &&
+        (this.requesting || this.manager.currentTargetKey === this.target?.key)
+      );
     },
     offline() {
       return !this.online || this.$store.state.settings.archiveMode;
+    },
+    songPercent() {
+      if (!this.manager.songTotal) return 0;
+      const activeFraction =
+        this.manager.activeDownloadKind === 'audio' &&
+        this.manager.downloadTotalBytes
+          ? Math.min(
+              0.99,
+              this.manager.downloadedBytes / this.manager.downloadTotalBytes
+            )
+          : 0;
+      return Math.round(
+        Math.min(
+          100,
+          ((this.manager.songDone + activeFraction) / this.manager.songTotal) *
+            100
+        )
+      );
+    },
+    filePercent() {
+      return this.manager.downloadTotalBytes
+        ? Math.min(
+            100,
+            Math.round(
+              (this.manager.downloadedBytes / this.manager.downloadTotalBytes) *
+                100
+            )
+          )
+        : 0;
+    },
+    phasePercent() {
+      return this.manager.phaseTotal
+        ? Math.min(
+            100,
+            Math.round(
+              (this.manager.phaseProgress / this.manager.phaseTotal) * 100
+            )
+          )
+        : 0;
     },
   },
   watch: {
@@ -142,12 +233,28 @@ export default {
     },
     async cache() {
       if (!this.target || this.busy || this.offline) return;
+      this.requesting = true;
       try {
         await this.manager.run('update', [this.target]);
         this.message = this.manager.message;
       } catch (e) {
         this.message = e.message;
+      } finally {
+        this.requesting = false;
+        this.$emit('complete');
       }
+    },
+    formatBytes(value) {
+      const bytes = Number(value) || 0;
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+      return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    },
+    formatSpeed(value) {
+      const speed = Number(value) || 0;
+      return speed >= 1024 * 1024
+        ? `${(speed / 1024 / 1024).toFixed(1)} MB/s`
+        : `${(speed / 1024).toFixed(0)} KB/s`;
     },
   },
 };
@@ -187,5 +294,54 @@ export default {
 }
 .collection-offline button:disabled {
   opacity: 0.5;
+}
+.cache-progress {
+  margin-top: 12px;
+}
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  opacity: 0.78;
+}
+.progress-labels span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.progress-track {
+  height: 5px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-body-bg);
+}
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary-gradient);
+  transition: width 160ms linear;
+}
+.file-progress {
+  margin-top: 10px;
+}
+.phase-progress {
+  margin-top: 10px;
+}
+.phase-track {
+  height: 3px;
+}
+.file-track {
+  height: 3px;
+}
+.indeterminate-track span {
+  width: 35%;
+  animation: cache-progress 1s ease-in-out infinite alternate;
+}
+@keyframes cache-progress {
+  to {
+    transform: translateX(185%);
+  }
 }
 </style>

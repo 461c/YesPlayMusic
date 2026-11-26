@@ -12,8 +12,8 @@
         <input
           v-model="searchInput"
           type="search"
-          aria-label="搜索我的收藏"
-          placeholder="搜索我的收藏"
+          aria-label="搜索"
+          placeholder="搜索"
           @keydown.esc="closeSearch"
         />
       </label>
@@ -41,7 +41,7 @@
       :query="searchQuery"
     />
     <div v-show="!searchQuery">
-      <div v-if="currentTab !== 'shelf'" class="section-one">
+      <div class="section-one">
         <div class="liked-songs" @click="goToLikedSongsList">
           <div class="top"
             ><img
@@ -87,16 +87,9 @@
 
       <div
         class="section-two"
-        :class="{ 'shelf-section': currentTab === 'shelf' }"
       >
         <div class="tabs-row">
           <div class="tabs">
-            <div
-              class="tab"
-              :class="{ active: currentTab === 'shelf' }"
-              @click="updateCurrentTab('shelf')"
-              >离线库</div
-            >
             <div
               class="tab"
               :class="{ active: currentTab === 'created' }"
@@ -167,7 +160,6 @@
           </button>
         </div>
 
-        <OfflineShelf v-if="currentTab === 'shelf'" />
         <div v-show="currentTab === 'created' || currentTab === 'saved'">
           <div v-if="liked.playlists.length > 1">
             <CoverRow
@@ -175,6 +167,7 @@
               :compact="filterPlaylists.length > 20"
               type="playlist"
               sub-text="creator"
+              :disabled-ids="offlineDisabledPlaylistIds"
               :show-play-button="true"
             />
           </div>
@@ -292,7 +285,8 @@
 
 <script>
 import { archiveMode } from '@/utils/archiveMode';
-import { libraryScope } from '@/utils/offlineLibrary';
+import { libraryScope, readSavedPlaylists } from '@/utils/offlineLibrary';
+import { playableLibraryIds } from '@/utils/db';
 import LibrarySearch from '@/components/LibrarySearch.vue';
 import { mapActions, mapMutations, mapState } from 'vuex';
 import { dailyTask } from '@/utils/common';
@@ -312,7 +306,6 @@ import MvRow from '@/components/MvRow.vue';
 export default {
   name: 'Library',
   components: {
-    OfflineShelf: () => import('@/components/OfflineShelf.vue'),
     LibrarySearch,
     LibraryAvatarMenu,
     SvgIcon,
@@ -331,11 +324,19 @@ export default {
       refreshing: false,
       activityRefreshing: false,
       likedSongs: [],
-      currentTab: 'shelf',
+      currentTab: 'created',
       playHistoryMode: 'week',
+      disabledPlaylistIds: [],
+      offlinePlaylistStatusReady: false,
     };
   },
   computed: {
+    offlineDisabledPlaylistIds() {
+      if (!this.offline) return [];
+      if (!this.offlinePlaylistStatusReady)
+        return this.filterPlaylists.map(playlist => String(playlist.id));
+      return this.disabledPlaylistIds;
+    },
     ownUid() {
       return String(this.data.user?.userId || '');
     },
@@ -388,8 +389,12 @@ export default {
   },
   beforeDestroy() {
     clearTimeout(this.searchTimer);
+    window.removeEventListener('online', this.updateNetworkState);
+    window.removeEventListener('offline', this.updateNetworkState);
   },
   created() {
+    window.addEventListener('online', this.updateNetworkState);
+    window.addEventListener('offline', this.updateNetworkState);
     setTimeout(() => {
       if (!this.show) NProgress.start();
     }, 1000);
@@ -444,9 +449,49 @@ export default {
         if (!this.offline && scope === this.accountScope)
           localStorage.setItem(refreshKey, String(Date.now()));
       } finally {
+        await this.refreshOfflinePlaylistStatus();
         this.refreshing = false;
         this.show = true;
         NProgress.done();
+      }
+    },
+    updateNetworkState() {
+      this.offline = navigator.onLine === false || archiveMode();
+      this.refreshOfflinePlaylistStatus();
+    },
+    async refreshOfflinePlaylistStatus() {
+      const scope = this.accountScope;
+      this.offlinePlaylistStatusReady = false;
+      try {
+        const [playableIds, snapshots] = await Promise.all([
+          playableLibraryIds(),
+          readSavedPlaylists(scope),
+        ]);
+        if (scope !== this.accountScope) return;
+        const saved = new Map(
+          snapshots.map(snapshot => [
+            String(snapshot.playlist.id),
+            snapshot.playlist,
+          ])
+        );
+        this.disabledPlaylistIds = this.liked.playlists
+          .filter(playlist => {
+            const local = saved.get(String(playlist.id));
+            const tracks =
+              playlist.trackIds?.length || playlist.tracks?.length
+                ? playlist.trackIds || playlist.tracks
+                : local?.trackIds || local?.tracks || [];
+            return !tracks.some(track =>
+              playableIds.has(String(track.id || track))
+            );
+          })
+          .map(playlist => String(playlist.id));
+        this.offlinePlaylistStatusReady = true;
+      } catch (_) {
+        this.disabledPlaylistIds = this.liked.playlists.map(playlist =>
+          String(playlist.id)
+        );
+        this.offlinePlaylistStatusReady = true;
       }
     },
     playLikedSongs() {
@@ -470,7 +515,7 @@ export default {
     updateCurrentTab(tab) {
       if (
         !isAccountLoggedIn() &&
-        !['shelf', 'created', 'saved'].includes(tab)
+        !['created', 'saved'].includes(tab)
       ) {
         this.showToast(locale.t('toast.needToLogin'));
         return;
@@ -558,9 +603,6 @@ export default {
 </style>
 
 <style lang="scss" scoped>
-.shelf-section {
-  margin-top: 24px;
-}
 .library-page {
   position: relative;
 }

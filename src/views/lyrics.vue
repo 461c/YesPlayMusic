@@ -27,8 +27,19 @@
       <div
         v-if="settings.lyricsBackground === true"
         class="gradient-background"
-        :style="{ background }"
-      ></div>
+      >
+        <div
+          v-if="previousBackground"
+          class="gradient-layer previous"
+          :class="{ 'fade-out': gradientTransitionActive }"
+          :style="{ background: previousBackground }"
+        ></div>
+        <div
+          class="gradient-layer current"
+          :class="{ 'fade-in': previousBackground && !gradientTransitionActive }"
+          :style="{ background }"
+        ></div>
+      </div>
 
       <div class="left-side">
         <div>
@@ -328,6 +339,9 @@ export default {
       highlightLyricIndex: -1,
       minimize: true,
       background: '',
+      previousBackground: '',
+      gradientTransitionActive: false,
+      gradientTransitionTimer: null,
       rightClickLyric: null,
     };
   },
@@ -447,7 +461,7 @@ export default {
     },
     'settings.lyricsBackground'(enabled) {
       if (enabled === true) this.getCoverColor();
-      else this.background = '';
+      else this.setGradientBackground('');
     },
     showLyrics(show) {
       if (show) {
@@ -482,6 +496,7 @@ export default {
     });
   },
   beforeDestroy: function () {
+    clearTimeout(this.gradientTransitionTimer);
     this.exitFullscreen();
   },
   destroyed() {
@@ -681,14 +696,13 @@ export default {
       const track = this.currentTrack;
       const coverUrl = track?.al?.picUrl;
       if (!coverUrl) {
-        this.background = '';
+        this.setGradientBackground('');
         return;
       }
       const isCurrentCover = () =>
         this.settings.lyricsBackground === true &&
         this.currentTrack?.id === track.id &&
         this.currentTrack?.al?.picUrl === coverUrl;
-      this.background = '';
       const extractor = Vibrant.from(coverUrl + '?param=256y256')
         .maxColorCount(64)
         .quality(2)
@@ -697,11 +711,32 @@ export default {
         .getPalette()
         .then(() => {
           if (isCurrentCover())
-            this.background = coverGradient(extractor.result.colors);
+            this.setGradientBackground(
+              coverGradient(extractor.result.colors)
+            );
         })
         .catch(() => {
-          if (isCurrentCover()) this.background = '';
+          if (isCurrentCover()) this.setGradientBackground('');
         });
+    },
+    setGradientBackground(nextBackground) {
+      if (nextBackground === this.background) return;
+      clearTimeout(this.gradientTransitionTimer);
+      const previous = this.background;
+      this.previousBackground = previous;
+      this.background = nextBackground;
+      this.gradientTransitionActive = false;
+      if (!previous) {
+        this.previousBackground = '';
+        return;
+      }
+      this.$nextTick(() => {
+        this.gradientTransitionActive = true;
+        this.gradientTransitionTimer = setTimeout(() => {
+          this.previousBackground = '';
+          this.gradientTransitionActive = false;
+        }, 520);
+      });
     },
     hasList() {
       return hasListSource();
@@ -788,6 +823,24 @@ export default {
   position: absolute;
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gradient-layer {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.5s ease;
+}
+.gradient-layer.current.fade-in,
+.gradient-layer.previous.fade-out {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-layer {
+    transition: none;
+  }
 }
 
 .left-side {

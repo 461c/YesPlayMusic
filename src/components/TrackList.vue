@@ -68,6 +68,9 @@
         :track-prop="track"
         :track-no="index + 1"
         :highlight-playing-track="highlightPlayingTrack"
+        :offline="offline"
+        :cached-track-ids="cachedTrackIds"
+        :show-cached-status="showCachedStatus"
         @dblclick.native="
           !singleClickPlay && playThisList(track.id || track.songId)
         "
@@ -142,6 +145,10 @@ export default {
       type: Boolean,
       default: true,
     },
+    offline: { type: Boolean, default: false },
+    cachedTrackIds: { type: Array, default: () => [] },
+    showCachedStatus: { type: Boolean, default: false },
+    collectionTrackIds: { type: Array, default: () => [] },
     itemKey: {
       type: String,
       default: 'id',
@@ -188,6 +195,7 @@ export default {
     ...mapMutations(['updateModal']),
     ...mapActions(['nextTrack', 'showToast', 'likeATrack']),
     openMenu(e, track, index = -1) {
+      if (this.isUnavailableOffline(track)) return;
       this.rightClickedTrack = track;
       this.rightClickedTrackIndex = index;
       this.$refs.menu.openMenu(e);
@@ -204,10 +212,28 @@ export default {
     clickTrack(event, track) {
       if (!this.singleClickPlay || event.target.closest('a, button, img'))
         return;
-      if (track.playable || track.privilege?.pl > 0)
+      if (this.isUnavailableOffline(track)) return;
+      if (
+        this.isUnavailableOffline(track) === false &&
+        (this.offline && this.type === 'playlist'
+          ? this.cachedTrackIds.includes(String(track.id || track.songId))
+          : track.playable || track.privilege?.pl > 0)
+      )
         this.playThisList(track.id || track.songId);
     },
     playThisList(trackID) {
+      if (this.offline && this.type === 'playlist') {
+        const ids = (this.collectionTrackIds.length
+          ? this.collectionTrackIds
+          : this.tracks
+        )
+          .map(track => track.id || track.songId || track)
+          .filter(id => this.cachedTrackIds.includes(String(id)));
+        if (ids.includes(trackID) || ids.includes(String(trackID)))
+          this.player.playCollection(ids, this.id, 'playlist', trackID);
+        return;
+      }
+      if (this.isUnavailableOffline({ id: trackID, songId: trackID })) return;
       const retained = this.tracks.find(
         track =>
           String(track.id) === String(trackID) &&
@@ -240,6 +266,11 @@ export default {
         let trackIDs = this.tracks.map(t => t.id || t.songId);
         this.player.replacePlaylist(trackIDs, this.id, 'cloudDisk', trackID);
       }
+    },
+    isUnavailableOffline(track) {
+      if (!this.offline || this.type !== 'playlist') return false;
+      const id = String(track?.id || track?.songId || '');
+      return !this.cachedTrackIds.includes(id);
     },
     playThisListDefault(trackID) {
       if (this.type === 'playlist') {

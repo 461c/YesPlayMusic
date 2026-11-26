@@ -10,6 +10,7 @@
         :show-play-button="true"
         :always-show-shadow="true"
         :click-cover-to-play="true"
+        :allow-play="!offlineMode"
         :fixed-size="288"
         type="playlist"
         :cover-hover="false"
@@ -82,7 +83,7 @@
             <input
               v-model.trim="inputSearchKeyWords"
               v-focus
-              :placeholder="inputFocus ? '' : $t('playlist.search')"
+              :placeholder="inputFocus ? '' : $t('nav.search')"
               @input="inputDebounce()"
               @focus="inputFocus = true"
               @blur="inputFocus = false"
@@ -155,7 +156,7 @@
               v-if="displaySearchInPlaylist"
               v-model.trim="inputSearchKeyWords"
               v-focus
-              :placeholder="inputFocus ? '' : $t('playlist.search')"
+              :placeholder="inputFocus ? '' : $t('nav.search')"
               @input="inputDebounce()"
               @focus="inputFocus = true"
               @blur="inputFocus = false"
@@ -170,13 +171,20 @@
       :key="playlist.id"
       :id="playlist.id"
       type="playlist"
+      :name="playlist.name"
+      :cover="playlist.coverImgUrl"
       :members="playlist.trackIds || []"
       :tracks="bufferedTracks"
+      @complete="refreshCachedTrackIds"
     />
     <TrackList
       :id="playlist.id"
       :tracks="filteredTracks"
       type="playlist"
+      :offline="offlineMode"
+      :cached-track-ids="cachedTrackIds"
+      :collection-track-ids="playlist.trackIds || []"
+      :show-cached-status="true"
       :extra-context-menu-item="
         isUserOwnPlaylist ? ['removeTrackFromPlaylist'] : []
       "
@@ -243,6 +251,7 @@ import {
   deletePlaylist,
 } from '@/api/playlist';
 import { getCachedPlaylist } from '@/utils/offlineLibrary';
+import { playableLibraryIds } from '@/utils/db';
 import { observePlaylistArtwork } from '@/utils/libraryArtwork';
 import { getTrackDetail } from '@/api/track';
 import { isAccountLoggedIn } from '@/utils/auth';
@@ -367,6 +376,7 @@ export default {
     return {
       show: false,
       offline: navigator.onLine === false,
+      cachedTrackIds: [],
       playlist: {
         id: 0,
         coverImgUrl: '',
@@ -394,6 +404,13 @@ export default {
   },
   computed: {
     ...mapState(['player', 'data']),
+    offlineMode() {
+      return (
+        this.offline ||
+        navigator.onLine === false ||
+        this.$store.state.settings.archiveMode
+      );
+    },
     isLikeSongsPage() {
       return this.$route.name === 'likedSongs';
     },
@@ -407,8 +424,8 @@ export default {
       );
     },
     filteredTracks() {
-      return [...this.tracks, ...(this.playlist.archivedTracks || [])].filter(
-        track =>
+      const tracks = [...this.tracks, ...(this.playlist.archivedTracks || [])]
+        .filter(track =>
           (track.name &&
             track.name
               .toLowerCase()
@@ -424,7 +441,21 @@ export default {
                 .toLowerCase()
                 .includes(this.searchKeyWords.toLowerCase())
           )
-      );
+        );
+      if (!this.offlineMode) return tracks;
+      return tracks
+        .map((track, index) => ({ track, index }))
+        .sort(
+          (a, b) =>
+            Number(
+              this.cachedTrackIds.includes(String(b.track.id || b.track.songId))
+            ) -
+              Number(
+                this.cachedTrackIds.includes(String(a.track.id || a.track.songId))
+              ) ||
+            a.index - b.index
+        )
+        .map(item => item.track);
     },
   },
   created() {
@@ -441,6 +472,9 @@ export default {
     this.$parent.$refs.main.addEventListener('scroll', this.onPlaylistScroll, {
       passive: true,
     });
+    window.addEventListener('online', this.updateNetworkState);
+    window.addEventListener('offline', this.updateNetworkState);
+    this.refreshCachedTrackIds();
   },
   beforeDestroy() {
     this.loadGeneration++;
@@ -449,8 +483,21 @@ export default {
       this.onPlaylistScroll
     );
     if (this.scrollFrame) cancelAnimationFrame(this.scrollFrame);
+    window.removeEventListener('online', this.updateNetworkState);
+    window.removeEventListener('offline', this.updateNetworkState);
   },
   methods: {
+    updateNetworkState() {
+      this.offline = navigator.onLine === false;
+      if (!this.offline) this.refreshCachedTrackIds();
+    },
+    async refreshCachedTrackIds() {
+      try {
+        this.cachedTrackIds = Array.from(await playableLibraryIds());
+      } catch (_) {
+        this.cachedTrackIds = [];
+      }
+    },
     onPlaylistScroll() {
       if (this.scrollFrame) return;
       this.scrollFrame = requestAnimationFrame(() => {
@@ -473,6 +520,14 @@ export default {
     ...mapActions(['playFirstTrackOnList', 'playTrackOnListByID', 'showToast']),
     playPlaylistByID(trackID = 'first') {
       let trackIDs = this.playlist.trackIds.map(t => t.id);
+      if (this.offlineMode)
+        trackIDs = trackIDs.filter(id =>
+          this.cachedTrackIds.includes(String(id))
+        );
+      if (!trackIDs.length) {
+        this.showToast('这个歌单没有已缓存的歌曲');
+        return;
+      }
       this.$store.state.player.playCollection(
         trackIDs,
         this.playlist.id,

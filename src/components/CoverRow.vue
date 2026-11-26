@@ -4,7 +4,11 @@
       v-for="item in items"
       :key="item.id || item.userId"
       class="item"
-      :class="{ artist: type === 'artist' || type === 'user' }"
+      :class="{
+        artist: type === 'artist' || type === 'user',
+        disabled: isDisabled(item),
+      }"
+      :aria-disabled="isDisabled(item) ? 'true' : null"
     >
       <a
         v-if="type === 'user'"
@@ -97,6 +101,7 @@ export default {
   },
   props: {
     items: { type: Array, required: true },
+    disabledIds: { type: Array, default: () => [] },
     compact: { type: Boolean, default: false },
     type: { type: String, required: true },
     subText: { type: String, default: 'none' },
@@ -120,6 +125,9 @@ export default {
     },
   },
   methods: {
+    isDisabled(item) {
+      return this.disabledIds.includes(String(item.id || item.userId));
+    },
     userLink(item) {
       if (item._artistId) return `/artist/${item._artistId}`;
       return `https://music.163.com/#/user/home?id=${encodeURIComponent(
@@ -220,6 +228,11 @@ export default {
       word-break: break-word;
     }
   }
+}
+.item.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  filter: grayscale(0.35);
 }
 
 .item.artist {

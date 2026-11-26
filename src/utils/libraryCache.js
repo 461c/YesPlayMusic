@@ -109,7 +109,9 @@ export function riskResponse(error) {
   );
 }
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const API_INTERVAL_MS = 500;
+// Keep requests serial and bounded by the persisted per-minute budget, but
+// avoid adding a second fixed delay in front of every request.
+const API_INTERVAL_MS = 0;
 const BUDGET_WINDOW_MS = 60000;
 const REQUESTS_PER_WINDOW = 100;
 

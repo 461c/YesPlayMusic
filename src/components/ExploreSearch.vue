@@ -7,7 +7,7 @@
         v-model="keywords"
         type="search"
         :placeholder="$t('nav.search')"
-        aria-label="搜索音乐"
+        aria-label="搜索"
       />
     </label>
   </form>
