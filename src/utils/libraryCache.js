@@ -432,10 +432,7 @@ class LibraryCacheManager {
       const chunkSize = 100;
       for (let start = 0; start < ids.length; start += chunkSize) {
         const batch = ids.slice(start, start + chunkSize).map(Number);
-        Object.assign(
-          states,
-          await getCachedTrackSourceStates(batch, quality)
-        );
+        Object.assign(states, await getCachedTrackSourceStates(batch, quality));
         onProgress(Math.min(start + batch.length, ids.length));
         if (start + batch.length < ids.length) {
           await sleep(0);

@@ -20,14 +20,17 @@
     </div>
     <div v-if="active" class="cache-progress" role="status" aria-live="polite">
       <div class="progress-labels">
-        <span
-          ><strong>{{ manager.stage }}</strong>
-          <template v-if="manager.currentSong"> · {{ manager.currentSong }}</template>
+        <span>
+          <strong>{{ manager.stage }}</strong>
+          <template v-if="manager.currentSong">
+            · {{ manager.currentSong }}
+          </template>
         </span>
         <span v-if="manager.networkPending">等待网络响应</span>
-        <span v-else-if="manager.songTotal"
-          >已检查 {{ manager.songChecked }} 首 · 已处理 {{ manager.songDone }} / {{ manager.songTotal }} 首</span
-        >
+        <span v-else-if="manager.songTotal">
+          已检查 {{ manager.songChecked }} 首 · 已处理 {{ manager.songDone }} /
+          {{ manager.songTotal }} 首
+        </span>
       </div>
       <div
         v-if="manager.songTotal"
@@ -48,18 +51,41 @@
           <span :style="{ width: phasePercent + '%' }"></span>
         </div>
       </div>
-      <div v-if="manager.activeDownloadKind === 'audio'" class="file-progress">
+      <div
+        v-if="manager.activeDownloadKind === 'audio'"
+        class="file-progress"
+      >
         <div class="progress-labels">
-          <span>下载 {{ formatBytes(manager.downloadedBytes) }}<template v-if="manager.downloadTotalBytes"> / {{ formatBytes(manager.downloadTotalBytes) }}</template></span>
-          <span>{{ manager.downloadSpeed ? formatSpeed(manager.downloadSpeed) : '' }}</span>
+          <span>
+            下载 {{ formatBytes(manager.downloadedBytes) }}
+            <template v-if="manager.downloadTotalBytes">
+              / {{ formatBytes(manager.downloadTotalBytes) }}
+            </template>
+          </span>
+          <span>
+            {{
+              manager.downloadSpeed ? formatSpeed(manager.downloadSpeed) : ''
+            }}
+          </span>
         </div>
-        <div v-if="manager.downloadTotalBytes" class="progress-track file-track">
+        <div
+          v-if="manager.downloadTotalBytes"
+          class="progress-track file-track"
+        >
           <span :style="{ width: filePercent + '%' }"></span>
         </div>
-        <div v-else class="progress-track indeterminate-track"><span></span></div>
+        <div v-else class="progress-track indeterminate-track">
+          <span></span>
+        </div>
       </div>
-      <div v-else-if="manager.currentTargetImagesTotal" class="progress-labels image-progress">
-        <span>封面 {{ manager.currentTargetImagesDone }} / {{ manager.currentTargetImagesTotal }}</span>
+      <div
+        v-else-if="manager.currentTargetImagesTotal"
+        class="progress-labels image-progress"
+      >
+        <span
+          >封面 {{ manager.currentTargetImagesDone }} /
+          {{ manager.currentTargetImagesTotal }}</span
+        >
         <span v-if="manager.stage.includes('下载')">{{ manager.stage }}</span>
       </div>
     </div>

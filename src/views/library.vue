@@ -85,9 +85,7 @@
         </div>
       </div>
 
-      <div
-        class="section-two"
-      >
+      <div class="section-two">
         <div class="tabs-row">
           <div class="tabs">
             <div
@@ -513,10 +511,7 @@ export default {
       );
     },
     updateCurrentTab(tab) {
-      if (
-        !isAccountLoggedIn() &&
-        !['created', 'saved'].includes(tab)
-      ) {
+      if (!isAccountLoggedIn() && !['created', 'saved'].includes(tab)) {
         this.showToast(locale.t('toast.needToLogin'));
         return;
       }

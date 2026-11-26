@@ -36,7 +36,9 @@
         ></div>
         <div
           class="gradient-layer current"
-          :class="{ 'fade-in': previousBackground && !gradientTransitionActive }"
+          :class="{
+            'fade-in': previousBackground && !gradientTransitionActive,
+          }"
           :style="{ background }"
         ></div>
       </div>
@@ -711,9 +713,7 @@ export default {
         .getPalette()
         .then(() => {
           if (isCurrentCover())
-            this.setGradientBackground(
-              coverGradient(extractor.result.colors)
-            );
+            this.setGradientBackground(coverGradient(extractor.result.colors));
         })
         .catch(() => {
           if (isCurrentCover()) this.setGradientBackground('');

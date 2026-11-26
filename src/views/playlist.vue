@@ -424,8 +424,11 @@ export default {
       );
     },
     filteredTracks() {
-      const tracks = [...this.tracks, ...(this.playlist.archivedTracks || [])]
-        .filter(track =>
+      const tracks = [
+        ...this.tracks,
+        ...(this.playlist.archivedTracks || []),
+      ].filter(
+        track =>
           (track.name &&
             track.name
               .toLowerCase()
@@ -441,20 +444,19 @@ export default {
                 .toLowerCase()
                 .includes(this.searchKeyWords.toLowerCase())
           )
-        );
+      );
       if (!this.offlineMode) return tracks;
       return tracks
         .map((track, index) => ({ track, index }))
-        .sort(
-          (a, b) =>
-            Number(
-              this.cachedTrackIds.includes(String(b.track.id || b.track.songId))
-            ) -
-              Number(
-                this.cachedTrackIds.includes(String(a.track.id || a.track.songId))
-              ) ||
-            a.index - b.index
-        )
+        .sort((a, b) => {
+          const aCached = this.cachedTrackIds.includes(
+            String(a.track.id || a.track.songId)
+          );
+          const bCached = this.cachedTrackIds.includes(
+            String(b.track.id || b.track.songId)
+          );
+          return Number(bCached) - Number(aCached) || a.index - b.index;
+        })
         .map(item => item.track);
     },
   },

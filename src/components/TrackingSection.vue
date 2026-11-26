@@ -15,12 +15,9 @@
           <div class="profile-card">
             <div class="profile-meta">
               <span class="profile-id">ID {{ profile.userId || uid }}</span>
-              <span
-                v-for="tag in profileTags"
-                :key="tag"
-                class="profile-tag"
-                >{{ tag }}</span
-              >
+              <span v-for="tag in profileTags" :key="tag" class="profile-tag">{{
+                tag
+              }}</span>
             </div>
             <p v-if="profile.signature">{{ profile.signature }}</p>
             <p v-if="profile.description">{{ profile.description }}</p>

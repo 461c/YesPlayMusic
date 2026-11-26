@@ -223,9 +223,8 @@ export default {
     },
     playThisList(trackID) {
       if (this.offline && this.type === 'playlist') {
-        const ids = (this.collectionTrackIds.length
-          ? this.collectionTrackIds
-          : this.tracks
+        const ids = (
+          this.collectionTrackIds.length ? this.collectionTrackIds : this.tracks
         )
           .map(track => track.id || track.songId || track)
           .filter(id => this.cachedTrackIds.includes(String(id)));

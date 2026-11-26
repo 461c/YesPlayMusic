@@ -168,9 +168,7 @@
         class="settings-panel"
         ><h3 class="panel-title">缓存</h3
         ><div class="settings-cards"
-          ><section
-            v-if="isAndroid || isElectron"
-            class="settings-card"
+          ><section v-if="isAndroid || isElectron" class="settings-card"
             ><h4 class="card-heading">存储管理</h4
             ><div v-if="isElectron || isAndroid" class="item">
               <div class="left">
